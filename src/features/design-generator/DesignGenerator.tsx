@@ -1,14 +1,40 @@
-import { Code2, RotateCcw, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  Code2,
+  FileInput,
+  RotateCcw,
+  Save,
+  Sparkles,
+  Trash2
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../../components/Button";
 import { ControlGroup } from "../../components/ControlGroup";
 import { SegmentedControl } from "../../components/SegmentedControl";
 import { SliderField } from "../../components/SliderField";
+import { downloadTextFile } from "../../lib/downloadTextFile";
 import { clamp } from "../../lib/number";
 import { PreviewCanvas } from "./components/PreviewCanvas";
 import { TokenInspector } from "./components/TokenInspector";
-import { accentOptions, initialDesignState } from "./presets";
-import type { ComponentKind, DesignState, MotionIntent } from "./types";
+import { exportCss } from "./export/exportCss";
+import { exportJson } from "./export/exportJson";
+import { parseDesignState } from "./import/importTokens";
+import { accentOptions, designPresets, initialDesignState } from "./presets";
+import { designSystemProfiles } from "./profiles/profiles";
+import {
+  deleteUserPreset,
+  loadUserPresets,
+  saveUserPreset
+} from "./storage/presetStorage";
+import type {
+  ComponentKind,
+  DesignPreset,
+  DesignState,
+  UserDesignPreset
+} from "./types";
+import {
+  resolveComponentTokens,
+  updateActiveComponentTokens
+} from "./tokens/componentTokens";
 import { useDesignTokens } from "./useDesignTokens";
 
 const componentOptions: Array<{ label: string; value: ComponentKind }> = [
@@ -17,33 +43,151 @@ const componentOptions: Array<{ label: string; value: ComponentKind }> = [
   { label: "Panel", value: "panel" }
 ];
 
-const intentOptions: Array<{ label: string; value: MotionIntent }> = [
-  { label: "Calma", value: "calm" },
-  { label: "Foco", value: "focused" },
-  { label: "Expresiva", value: "expressive" }
-];
+const presetOptions = designPresets.map((preset) => ({
+  label: preset.label,
+  value: preset.id
+}));
+
+const profileOptions = designSystemProfiles.map((profile) => ({
+  label: profile.label,
+  value: profile.id
+}));
 
 export function DesignGenerator() {
   const [designState, setDesignState] =
     useState<DesignState>(initialDesignState);
+  const [selectedProfileId, setSelectedProfileId] = useState("minimal");
+  const [userPresets, setUserPresets] = useState<UserDesignPreset[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeComponentTokens = resolveComponentTokens(
+    designState,
+    designState.component.kind
+  );
   const tokens = useDesignTokens(designState);
 
-  const updateState = <TKey extends keyof DesignState>(
-    key: TKey,
-    value: DesignState[TKey]
+  useEffect(() => {
+    setUserPresets(loadUserPresets());
+  }, []);
+
+  const updateDomain = <TDomain extends keyof DesignState>(
+    domain: TDomain,
+    value: Partial<DesignState[TDomain]>
   ) => {
-    setDesignState((current) => ({ ...current, [key]: value }));
+    setDesignState((current) => ({
+      ...current,
+      [domain]: {
+        ...current[domain],
+        ...value
+      }
+    }));
   };
 
-  const cssSnippet = useMemo(
-    () => `.component {
-  --accent: ${designState.accent};
-  --radius: ${designState.radius}px;
-  --density: ${designState.density}px;
-  --motion-duration: ${designState.speed}ms;
-}`,
-    [designState]
-  );
+  const applyPreset = (presetId: string) => {
+    const preset = designPresets.find(
+      (candidatePreset) => candidatePreset.id === presetId
+    );
+
+    if (!preset) {
+      return;
+    }
+
+    setDesignState((current) => applyPresetOverrides(current, preset));
+  };
+
+  const applyProfile = (profileId: string) => {
+    const profile = designSystemProfiles.find(
+      (candidateProfile) => candidateProfile.id === profileId
+    );
+
+    if (!profile) {
+      return;
+    }
+
+    setSelectedProfileId(profile.id);
+    setDesignState((current) => ({
+      ...current,
+      color: profile.defaults.color,
+      layout: profile.defaults.layout,
+      motion: profile.defaults.motion
+    }));
+  };
+
+  const cssSnippet = useMemo(() => exportCss(tokens), [tokens]);
+
+  const handleExportCss = () => {
+    const cssOutput = exportCss(tokens);
+
+    console.log(cssOutput);
+    downloadTextFile("tokens.css", cssOutput, "text/css");
+  };
+
+  const handleExportJson = () => {
+    const jsonOutput = JSON.stringify(exportJson(tokens), null, 2);
+
+    console.log(jsonOutput);
+    downloadTextFile("tokens.json", jsonOutput, "application/json");
+  };
+
+  const handleSaveUserPreset = () => {
+    const presetName = window.prompt("Nombre del preset");
+    const label = presetName?.trim();
+
+    if (!label) {
+      return;
+    }
+
+    const preset: UserDesignPreset = {
+      createdAt: new Date().toISOString(),
+      id: createPresetId(),
+      label,
+      state: designState
+    };
+
+    setUserPresets(saveUserPreset(preset));
+  };
+
+  const handleLoadUserPreset = (preset: UserDesignPreset) => {
+    setDesignState(normalizeDesignState(preset.state));
+  };
+
+  const handleDeleteUserPreset = (presetId: string) => {
+    setUserPresets(deleteUserPreset(presetId));
+  };
+
+  const handleImportJson = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = (file: File | undefined) => {
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      try {
+        const fileContent = String(reader.result);
+        const importedState = normalizeDesignState(
+          parseDesignState(JSON.parse(fileContent))
+        );
+
+        setDesignState(importedState);
+      } catch (error) {
+        console.error("No se pudo importar tokens.json", error);
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    };
+
+    reader.onerror = () => {
+      console.error("No se pudo leer el archivo tokens.json", reader.error);
+    };
+
+    reader.readAsText(file);
+  };
 
   return (
     <main className="generator-shell" style={tokens}>
@@ -61,16 +205,22 @@ export function DesignGenerator() {
           title="Composicion"
         >
           <SegmentedControl
+            label="Profile"
+            onChange={applyProfile}
+            options={profileOptions}
+            value={selectedProfileId}
+          />
+          <SegmentedControl
             label="Componente"
-            onChange={(value) => updateState("component", value)}
+            onChange={(value) => updateDomain("component", { kind: value })}
             options={componentOptions}
-            value={designState.component}
+            value={designState.component.kind}
           />
           <SegmentedControl
             label="Microanimacion"
-            onChange={(value) => updateState("intent", value)}
-            options={intentOptions}
-            value={designState.intent}
+            onChange={applyPreset}
+            options={presetOptions}
+            value={designState.motion.presetId}
           />
         </ControlGroup>
 
@@ -79,9 +229,9 @@ export function DesignGenerator() {
             {accentOptions.map((accent) => (
               <button
                 aria-label={`Usar color ${accent}`}
-                aria-pressed={designState.accent === accent}
+                aria-pressed={designState.color.accent === accent}
                 key={accent}
-                onClick={() => updateState("accent", accent)}
+                onClick={() => updateDomain("color", { accent })}
                 style={{ backgroundColor: accent }}
                 type="button"
               />
@@ -91,46 +241,139 @@ export function DesignGenerator() {
             label="Radio"
             max={22}
             min={2}
-            onChange={(value) => updateState("radius", value)}
+            onChange={(value) =>
+              setDesignState((current) =>
+                updateActiveComponentTokens(current, {
+                  layout: { radius: value }
+                })
+              )
+            }
             suffix="px"
-            value={designState.radius}
+            value={activeComponentTokens.layout.radius}
           />
           <SliderField
             label="Densidad"
             max={72}
             min={36}
-            onChange={(value) => updateState("density", value)}
+            onChange={(value) =>
+              setDesignState((current) =>
+                updateActiveComponentTokens(current, {
+                  layout: { density: value }
+                })
+              )
+            }
             suffix="px"
-            value={designState.density}
+            value={activeComponentTokens.layout.density}
           />
           <SliderField
             label="Elevacion"
             max={60}
             min={0}
-            onChange={(value) => updateState("elevation", value)}
-            value={designState.elevation}
+            onChange={(value) =>
+              setDesignState((current) =>
+                updateActiveComponentTokens(current, {
+                  layout: { elevation: value }
+                })
+              )
+            }
+            value={activeComponentTokens.layout.elevation}
           />
           <SliderField
             label="Duracion"
             max={900}
             min={160}
-            onChange={(value) => updateState("speed", clamp(value, 160, 900))}
+            onChange={(value) =>
+              setDesignState((current) =>
+                updateActiveComponentTokens(current, {
+                  motion: { duration: clamp(value, 160, 900) }
+                })
+              )
+            }
             step={20}
             suffix="ms"
-            value={designState.speed}
+            value={activeComponentTokens.motion.duration}
           />
         </ControlGroup>
 
+        <ControlGroup title="Mis presets">
+          <div className="user-presets">
+            <Button
+              icon={<Save aria-hidden="true" size={18} />}
+              onClick={handleSaveUserPreset}
+              variant="secondary"
+            >
+              Guardar preset
+            </Button>
+            {userPresets.length > 0 ? (
+              <div className="user-presets__list">
+                {userPresets.map((preset) => (
+                  <div className="user-presets__item" key={preset.id}>
+                    <button
+                      className="user-presets__load"
+                      onClick={() => handleLoadUserPreset(preset)}
+                      type="button"
+                    >
+                      <span>{preset.label}</span>
+                      <small>
+                        {new Intl.DateTimeFormat("es", {
+                          dateStyle: "medium"
+                        }).format(new Date(preset.createdAt))}
+                      </small>
+                    </button>
+                    <button
+                      aria-label={`Eliminar preset ${preset.label}`}
+                      className="user-presets__delete"
+                      onClick={() => handleDeleteUserPreset(preset.id)}
+                      type="button"
+                    >
+                      <Trash2 aria-hidden="true" size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="user-presets__empty">No hay presets guardados.</p>
+            )}
+          </div>
+        </ControlGroup>
+
         <div className="sidebar-actions">
+          <input
+            accept="application/json"
+            className="file-input"
+            onChange={(event) => handleImportFile(event.target.files?.[0])}
+            ref={fileInputRef}
+            type="file"
+          />
           <Button
             icon={<RotateCcw aria-hidden="true" size={18} />}
-            onClick={() => setDesignState(initialDesignState)}
+            onClick={() =>
+              setDesignState(getInitialStateForProfile(selectedProfileId))
+            }
             variant="ghost"
           >
             Reiniciar
           </Button>
-          <Button icon={<Code2 aria-hidden="true" size={18} />} variant="primary">
-            Exportar tokens
+          <Button
+            icon={<Code2 aria-hidden="true" size={18} />}
+            onClick={handleExportCss}
+            variant="primary"
+          >
+            Export CSS
+          </Button>
+          <Button
+            icon={<Code2 aria-hidden="true" size={18} />}
+            onClick={handleExportJson}
+            variant="primary"
+          >
+            Export JSON
+          </Button>
+          <Button
+            icon={<FileInput aria-hidden="true" size={18} />}
+            onClick={handleImportJson}
+            variant="secondary"
+          >
+            Import JSON
           </Button>
         </div>
       </aside>
@@ -141,4 +384,50 @@ export function DesignGenerator() {
       </section>
     </main>
   );
+}
+
+function applyPresetOverrides(
+  current: DesignState,
+  preset: DesignPreset
+): DesignState {
+  return {
+    ...current,
+    motion: {
+      ...current.motion,
+      ...preset.overrides.motion
+    }
+  };
+}
+
+function getInitialStateForProfile(profileId: string): DesignState {
+  const profile = designSystemProfiles.find(
+    (candidateProfile) => candidateProfile.id === profileId
+  );
+
+  if (!profile) {
+    return initialDesignState;
+  }
+
+  return {
+    ...initialDesignState,
+    ...profile.defaults
+  };
+}
+
+function normalizeDesignState(state: DesignState): DesignState {
+  return {
+    ...state,
+    componentTokens: {
+      ...initialDesignState.componentTokens,
+      ...state.componentTokens
+    }
+  };
+}
+
+function createPresetId() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+
+  return `preset-${Date.now()}`;
 }

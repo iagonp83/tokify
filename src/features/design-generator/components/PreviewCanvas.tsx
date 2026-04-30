@@ -8,7 +8,10 @@ type PreviewCanvasProps = {
 export function PreviewCanvas({ state }: PreviewCanvasProps) {
   return (
     <div className="preview-canvas">
-      <div className={`preview-card preview-card--${state.component}`}>
+      <div
+        className={`preview-card preview-card--${state.component.kind} component-preview component-preview--${state.component.kind}`}
+        data-component={state.component.kind}
+      >
         <div className="preview-card__toolbar">
           <span />
           <span />
@@ -19,7 +22,7 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
             <Wand2 aria-hidden="true" size={22} />
           </div>
           <div>
-            <p>{state.component}</p>
+            <p>{state.component.kind}</p>
             <h2>Interaction blueprint</h2>
           </div>
         </div>

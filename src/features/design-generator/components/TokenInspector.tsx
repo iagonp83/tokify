@@ -10,7 +10,7 @@ export function TokenInspector({ code, state }: TokenInspectorProps) {
     <div className="token-inspector">
       <div>
         <p>Tokens activos</p>
-        <h2>{state.intent}</h2>
+        <h2>{state.motion.presetId}</h2>
       </div>
       <pre>
         <code>{code}</code>

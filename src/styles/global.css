@@ -29,11 +29,31 @@ button {
 }
 
 .generator-shell {
-  --accent: #2f7d69;
-  --density: 48px;
-  --elevation: 0 17px 68px rgb(18 28 23 / 0.18);
+  --color-accent: #2f7d69;
+  --layout-density: 48px;
+  --layout-elevation: 0 17px 68px rgb(18 28 23 / 0.18);
+  --layout-radius: 8px;
+  --card-density: var(--layout-density);
+  --card-elevation: var(--layout-elevation);
+  --card-motion-duration: var(--motion-duration);
+  --card-radius: var(--layout-radius);
+  --component-density: var(--card-density);
+  --component-elevation: var(--card-elevation);
+  --component-motion-duration: var(--card-motion-duration);
+  --component-radius: var(--card-radius);
+  --motion-delay: 0ms;
+  --motion-distance: 2px;
   --motion-duration: 420ms;
-  --radius: 8px;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-stagger: 40ms;
+  --panel-density: var(--layout-density);
+  --panel-elevation: var(--layout-elevation);
+  --panel-motion-duration: var(--motion-duration);
+  --panel-radius: var(--layout-radius);
+  --toolbar-density: var(--layout-density);
+  --toolbar-elevation: var(--layout-elevation);
+  --toolbar-motion-duration: var(--motion-duration);
+  --toolbar-radius: var(--layout-radius);
   display: grid;
   grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
   min-height: 100vh;
@@ -61,7 +81,7 @@ button {
 }
 
 .brand-lockup svg {
-  color: var(--accent);
+  color: var(--color-accent);
 }
 
 .brand-lockup p,
@@ -145,7 +165,7 @@ button {
   border: 0;
   border-radius: 7px;
   transition:
-    transform var(--motion-duration) cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform var(--motion-duration) var(--motion-ease),
     background var(--motion-duration) ease,
     color var(--motion-duration) ease;
 }
@@ -157,7 +177,7 @@ button {
 
 .segmented-control button[aria-pressed="true"] {
   color: #ffffff;
-  background: var(--accent);
+  background: var(--color-accent);
 }
 
 .swatch-row {
@@ -175,7 +195,7 @@ button {
 
 .swatch-row button[aria-pressed="true"] {
   box-shadow:
-    0 0 0 2px var(--accent),
+    0 0 0 2px var(--color-accent),
     0 8px 18px rgb(18 28 23 / 0.16);
 }
 
@@ -195,14 +215,78 @@ button {
 
 .slider-field input {
   width: 100%;
-  accent-color: var(--accent);
+  accent-color: var(--color-accent);
+}
+
+.user-presets {
+  display: grid;
+  gap: 12px;
+}
+
+.user-presets__list {
+  display: grid;
+  gap: 8px;
+}
+
+.user-presets__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.user-presets__load,
+.user-presets__delete {
+  border: 1px solid #dce3dc;
+  border-radius: 7px;
+  background: #f7faf7;
+}
+
+.user-presets__load {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 9px 12px;
+  text-align: left;
+}
+
+.user-presets__load span {
+  overflow: hidden;
+  color: #171d19;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-presets__load small,
+.user-presets__empty {
+  color: #687169;
+  font-size: 0.82rem;
+}
+
+.user-presets__empty {
+  margin: 0;
+}
+
+.user-presets__delete {
+  display: grid;
+  place-items: center;
+  color: #687169;
+}
+
+.user-presets__delete:hover {
+  color: #b03755;
 }
 
 .sidebar-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: auto;
+}
+
+.file-input {
+  display: none;
 }
 
 .button {
@@ -217,7 +301,7 @@ button {
 
 .button--primary {
   color: #ffffff;
-  background: var(--accent);
+  background: var(--color-accent);
 }
 
 .button--secondary {
@@ -234,7 +318,7 @@ button {
 .button:hover,
 .segmented-control button:hover,
 .preview-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(calc(var(--motion-distance) * -1));
 }
 
 .button__icon {
@@ -264,15 +348,36 @@ button {
 .preview-card {
   width: min(76%, 520px);
   min-height: 280px;
-  padding: var(--density);
-  border: 1px solid color-mix(in srgb, var(--accent), white 68%);
-  border-radius: var(--radius);
+  padding: var(--component-density);
+  border: 1px solid color-mix(in srgb, var(--color-accent), white 68%);
+  border-radius: var(--component-radius);
   background: #ffffff;
-  box-shadow: var(--elevation);
+  box-shadow: var(--component-elevation);
   transition:
-    transform var(--motion-duration) cubic-bezier(0.2, 0.8, 0.2, 1),
-    box-shadow var(--motion-duration) ease,
-    border-radius var(--motion-duration) ease;
+    transform var(--component-motion-duration) var(--motion-ease),
+    box-shadow var(--component-motion-duration) ease,
+    border-radius var(--component-motion-duration) ease;
+}
+
+.preview-card[data-component="card"] {
+  --component-density: var(--card-density);
+  --component-elevation: var(--card-elevation);
+  --component-motion-duration: var(--card-motion-duration);
+  --component-radius: var(--card-radius);
+}
+
+.preview-card[data-component="toolbar"] {
+  --component-density: var(--toolbar-density);
+  --component-elevation: var(--toolbar-elevation);
+  --component-motion-duration: var(--toolbar-motion-duration);
+  --component-radius: var(--toolbar-radius);
+}
+
+.preview-card[data-component="panel"] {
+  --component-density: var(--panel-density);
+  --component-elevation: var(--panel-elevation);
+  --component-motion-duration: var(--panel-motion-duration);
+  --component-radius: var(--panel-radius);
 }
 
 .preview-card--toolbar {
@@ -294,7 +399,7 @@ button {
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--accent), white 35%);
+  background: color-mix(in srgb, var(--color-accent), white 35%);
 }
 
 .preview-card__body {
@@ -308,9 +413,9 @@ button {
   width: 54px;
   height: 54px;
   place-items: center;
-  border-radius: var(--radius);
+  border-radius: var(--component-radius);
   color: #ffffff;
-  background: var(--accent);
+  background: var(--color-accent);
 }
 
 .preview-card__meta {
