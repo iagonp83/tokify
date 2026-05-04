@@ -340,11 +340,18 @@ JSON export is handled separately by:
 src/features/design-generator/export/exportJson.ts
 ```
 
-The current JSON export behaves as a resolved export. Its component values come
-from the resolved flat `DesignTokens` object, not from a source-of-truth
-separation of global tokens, semantic token groups, component defaults, and
-authored overrides. This compatibility behavior should be preserved until a
-dedicated export/import migration is introduced.
+JSON export keeps the legacy `components` section as a resolved export for
+compatibility. Its component values come from the resolved flat `DesignTokens`
+object.
+
+JSON export also includes a top-level `overrides` section. This section is
+source-of-truth oriented: it serializes authored component overrides from
+`DesignState.componentTokens` and preserves partialness by omitting missing
+values instead of filling them from globals.
+
+JSON import prefers `overrides` when that section exists. If `overrides` is
+missing, import falls back to the legacy `components` path, where resolved
+component values are treated as component overrides for backward compatibility.
 
 ## Current Non-Goals
 

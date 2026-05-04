@@ -194,19 +194,27 @@ Corrected mappings:
 Padding-related paths now resolve to density-related tokens. The focus ring path
 now resolves to the state focus ring token.
 
-### JSON Export Is Currently Resolved Export
+### JSON Export Has Resolved And Authored Layers
 
-The current JSON export serializes resolved token values from the flat
+The JSON export keeps the legacy `components` section as a resolved export for
+compatibility. That section serializes resolved token values from the flat
 `DesignTokens` object.
 
 This means the JSON `components` section contains resolved values for every
 component kind, not only authored component overrides.
 
-As a result, importing exported JSON can treat inherited values as component
-overrides. This is current compatibility behavior, not the desired future
-source-of-truth model.
+The JSON export also includes a top-level `overrides` section. This section
+serializes authored component overrides from `DesignState.componentTokens`.
+Missing override values are omitted instead of filled from globals.
 
-Future source-of-truth export should distinguish:
+Import behavior:
+
+- If `overrides` exists, it is used as the source of truth for
+  `DesignState.componentTokens`.
+- If `overrides` is missing, import falls back to the legacy `components`
+  behavior and treats those resolved component values as overrides.
+
+The source-of-truth export now distinguishes:
 
 - global defaults
 - semantic token groups

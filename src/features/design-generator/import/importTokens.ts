@@ -42,6 +42,7 @@ type ComponentTokenGroup = {
 type ImportPayload = TokenGroup & {
   components?: Partial<Record<ComponentKind, ComponentTokenGroup>>;
   global?: TokenGroup;
+  overrides?: Partial<Record<ComponentKind, ComponentTokenGroup>>;
 };
 
 export function parseDesignState(input: unknown): DesignState {
@@ -73,7 +74,9 @@ export function parseDesignState(input: unknown): DesignState {
     layout,
     motion,
     state,
-    componentTokens: readComponentTokens(payload.components, layout, motion)
+    componentTokens: payload.overrides
+      ? readAuthoredComponentOverrides(payload.overrides)
+      : readComponentTokens(payload.components, layout, motion)
   };
 }
 
@@ -119,6 +122,105 @@ function readComponentTokenOverrides(
       )
     }
   };
+}
+
+function readAuthoredComponentOverrides(
+  overrides: ImportPayload["overrides"]
+): DesignState["componentTokens"] {
+  return componentKinds.reduce<DesignState["componentTokens"]>(
+    (componentTokens, componentKind) => ({
+      ...componentTokens,
+      [componentKind]: readAuthoredComponentOverride(
+        overrides?.[componentKind],
+        componentKind
+      )
+    }),
+    initialDesignState.componentTokens
+  );
+}
+
+function readAuthoredComponentOverride(
+  component: ComponentTokenGroup | undefined,
+  componentKind: ComponentKind
+): ComponentTokenOverrides {
+  if (!component) {
+    return {};
+  }
+
+  const layout = readLayoutOverride(
+    component.layout,
+    `overrides.${componentKind}`
+  );
+  const motion = readMotionOverride(
+    component.motion,
+    `overrides.${componentKind}`
+  );
+
+  return {
+    ...(layout ? { layout } : {}),
+    ...(motion ? { motion } : {})
+  };
+}
+
+function readLayoutOverride(
+  layout: TokenGroup["layout"],
+  path: string
+): ComponentTokenOverrides["layout"] {
+  if (!layout) {
+    return undefined;
+  }
+
+  const parsedLayout: ComponentTokenOverrides["layout"] = {};
+
+  if (layout.density !== undefined) {
+    parsedLayout.density = readUnitNumber(
+      layout.density,
+      initialDesignState.layout.density,
+      `${path}.layout.density`,
+      "px"
+    );
+  }
+
+  if (layout.elevation !== undefined) {
+    parsedLayout.elevation = readElevation(
+      layout.elevation,
+      initialDesignState.layout.elevation,
+      `${path}.layout.elevation`
+    );
+  }
+
+  if (layout.radius !== undefined) {
+    parsedLayout.radius = readUnitNumber(
+      layout.radius,
+      initialDesignState.layout.radius,
+      `${path}.layout.radius`,
+      "px"
+    );
+  }
+
+  return Object.keys(parsedLayout).length > 0 ? parsedLayout : undefined;
+}
+
+function readMotionOverride(
+  motion: ComponentTokenGroup["motion"],
+  path: string
+): ComponentTokenOverrides["motion"] {
+  if (!motion) {
+    return undefined;
+  }
+
+  const parsedMotion: ComponentTokenOverrides["motion"] = {};
+
+  if (motion.duration !== undefined) {
+    parsedMotion.duration = readUnitNumber(
+      motion.duration,
+      initialDesignState.motion.duration,
+      `${path}.motion.duration`,
+      "ms"
+    );
+  }
+
+  return Object.keys(parsedMotion).length > 0 ? parsedMotion : undefined;
 }
 
 function readLayout(

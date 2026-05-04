@@ -1,6 +1,21 @@
 import type { DesignTokens } from "../useDesignTokens";
-import { componentKinds } from "../tokens/componentTokens";
-import type { ComponentKind } from "../types";
+import { componentKinds, formatElevation } from "../tokens/componentTokens";
+import type {
+  ComponentKind,
+  ComponentTokenOverrides,
+  DesignState
+} from "../types";
+
+type ExportedComponentOverride = {
+  layout?: {
+    density?: string;
+    elevation?: string;
+    radius?: string;
+  };
+  motion?: {
+    duration?: string;
+  };
+};
 
 export type ExportedDesignTokens = {
   components: Record<
@@ -16,6 +31,7 @@ export type ExportedDesignTokens = {
       };
     }
   >;
+  overrides: Partial<Record<ComponentKind, ExportedComponentOverride>>;
   global: {
     color: {
       accent: string;
@@ -43,7 +59,10 @@ export type ExportedDesignTokens = {
   };
 };
 
-export function exportJson(tokens: DesignTokens): ExportedDesignTokens {
+export function exportJson(
+  tokens: DesignTokens,
+  state?: DesignState
+): ExportedDesignTokens {
   return {
     global: {
       color: {
@@ -70,6 +89,7 @@ export function exportJson(tokens: DesignTokens): ExportedDesignTokens {
         stagger: tokens["--motion-stagger"]
       }
     },
+    overrides: exportComponentOverrides(state?.componentTokens),
     components: componentKinds.reduce<ExportedDesignTokens["components"]>(
       (components, componentKind) => ({
         ...components,
@@ -87,4 +107,75 @@ export function exportJson(tokens: DesignTokens): ExportedDesignTokens {
       {} as ExportedDesignTokens["components"]
     )
   };
+}
+
+function exportComponentOverrides(
+  componentTokens: DesignState["componentTokens"] | undefined
+): ExportedDesignTokens["overrides"] {
+  if (!componentTokens) {
+    return {};
+  }
+
+  return componentKinds.reduce<ExportedDesignTokens["overrides"]>(
+    (overrides, componentKind) => {
+      const componentOverride = exportComponentOverride(
+        componentTokens[componentKind]
+      );
+
+      if (!componentOverride) {
+        return overrides;
+      }
+
+      return {
+        ...overrides,
+        [componentKind]: componentOverride
+      };
+    },
+    {}
+  );
+}
+
+function exportComponentOverride(
+  override: ComponentTokenOverrides | undefined
+): ExportedComponentOverride | undefined {
+  if (!override) {
+    return undefined;
+  }
+
+  const layout = exportLayoutOverride(override);
+  const motion = exportMotionOverride(override);
+  const exportedOverride = {
+    ...(layout ? { layout } : {}),
+    ...(motion ? { motion } : {})
+  };
+
+  return Object.keys(exportedOverride).length > 0
+    ? exportedOverride
+    : undefined;
+}
+
+function exportLayoutOverride(override: ComponentTokenOverrides) {
+  const layout = {
+    ...(override.layout?.density !== undefined
+      ? { density: `${override.layout.density}px` }
+      : {}),
+    ...(override.layout?.elevation !== undefined
+      ? { elevation: formatElevation(override.layout.elevation) }
+      : {}),
+    ...(override.layout?.radius !== undefined
+      ? { radius: `${override.layout.radius}px` }
+      : {})
+  };
+
+  return Object.keys(layout).length > 0 ? layout : undefined;
+}
+
+function exportMotionOverride(override: ComponentTokenOverrides) {
+  const motion = {
+    ...(override.motion?.duration !== undefined
+      ? { duration: `${override.motion.duration}ms` }
+      : {})
+  };
+
+  return Object.keys(motion).length > 0 ? motion : undefined;
 }

@@ -122,7 +122,7 @@ export function DesignGenerator() {
   };
 
   const handleExportJson = () => {
-    const jsonOutput = JSON.stringify(exportJson(tokens), null, 2);
+    const jsonOutput = JSON.stringify(exportJson(tokens, designState), null, 2);
 
     console.log(jsonOutput);
     downloadTextFile("tokens.json", jsonOutput, "application/json");
