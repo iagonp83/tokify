@@ -116,6 +116,22 @@ Current visible state behavior:
 
 The existing token engine lives in `src/features/design-generator/tokens/`.
 
+The formal token hierarchy is documented in:
+
+```txt
+docs/TOKEN_HIERARCHY.md
+```
+
+Current hierarchy:
+
+```txt
+global tokens
+-> semantic token paths
+-> component default tokens
+-> component overrides
+-> resolved runtime tokens / CSS variables
+```
+
 Token creation functions:
 
 - `createColorTokens`
@@ -149,6 +165,9 @@ State tokens are now part of the real token engine:
 - `--state-active-opacity`
 - `--state-focus-ring`
 - `--state-disabled-opacity`
+
+These state tokens exist at runtime and in CSS export, but they are not yet
+fully modeled as a JSON `state` token group.
 
 Component Model token bindings use semantic string paths:
 
@@ -219,6 +238,25 @@ component.button.paddingBlock -> --${componentKind}-density
 component.button.elevation -> --${componentKind}-elevation
 motion.duration.fast -> --${componentKind}-motion-duration
 ```
+
+`Button` is currently a reference component rendered through the active
+component skin. It is not yet a real component token namespace in
+`ComponentKind`, `componentKinds`, or `DesignState.componentTokens`.
+
+Known invalid placeholder mappings currently exist in `tokenResolver.ts` and
+cross semantic boundaries:
+
+```ts
+component.button.size.md.paddingBlock -> --layout-radius
+component.button.size.sm.paddingBlock -> --motion-distance
+component.button.state.active.paddingInline -> --layout-radius
+component.button.state.focus.paddingBlock -> --layout-radius
+component.button.state.focus.ring -> --layout-elevation
+```
+
+`semantic.color.onAccent` currently maps to `--color-accent`. This preserves
+current behavior but should become a dedicated foreground token in a later
+safe correction.
 
 If a path is not mapped, the resolver throws a clear error.
 
@@ -298,5 +336,19 @@ JSON export is handled separately by:
 ```ts
 src/features/design-generator/export/exportJson.ts
 ```
+
+The current JSON export behaves as a resolved export. Its component values come
+from the resolved flat `DesignTokens` object, not from a source-of-truth
+separation of global tokens, semantic token groups, component defaults, and
+authored overrides. This compatibility behavior should be preserved until a
+dedicated export/import migration is introduced.
+
+## Current Non-Goals
+
+- No redesign.
+- No runtime behavior change.
+- No export or import behavior change.
+- No resolver mapping change.
+- No token migration yet.
 
 At this snapshot, the Component Model is connected to preview rendering and real `DesignTokens`, but there are still no adapters, no generated React components, and no library-specific output.
