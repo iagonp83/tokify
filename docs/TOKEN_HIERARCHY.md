@@ -163,21 +163,22 @@ as the complete source-of-truth token model.
 
 ### Button Is A Reference Component
 
-`Button` exists in the Component Model as the current reference implementation,
-but it is not currently a real component token namespace.
+`Button` and `Input` exist in the Component Model as reference
+implementations, but they are not currently real component token namespaces.
 
-There is no `button` entry in `ComponentKind`, `componentKinds`, or
+There is no `button` or `input` entry in `ComponentKind`, `componentKinds`, or
 `DesignState.componentTokens`.
 
 Current behavior:
 
 - The Button schema uses token paths such as `component.button.radius`.
+- The Input schema uses token paths such as `component.input.radius`.
 - `tokenResolver.ts` resolves those paths through the active component kind.
-- The rendered Button therefore uses the selected `card`, `toolbar`, or `panel`
-  skin.
+- The rendered Button and Input therefore use the selected `card`, `toolbar`, or
+  `panel` skin.
 
-This is compatibility behavior. A real `button` token namespace requires an
-explicit model change and migration plan.
+This is compatibility behavior. Real `button` or `input` token namespaces
+require an explicit model change and migration plan.
 
 ### Corrected Button Resolver Mappings
 

@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import { Layers, MousePointer2, Wand2 } from "lucide-react";
 import { buttonSchema } from "../../../compiler/component-model/button.schema";
+import { inputSchema } from "../../../compiler/component-model/input.schema";
 import type { ComponentStateName } from "../../../compiler/component-model/component.types";
 import { resolveComponent } from "../../../compiler/component-model/resolveComponent";
 import { createTokenResolver } from "../../../compiler/component-model/tokenResolver";
@@ -28,10 +29,18 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
     size: "sm",
     state: uiState
   });
+  const resolvedInput = resolveComponent(inputSchema, tokenResolver, {
+    state: uiState
+  });
   const stateStyles = resolved.styles.states[uiState] ?? {};
+  const inputStateStyles = resolvedInput.styles.states[uiState] ?? {};
   const rootStyle = {
     ...(resolved.styles.base.root ?? {}),
     ...(stateStyles.root ?? {})
+  };
+  const inputRootStyle = {
+    ...(resolvedInput.styles.base.root ?? {}),
+    ...(inputStateStyles.root ?? {})
   };
   const rootStyleWithLayout: CSSProperties = {
     ...rootStyle,
@@ -52,6 +61,13 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
     ...(stateStyles.icon ?? {})
   };
   const hasIconSlot = resolved.schema.slots.some((slot) => slot.name === "icon");
+  const inputStyle: CSSProperties = {
+    ...inputRootStyle,
+    border: 0,
+    boxSizing: "border-box",
+    minWidth: 220,
+    outline: 0
+  };
 
   return (
     <div className="preview-canvas">
@@ -99,6 +115,13 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
         {hasIconSlot ? <span style={iconStyle}>{"\u2022"}</span> : null}
         <span style={labelStyle}>Button</span>
       </button>
+      <input
+        aria-label="Input preview"
+        disabled={uiState === "disabled"}
+        readOnly
+        style={inputStyle}
+        value="Input"
+      />
     </div>
   );
 }

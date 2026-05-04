@@ -8,6 +8,7 @@ Current files:
 
 - `component.types.ts`
 - `button.schema.ts`
+- `input.schema.ts`
 - `resolveComponent.ts`
 - `validateComponent.ts`
 - `tokenResolver.ts`
@@ -34,13 +35,17 @@ Components are library-agnostic. They do not describe React, DOM, CSS classes, o
 - token bindings
 - edit policy
 
-The current reference component is `Button`.
+The current reference components are `Button` and `Input`.
 
 Button slots:
 
 - `root`
 - `label`
 - `icon`
+
+Input slots:
+
+- `root`
 
 ## Variant System
 
@@ -94,6 +99,13 @@ Current Button states:
 - `focus`
 - `disabled`
 - `loading`
+
+Current Input states:
+
+- `default`
+- `hover`
+- `focus`
+- `disabled`
 
 State-specific bindings use binding conditions:
 
@@ -242,8 +254,16 @@ component.button.elevation -> --${componentKind}-elevation
 motion.duration.fast -> --${componentKind}-motion-duration
 ```
 
-`Button` is currently a reference component rendered through the active
-component skin. It is not yet a real component token namespace in
+Some Input component paths also resolve through the active component skin:
+
+```ts
+component.input.radius -> --${componentKind}-radius
+component.input.paddingBlock -> --${componentKind}-density
+component.input.paddingInline -> --${componentKind}-density
+```
+
+`Button` and `Input` are currently reference components rendered through the
+active component skin. They are not yet real component token namespaces in
 `ComponentKind`, `componentKinds`, or `DesignState.componentTokens`.
 
 Previously invalid placeholder mappings in `tokenResolver.ts` have been
@@ -268,15 +288,17 @@ If a mapped token key is missing from `DesignTokens`, the resolver throws a clea
 ## Preview Rendering Approach
 
 `PreviewCanvas.tsx` currently renders the Button preview directly from the Component Model.
+It also renders the Input preview through the same resolver and state controls.
 
 Flow:
 
 1. `useDesignTokens(state)` creates the current token map.
 2. `createTokenResolver(tokens, state.component.kind)` creates the resolver.
 3. `resolveComponent(buttonSchema, tokenResolver, { intent, size, state })` resolves the Button.
-4. Resolved bindings are grouped by slot.
-5. Each slot gets an inline style object.
-6. Slots are rendered as DOM elements.
+4. `resolveComponent(inputSchema, tokenResolver, { state })` resolves the Input.
+5. Resolved bindings are grouped by slot.
+6. Each slot gets an inline style object.
+7. Slots are rendered as DOM elements.
 
 Current slot mapping:
 

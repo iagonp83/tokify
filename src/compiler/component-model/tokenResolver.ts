@@ -29,6 +29,11 @@ const tokenPathMap = {
   "component.button.state.focus.paddingBlock": (componentKind) =>
     `--${componentKind}-density`,
   "component.button.state.focus.ring": "--state-focus-ring",
+  "component.input.paddingBlock": (componentKind) =>
+    `--${componentKind}-density`,
+  "component.input.paddingInline": (componentKind) =>
+    `--${componentKind}-density`,
+  "component.input.radius": (componentKind) => `--${componentKind}-radius`,
   "motion.delay.none": "--motion-delay",
   "motion.duration.fast": (componentKind) =>
     `--${componentKind}-motion-duration`,
