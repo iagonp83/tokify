@@ -107,13 +107,9 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
   };
   const labelStyle: CSSProperties = {
     ...createSlotStyle(bindingsBySlot.label ?? []),
-    opacity: 1,
-    outline: "1px solid red"
+    opacity: 1
   };
-  const iconStyle: CSSProperties = {
-    ...createSlotStyle(bindingsBySlot.icon ?? []),
-    outline: "1px solid blue"
-  };
+  const iconStyle = createSlotStyle(bindingsBySlot.icon ?? []);
   const hasIconSlot = resolved.schema.slots.some((slot) => slot.name === "icon");
 
   return (
