@@ -68,7 +68,10 @@ export type ComponentTokenOverrides = {
   motion?: Partial<MotionState>;
 };
 
-export type ComponentTokensState = Record<ComponentKind, ComponentTokenOverrides>;
+export type AuthoredComponentNamespace = Exclude<ComponentNamespace, ComponentKind>;
+
+export type ComponentTokensState = Record<ComponentKind, ComponentTokenOverrides> &
+  Partial<Record<AuthoredComponentNamespace, ComponentTokenOverrides>>;
 
 export type UserDesignPreset = {
   createdAt: string;
