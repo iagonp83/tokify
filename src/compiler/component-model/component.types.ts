@@ -58,7 +58,9 @@ export type TokenBindingTarget =
   | "opacity"
   | "paddingBlock"
   | "paddingInline"
+  | "transitionDelay"
   | "transitionDuration"
+  | "transitionProperty"
   | "transitionTimingFunction";
 
 export type ComponentTokenBinding = {
@@ -94,9 +96,21 @@ export type ResolvedComponentBinding = ComponentTokenBinding & {
   value: string;
 };
 
+export type ResolvedComponentStyle = Record<string, string>;
+
+export type ResolvedComponentSlotStyles = Record<string, ResolvedComponentStyle>;
+
+export type ResolvedComponentStateStyles = Partial<
+  Record<ComponentStateName, ResolvedComponentSlotStyles>
+>;
+
 export type ResolvedComponent = {
   bindings: readonly ResolvedComponentBinding[];
   schema: ComponentSchema;
   selection: Required<Record<ComponentVariantAxisName, string>>;
   state: ComponentStateName;
+  styles: {
+    base: ResolvedComponentSlotStyles;
+    states: ResolvedComponentStateStyles;
+  };
 };

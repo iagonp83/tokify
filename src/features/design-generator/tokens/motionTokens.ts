@@ -6,6 +6,8 @@ export function createMotionTokens(motion: MotionState) {
     "--motion-distance": `${motion.distance}px`,
     "--motion-duration": `${motion.duration}ms`,
     "--motion-ease": motion.ease,
-    "--motion-stagger": `${motion.stagger}ms`
+    "--motion-stagger": `${motion.stagger}ms`,
+    "--motion-transition-property":
+      "background-color, border-color, border-radius, box-shadow, color, opacity, padding"
   };
 }

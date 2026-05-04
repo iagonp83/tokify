@@ -11,6 +11,7 @@ const globalTokenOrder = [
   "--motion-distance",
   "--motion-delay",
   "--motion-stagger",
+  "--motion-transition-property",
   "--state-hover-background",
   "--state-active-opacity",
   "--state-focus-ring",

@@ -1,10 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import { Layers, MousePointer2, Wand2 } from "lucide-react";
 import { buttonSchema } from "../../../compiler/component-model/button.schema";
-import type {
-  ComponentStateName,
-  ResolvedComponentBinding
-} from "../../../compiler/component-model/component.types";
+import type { ComponentStateName } from "../../../compiler/component-model/component.types";
 import { resolveComponent } from "../../../compiler/component-model/resolveComponent";
 import { createTokenResolver } from "../../../compiler/component-model/tokenResolver";
 import type { DesignState } from "../types";
@@ -22,40 +19,6 @@ const previewStates: ComponentStateName[] = [
   "disabled"
 ];
 
-function toCssProperty(target: ResolvedComponentBinding["target"]) {
-  switch (target) {
-    case "background":
-    case "borderRadius":
-    case "boxShadow":
-    case "color":
-    case "gap":
-    case "height":
-    case "opacity":
-    case "paddingBlock":
-    case "paddingInline":
-    case "transitionDuration":
-    case "transitionTimingFunction":
-      return target;
-    default:
-      return undefined;
-  }
-}
-
-function createSlotStyle(bindings: ResolvedComponentBinding[]) {
-  return bindings.reduce<CSSProperties>((styleObject, binding) => {
-    const cssProperty = toCssProperty(binding.target);
-
-    if (!cssProperty) {
-      return styleObject;
-    }
-
-    return {
-      ...styleObject,
-      [cssProperty]: binding.value
-    };
-  }, {});
-}
-
 export function PreviewCanvas({ state }: PreviewCanvasProps) {
   const [uiState, setUiState] = useState<ComponentStateName>("default");
   const tokens = useDesignTokens(state);
@@ -65,16 +28,11 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
     size: "sm",
     state: uiState
   });
-  const bindingsBySlot = resolved.bindings.reduce<
-    Record<string, ResolvedComponentBinding[]>
-  >(
-    (slots, binding) => ({
-      ...slots,
-      [binding.slot]: [...(slots[binding.slot] ?? []), binding]
-    }),
-    {}
-  );
-  const rootStyle = createSlotStyle(bindingsBySlot.root ?? []);
+  const stateStyles = resolved.styles.states[uiState] ?? {};
+  const rootStyle = {
+    ...(resolved.styles.base.root ?? {}),
+    ...(stateStyles.root ?? {})
+  };
   const rootStyleWithLayout: CSSProperties = {
     ...rootStyle,
     alignItems: "center",
@@ -85,10 +43,14 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
     justifyContent: "center"
   };
   const labelStyle: CSSProperties = {
-    ...createSlotStyle(bindingsBySlot.label ?? []),
+    ...(resolved.styles.base.label ?? {}),
+    ...(stateStyles.label ?? {}),
     opacity: 1
   };
-  const iconStyle = createSlotStyle(bindingsBySlot.icon ?? []);
+  const iconStyle = {
+    ...(resolved.styles.base.icon ?? {}),
+    ...(stateStyles.icon ?? {})
+  };
   const hasIconSlot = resolved.schema.slots.some((slot) => slot.name === "icon");
 
   return (

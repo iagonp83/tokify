@@ -25,13 +25,14 @@ export type ExportedDesignTokens = {
       elevation: string;
       radius: string;
     };
-    motion: {
-      delay: string;
-      distance: string;
-      duration: string;
-      ease: string;
-      stagger: string;
-    };
+      motion: {
+        delay: string;
+        distance: string;
+        duration: string;
+        ease: string;
+        property: string;
+        stagger: string;
+      };
   };
 };
 
@@ -51,6 +52,7 @@ export function exportJson(tokens: DesignTokens): ExportedDesignTokens {
         distance: tokens["--motion-distance"],
         duration: tokens["--motion-duration"],
         ease: tokens["--motion-ease"],
+        property: tokens["--motion-transition-property"],
         stagger: tokens["--motion-stagger"]
       }
     },

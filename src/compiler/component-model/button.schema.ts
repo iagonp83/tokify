@@ -99,6 +99,11 @@ export const buttonSchema = {
     },
     {
       slot: "root",
+      target: "transitionProperty",
+      token: "motion.transition.property"
+    },
+    {
+      slot: "root",
       target: "transitionDuration",
       token: "motion.duration.fast"
     },
@@ -106,6 +111,11 @@ export const buttonSchema = {
       slot: "root",
       target: "transitionTimingFunction",
       token: "motion.ease.standard"
+    },
+    {
+      slot: "root",
+      target: "transitionDelay",
+      token: "motion.delay.none"
     },
     {
       conditions: {

@@ -29,9 +29,11 @@ const tokenPathMap = {
   "component.button.state.focus.ring": "--layout-elevation",
   "component.button.state.hover.radius": (componentKind) =>
     `--${componentKind}-density`,
+  "motion.delay.none": "--motion-delay",
   "motion.duration.fast": (componentKind) =>
     `--${componentKind}-motion-duration`,
   "motion.ease.standard": "--motion-ease",
+  "motion.transition.property": "--motion-transition-property",
   "semantic.color.accent": "--color-accent",
   "semantic.color.onAccent": "--color-accent",
   "semantic.state.active.opacity": "--state-active-opacity",
