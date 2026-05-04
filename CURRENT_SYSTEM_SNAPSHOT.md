@@ -266,6 +266,21 @@ component.input.paddingInline -> --${componentKind}-density
 active component skin. They are not yet real component token namespaces in
 `ComponentKind`, `componentKinds`, or `DesignState.componentTokens`.
 
+This is intentional for the current consolidation phase. Reference components
+inherit the active `card`, `toolbar`, or `panel` skin so the system can validate
+Component Model rendering, state handling, resolver behavior, and JSON
+export/import without adding new component namespaces yet.
+
+Future direction:
+
+- Introduce real component token namespaces such as `component.button.*`.
+- Introduce real component token namespaces such as `component.input.*`.
+- Keep reference/skin mode only if it is explicitly supported as a separate
+  compatibility mode.
+
+Do not implement `button` or `input` namespaces until that model change and
+migration path are explicitly planned.
+
 Previously invalid placeholder mappings in `tokenResolver.ts` have been
 corrected so padding-related paths resolve to active component density and the
 focus ring path resolves to the state focus ring:

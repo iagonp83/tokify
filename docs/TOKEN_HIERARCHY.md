@@ -161,7 +161,7 @@ as the complete source-of-truth token model.
 
 ## Current Compatibility Gaps
 
-### Button Is A Reference Component
+### Button And Input Are Reference Components
 
 `Button` and `Input` exist in the Component Model as reference
 implementations, but they are not currently real component token namespaces.
@@ -177,8 +177,19 @@ Current behavior:
 - The rendered Button and Input therefore use the selected `card`, `toolbar`, or
   `panel` skin.
 
-This is compatibility behavior. Real `button` or `input` token namespaces
-require an explicit model change and migration plan.
+This is intentional for the current consolidation phase. It lets reference
+components validate the Component Model, state handling, resolver behavior, and
+export/import flow without introducing new component token namespaces yet.
+
+Future direction:
+
+- Introduce real component token namespaces such as `component.button.*`.
+- Introduce real component token namespaces such as `component.input.*`.
+- Keep reference/skin mode only if it is explicitly supported as a separate
+  compatibility mode.
+
+Do not implement `button` or `input` namespaces until that model change and
+migration path are explicitly planned.
 
 ### Corrected Button Resolver Mappings
 
