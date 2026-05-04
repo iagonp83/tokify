@@ -4,9 +4,11 @@ import type {
   ComponentVariantAxisName,
   ResolvedComponent
 } from "./component.types";
+import type { TokenResolver } from "./tokenResolver";
 
 export function resolveComponent(
   schema: ComponentSchema,
+  tokenResolver: TokenResolver,
   context: ComponentResolutionContext = {}
 ): ResolvedComponent {
   const resolvedSelection = schema.variants.reduce<
@@ -48,9 +50,9 @@ export function resolveComponent(
         schema.name,
         binding.slot,
         binding.target,
-        binding.token.namespace,
-        binding.token.path
-      ].join(".")
+        binding.token
+      ].join("."),
+      value: tokenResolver.get(binding.token)
     }));
 
   return {

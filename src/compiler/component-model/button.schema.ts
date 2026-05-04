@@ -38,47 +38,27 @@ export const buttonSchema = {
     {
       slot: "root",
       target: "background",
-      token: {
-        namespace: "semantic",
-        path: "color.accent",
-        type: "color"
-      }
+      token: "semantic.color.accent"
     },
     {
       slot: "root",
       target: "color",
-      token: {
-        namespace: "semantic",
-        path: "color.onAccent",
-        type: "color"
-      }
+      token: "semantic.color.onAccent"
     },
     {
       slot: "root",
       target: "borderRadius",
-      token: {
-        namespace: "component",
-        path: "button.radius",
-        type: "radius"
-      }
+      token: "component.button.radius"
     },
     {
       slot: "root",
       target: "paddingBlock",
-      token: {
-        namespace: "component",
-        path: "button.paddingBlock",
-        type: "spacing"
-      }
+      token: "component.button.paddingBlock"
     },
     {
       slot: "root",
       target: "paddingInline",
-      token: {
-        namespace: "component",
-        path: "button.paddingInline",
-        type: "spacing"
-      }
+      token: "component.button.paddingInline"
     },
     {
       conditions: {
@@ -86,11 +66,7 @@ export const buttonSchema = {
       },
       slot: "root",
       target: "height",
-      token: {
-        namespace: "component",
-        path: "button.size.sm.height",
-        type: "spacing"
-      }
+      token: "component.button.size.sm.height"
     },
     {
       conditions: {
@@ -98,11 +74,7 @@ export const buttonSchema = {
       },
       slot: "root",
       target: "height",
-      token: {
-        namespace: "component",
-        path: "button.size.md.height",
-        type: "spacing"
-      }
+      token: "component.button.size.md.height"
     },
     {
       conditions: {
@@ -110,11 +82,7 @@ export const buttonSchema = {
       },
       slot: "root",
       target: "height",
-      token: {
-        namespace: "component",
-        path: "button.size.lg.height",
-        type: "spacing"
-      }
+      token: "component.button.size.lg.height"
     },
     {
       conditions: {
@@ -122,29 +90,17 @@ export const buttonSchema = {
       },
       slot: "root",
       target: "opacity",
-      token: {
-        namespace: "semantic",
-        path: "state.disabled.opacity",
-        type: "number"
-      }
+      token: "semantic.state.disabled.opacity"
     },
     {
       slot: "root",
       target: "transitionDuration",
-      token: {
-        namespace: "motion",
-        path: "duration.fast",
-        type: "duration"
-      }
+      token: "motion.duration.fast"
     },
     {
       slot: "root",
       target: "transitionTimingFunction",
-      token: {
-        namespace: "motion",
-        path: "ease.standard",
-        type: "easing"
-      }
+      token: "motion.ease.standard"
     }
   ],
   variants: [

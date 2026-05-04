@@ -47,29 +47,6 @@ export type ComponentVariantCondition = Partial<
   Record<ComponentVariantAxisName, string>
 >;
 
-export type TokenNamespace =
-  | "raw"
-  | "semantic"
-  | "component"
-  | "motion"
-  | "layout"
-  | "dataViz";
-
-export type TokenValueType =
-  | "color"
-  | "duration"
-  | "easing"
-  | "number"
-  | "radius"
-  | "shadow"
-  | "spacing";
-
-export type TokenReference = {
-  namespace: TokenNamespace;
-  path: string;
-  type: TokenValueType;
-};
-
 export type TokenBindingTarget =
   | "background"
   | "borderColor"
@@ -88,7 +65,7 @@ export type ComponentTokenBinding = {
   conditions?: ComponentVariantCondition & { state?: ComponentStateName };
   slot: string;
   target: TokenBindingTarget;
-  token: TokenReference;
+  token: string;
 };
 
 export type EditableComponentField =
@@ -114,6 +91,7 @@ export type ComponentSchema = {
 
 export type ResolvedComponentBinding = ComponentTokenBinding & {
   id: string;
+  value: string;
 };
 
 export type ResolvedComponent = {
