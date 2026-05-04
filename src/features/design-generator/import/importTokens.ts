@@ -1,7 +1,9 @@
 import { initialDesignState } from "../presets";
 import { componentKinds } from "../tokens/componentTokens";
 import type {
+  AuthoredComponentNamespace,
   ComponentKind,
+  ComponentNamespace,
   ComponentTokenOverrides,
   DesignState,
   LayoutState,
@@ -42,8 +44,13 @@ type ComponentTokenGroup = {
 type ImportPayload = TokenGroup & {
   components?: Partial<Record<ComponentKind, ComponentTokenGroup>>;
   global?: TokenGroup;
-  overrides?: Partial<Record<ComponentKind, ComponentTokenGroup>>;
+  overrides?: Partial<Record<ComponentNamespace, ComponentTokenGroup>>;
 };
+
+const authoredComponentNamespaces: AuthoredComponentNamespace[] = [
+  "button",
+  "input"
+];
 
 export function parseDesignState(input: unknown): DesignState {
   if (!isObject(input)) {
@@ -127,7 +134,9 @@ function readComponentTokenOverrides(
 function readAuthoredComponentOverrides(
   overrides: ImportPayload["overrides"]
 ): DesignState["componentTokens"] {
-  return componentKinds.reduce<DesignState["componentTokens"]>(
+  const componentTokenOverrides = componentKinds.reduce<
+    DesignState["componentTokens"]
+  >(
     (componentTokens, componentKind) => ({
       ...componentTokens,
       [componentKind]: readAuthoredComponentOverride(
@@ -137,11 +146,30 @@ function readAuthoredComponentOverrides(
     }),
     initialDesignState.componentTokens
   );
+
+  return authoredComponentNamespaces.reduce<DesignState["componentTokens"]>(
+    (componentTokens, namespace) => {
+      const namespaceOverride = readAuthoredComponentOverride(
+        overrides?.[namespace],
+        namespace
+      );
+
+      if (!namespaceOverride.layout && !namespaceOverride.motion) {
+        return componentTokens;
+      }
+
+      return {
+        ...componentTokens,
+        [namespace]: namespaceOverride
+      };
+    },
+    componentTokenOverrides
+  );
 }
 
 function readAuthoredComponentOverride(
   component: ComponentTokenGroup | undefined,
-  componentKind: ComponentKind
+  componentKind: ComponentNamespace
 ): ComponentTokenOverrides {
   if (!component) {
     return {};
