@@ -1,4 +1,5 @@
 export type ComponentKind = "card" | "toolbar" | "panel";
+export type ComponentNamespace = ComponentKind | "button" | "input";
 
 export type ComponentState = {
   kind: ComponentKind;

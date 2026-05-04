@@ -1,5 +1,6 @@
 import type {
   ComponentKind,
+  ComponentNamespace,
   ComponentTokenOverrides,
   DesignState,
   LayoutState,
@@ -7,6 +8,13 @@ import type {
 } from "../types";
 
 export const componentKinds: ComponentKind[] = ["card", "toolbar", "panel"];
+export const componentNamespaces: ComponentNamespace[] = [
+  "card",
+  "toolbar",
+  "panel",
+  "button",
+  "input"
+];
 
 export type ResolvedComponentTokens = {
   layout: LayoutState;
