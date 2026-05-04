@@ -246,15 +246,16 @@ motion.duration.fast -> --${componentKind}-motion-duration
 component skin. It is not yet a real component token namespace in
 `ComponentKind`, `componentKinds`, or `DesignState.componentTokens`.
 
-Known invalid placeholder mappings currently exist in `tokenResolver.ts` and
-cross semantic boundaries:
+Previously invalid placeholder mappings in `tokenResolver.ts` have been
+corrected so padding-related paths resolve to active component density and the
+focus ring path resolves to the state focus ring:
 
 ```ts
-component.button.size.md.paddingBlock -> --layout-radius
-component.button.size.sm.paddingBlock -> --motion-distance
-component.button.state.active.paddingInline -> --layout-radius
-component.button.state.focus.paddingBlock -> --layout-radius
-component.button.state.focus.ring -> --layout-elevation
+component.button.size.md.paddingBlock -> --${componentKind}-density
+component.button.size.sm.paddingBlock -> --${componentKind}-density
+component.button.state.active.paddingInline -> --${componentKind}-density
+component.button.state.focus.paddingBlock -> --${componentKind}-density
+component.button.state.focus.ring -> --state-focus-ring
 ```
 
 `semantic.color.onAccent` maps to `--color-on-accent`, which defaults to

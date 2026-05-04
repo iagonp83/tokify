@@ -20,11 +20,15 @@ const tokenPathMap = {
   "component.button.radius": (componentKind) => `--${componentKind}-radius`,
   "component.button.size.lg.paddingBlock": (componentKind) =>
     `--${componentKind}-density`,
-  "component.button.size.md.paddingBlock": "--layout-radius",
-  "component.button.size.sm.paddingBlock": "--motion-distance",
-  "component.button.state.active.paddingInline": "--layout-radius",
-  "component.button.state.focus.paddingBlock": "--layout-radius",
-  "component.button.state.focus.ring": "--layout-elevation",
+  "component.button.size.md.paddingBlock": (componentKind) =>
+    `--${componentKind}-density`,
+  "component.button.size.sm.paddingBlock": (componentKind) =>
+    `--${componentKind}-density`,
+  "component.button.state.active.paddingInline": (componentKind) =>
+    `--${componentKind}-density`,
+  "component.button.state.focus.paddingBlock": (componentKind) =>
+    `--${componentKind}-density`,
+  "component.button.state.focus.ring": "--state-focus-ring",
   "motion.delay.none": "--motion-delay",
   "motion.duration.fast": (componentKind) =>
     `--${componentKind}-motion-duration`,

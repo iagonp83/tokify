@@ -179,22 +179,20 @@ Current behavior:
 This is compatibility behavior. A real `button` token namespace requires an
 explicit model change and migration plan.
 
-### Known Invalid Button Resolver Mappings
+### Corrected Button Resolver Mappings
 
-Some Button token resolver mappings are known placeholders and cross semantic
-boundaries.
+Some Button token resolver mappings previously crossed semantic boundaries.
 
-Known invalid mappings include:
+Corrected mappings:
 
-- `component.button.size.md.paddingBlock -> --layout-radius`
-- `component.button.size.sm.paddingBlock -> --motion-distance`
-- `component.button.state.active.paddingInline -> --layout-radius`
-- `component.button.state.focus.paddingBlock -> --layout-radius`
-- `component.button.state.focus.ring -> --layout-elevation`
+- `component.button.size.md.paddingBlock -> --${componentKind}-density`
+- `component.button.size.sm.paddingBlock -> --${componentKind}-density`
+- `component.button.state.active.paddingInline -> --${componentKind}-density`
+- `component.button.state.focus.paddingBlock -> --${componentKind}-density`
+- `component.button.state.focus.ring -> --state-focus-ring`
 
-These mappings should not be copied into future component schemas. They are
-documented here so they can be corrected in a dedicated safe code change without
-combining that correction with hierarchy documentation.
+Padding-related paths now resolve to density-related tokens. The focus ring path
+now resolves to the state focus ring token.
 
 ### JSON Export Is Currently Resolved Export
 
