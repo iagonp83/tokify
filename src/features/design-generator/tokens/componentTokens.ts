@@ -69,6 +69,20 @@ export function resolveComponentTokens(
 }
 
 export function createComponentTokens(state: DesignState) {
+  const activeComponentTokens = resolveComponentTokens(
+    state,
+    state.component.kind
+  );
+  const referenceComponentTokens = {
+    "--button-density": `${activeComponentTokens.layout.density}px`,
+    "--button-elevation": formatElevation(activeComponentTokens.layout.elevation),
+    "--button-motion-duration": `${activeComponentTokens.motion.duration}ms`,
+    "--button-radius": `${activeComponentTokens.layout.radius}px`,
+    "--input-density": `${activeComponentTokens.layout.density}px`,
+    "--input-motion-duration": `${activeComponentTokens.motion.duration}ms`,
+    "--input-radius": `${activeComponentTokens.layout.radius}px`
+  };
+
   return componentKinds.reduce<Record<string, string>>((tokens, componentKind) => {
     const resolvedTokens = resolveComponentTokens(state, componentKind);
 
@@ -81,7 +95,7 @@ export function createComponentTokens(state: DesignState) {
       [`--${componentKind}-motion-duration`]: `${resolvedTokens.motion.duration}ms`,
       [`--${componentKind}-radius`]: `${resolvedTokens.layout.radius}px`
     };
-  }, {});
+  }, referenceComponentTokens);
 }
 
 export function formatElevation(elevation: number) {
