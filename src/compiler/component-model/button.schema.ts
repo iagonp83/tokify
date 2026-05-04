@@ -105,7 +105,7 @@ export const buttonSchema = {
     {
       slot: "root",
       target: "transitionDuration",
-      token: "motion.duration.fast"
+      token: "component.button.motion.duration"
     },
     {
       slot: "root",

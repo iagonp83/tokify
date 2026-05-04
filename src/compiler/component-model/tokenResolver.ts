@@ -19,6 +19,10 @@ const tokenPathMap = {
     fallback: (componentKind) => `--${componentKind}-elevation`,
     token: "--button-elevation"
   },
+  "component.button.motion.duration": {
+    fallback: (componentKind) => `--${componentKind}-motion-duration`,
+    token: "--button-motion-duration"
+  },
   "component.button.paddingBlock": {
     fallback: (componentKind) => `--${componentKind}-density`,
     token: "--button-density"
@@ -52,6 +56,10 @@ const tokenPathMap = {
     token: "--button-density"
   },
   "component.button.state.focus.ring": "--state-focus-ring",
+  "component.input.motion.duration": {
+    fallback: (componentKind) => `--${componentKind}-motion-duration`,
+    token: "--input-motion-duration"
+  },
   "component.input.paddingBlock": {
     fallback: (componentKind) => `--${componentKind}-density`,
     token: "--input-density"

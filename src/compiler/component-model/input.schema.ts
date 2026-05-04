@@ -54,7 +54,7 @@ export const inputSchema = {
     {
       slot: "root",
       target: "transitionDuration",
-      token: "motion.duration.fast"
+      token: "component.input.motion.duration"
     },
     {
       slot: "root",
