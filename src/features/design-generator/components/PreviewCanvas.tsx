@@ -1,7 +1,10 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { Layers, MousePointer2, Wand2 } from "lucide-react";
 import { buttonSchema } from "../../../compiler/component-model/button.schema";
-import type { ResolvedComponentBinding } from "../../../compiler/component-model/component.types";
+import type {
+  ComponentStateName,
+  ResolvedComponentBinding
+} from "../../../compiler/component-model/component.types";
 import { resolveComponent } from "../../../compiler/component-model/resolveComponent";
 import { createTokenResolver } from "../../../compiler/component-model/tokenResolver";
 import type { DesignState } from "../types";
@@ -11,14 +14,27 @@ type PreviewCanvasProps = {
   state: DesignState;
 };
 
+const previewStates: ComponentStateName[] = [
+  "default",
+  "hover",
+  "active",
+  "focus",
+  "disabled"
+];
+
 function toCssProperty(target: ResolvedComponentBinding["target"]) {
   switch (target) {
     case "background":
     case "borderRadius":
+    case "boxShadow":
     case "color":
     case "gap":
+    case "height":
+    case "opacity":
     case "paddingBlock":
     case "paddingInline":
+    case "transitionDuration":
+    case "transitionTimingFunction":
       return target;
     default:
       return undefined;
@@ -41,12 +57,34 @@ function createSlotStyle(bindings: ResolvedComponentBinding[]) {
 }
 
 export function PreviewCanvas({ state }: PreviewCanvasProps) {
+  const [uiState, setUiState] = useState<ComponentStateName>("default");
   const tokens = useDesignTokens(state);
-  const tokenResolver = createTokenResolver(tokens);
-  const resolved = resolveComponent(buttonSchema, tokenResolver, {
-    intent: "primary",
-    size: "md",
-    state: "default"
+  const tokenResolver = createTokenResolver(tokens, state.component.kind);
+  const previewTokenResolver = {
+    get(path: string) {
+      if (path === "semantic.state.active.opacity") {
+        return "0.8";
+      }
+
+      if (path === "semantic.state.disabled.opacity") {
+        return "0.48";
+      }
+
+      if (path === "semantic.state.focus.ring") {
+        return "0 0 0 3px rgba(47, 125, 105, 0.35)";
+      }
+
+      if (path === "semantic.state.hover.background") {
+        return "#3168b7";
+      }
+
+      return tokenResolver.get(path);
+    }
+  };
+  const resolved = resolveComponent(buttonSchema, previewTokenResolver, {
+    intent: "secondary",
+    size: "sm",
+    state: uiState
   });
   const bindingsBySlot = resolved.bindings.reduce<
     Record<string, ResolvedComponentBinding[]>
@@ -108,6 +146,17 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
             Reusable
           </span>
         </div>
+      </div>
+      <div>
+        {previewStates.map((stateName) => (
+          <button
+            key={stateName}
+            onClick={() => setUiState(stateName)}
+            type="button"
+          >
+            {stateName}
+          </button>
+        ))}
       </div>
       <button style={rootStyleWithLayout}>
         {hasIconSlot ? <span style={iconStyle}>{"\u2022"}</span> : null}

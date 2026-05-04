@@ -109,6 +109,30 @@ export const buttonSchema = {
     },
     {
       conditions: {
+        state: "hover"
+      },
+      slot: "root",
+      target: "background",
+      token: "semantic.state.hover.background"
+    },
+    {
+      conditions: {
+        state: "active"
+      },
+      slot: "root",
+      target: "opacity",
+      token: "semantic.state.active.opacity"
+    },
+    {
+      conditions: {
+        state: "focus"
+      },
+      slot: "root",
+      target: "boxShadow",
+      token: "semantic.state.focus.ring"
+    },
+    {
+      conditions: {
         intent: "secondary"
       },
       slot: "root",
@@ -130,14 +154,6 @@ export const buttonSchema = {
       slot: "root",
       target: "paddingInline",
       token: "component.button.state.active.paddingInline"
-    },
-    {
-      conditions: {
-        state: "focus"
-      },
-      slot: "root",
-      target: "boxShadow",
-      token: "component.button.state.focus.ring"
     },
     {
       conditions: {
