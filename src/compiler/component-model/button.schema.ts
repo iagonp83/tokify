@@ -52,6 +52,11 @@ export const buttonSchema = {
     },
     {
       slot: "root",
+      target: "boxShadow",
+      token: "component.button.elevation"
+    },
+    {
+      slot: "root",
       target: "paddingBlock",
       token: "component.button.paddingBlock"
     },
@@ -65,24 +70,24 @@ export const buttonSchema = {
         size: "sm"
       },
       slot: "root",
-      target: "height",
-      token: "component.button.size.sm.height"
+      target: "paddingBlock",
+      token: "component.button.size.sm.paddingBlock"
     },
     {
       conditions: {
         size: "md"
       },
       slot: "root",
-      target: "height",
-      token: "component.button.size.md.height"
+      target: "paddingBlock",
+      token: "component.button.size.md.paddingBlock"
     },
     {
       conditions: {
         size: "lg"
       },
       slot: "root",
-      target: "height",
-      token: "component.button.size.lg.height"
+      target: "paddingBlock",
+      token: "component.button.size.lg.paddingBlock"
     },
     {
       conditions: {
@@ -101,6 +106,46 @@ export const buttonSchema = {
       slot: "root",
       target: "transitionTimingFunction",
       token: "motion.ease.standard"
+    },
+    {
+      conditions: {
+        intent: "secondary"
+      },
+      slot: "root",
+      target: "borderRadius",
+      token: "component.button.intent.secondary.radius"
+    },
+    {
+      conditions: {
+        state: "hover"
+      },
+      slot: "root",
+      target: "borderRadius",
+      token: "component.button.state.hover.radius"
+    },
+    {
+      conditions: {
+        state: "active"
+      },
+      slot: "root",
+      target: "paddingInline",
+      token: "component.button.state.active.paddingInline"
+    },
+    {
+      conditions: {
+        state: "focus"
+      },
+      slot: "root",
+      target: "boxShadow",
+      token: "component.button.state.focus.ring"
+    },
+    {
+      conditions: {
+        state: "focus"
+      },
+      slot: "root",
+      target: "paddingBlock",
+      token: "component.button.state.focus.paddingBlock"
     }
   ],
   variants: [
