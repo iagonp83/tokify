@@ -7,33 +7,63 @@ export type TokenResolver = {
 
 type TokenMapEntry =
   | keyof DesignTokens
-  | ((componentKind: ComponentKind) => string);
+  | ((componentKind: ComponentKind) => string)
+  | {
+      fallback: (componentKind: ComponentKind) => string;
+      token: keyof DesignTokens;
+    };
 
 const tokenPathMap = {
   "component.button.intent.primary.background": "--color-accent",
-  "component.button.elevation": (componentKind) =>
-    `--${componentKind}-elevation`,
-  "component.button.paddingBlock": (componentKind) =>
-    `--${componentKind}-density`,
-  "component.button.paddingInline": (componentKind) =>
-    `--${componentKind}-density`,
-  "component.button.radius": (componentKind) => `--${componentKind}-radius`,
-  "component.button.size.lg.paddingBlock": (componentKind) =>
-    `--${componentKind}-density`,
-  "component.button.size.md.paddingBlock": (componentKind) =>
-    `--${componentKind}-density`,
-  "component.button.size.sm.paddingBlock": (componentKind) =>
-    `--${componentKind}-density`,
-  "component.button.state.active.paddingInline": (componentKind) =>
-    `--${componentKind}-density`,
-  "component.button.state.focus.paddingBlock": (componentKind) =>
-    `--${componentKind}-density`,
+  "component.button.elevation": {
+    fallback: (componentKind) => `--${componentKind}-elevation`,
+    token: "--button-elevation"
+  },
+  "component.button.paddingBlock": {
+    fallback: (componentKind) => `--${componentKind}-density`,
+    token: "--button-density"
+  },
+  "component.button.paddingInline": {
+    fallback: (componentKind) => `--${componentKind}-density`,
+    token: "--button-density"
+  },
+  "component.button.radius": {
+    fallback: (componentKind) => `--${componentKind}-radius`,
+    token: "--button-radius"
+  },
+  "component.button.size.lg.paddingBlock": {
+    fallback: (componentKind) => `--${componentKind}-density`,
+    token: "--button-density"
+  },
+  "component.button.size.md.paddingBlock": {
+    fallback: (componentKind) => `--${componentKind}-density`,
+    token: "--button-density"
+  },
+  "component.button.size.sm.paddingBlock": {
+    fallback: (componentKind) => `--${componentKind}-density`,
+    token: "--button-density"
+  },
+  "component.button.state.active.paddingInline": {
+    fallback: (componentKind) => `--${componentKind}-density`,
+    token: "--button-density"
+  },
+  "component.button.state.focus.paddingBlock": {
+    fallback: (componentKind) => `--${componentKind}-density`,
+    token: "--button-density"
+  },
   "component.button.state.focus.ring": "--state-focus-ring",
-  "component.input.paddingBlock": (componentKind) =>
-    `--${componentKind}-density`,
-  "component.input.paddingInline": (componentKind) =>
-    `--${componentKind}-density`,
-  "component.input.radius": (componentKind) => `--${componentKind}-radius`,
+  "component.input.paddingBlock": {
+    fallback: (componentKind) => `--${componentKind}-density`,
+    token: "--input-density"
+  },
+  "component.input.paddingInline": {
+    fallback: (componentKind) => `--${componentKind}-density`,
+    token: "--input-density"
+  },
+  "component.input.radius": {
+    fallback: (componentKind) => `--${componentKind}-radius`,
+    token: "--input-radius"
+  },
   "motion.delay.none": "--motion-delay",
   "motion.duration.fast": (componentKind) =>
     `--${componentKind}-motion-duration`,
@@ -64,8 +94,19 @@ export function createTokenResolver(
       const tokenName =
         typeof tokenMapEntry === "function"
           ? tokenMapEntry(componentKind)
-          : tokenMapEntry;
+          : typeof tokenMapEntry === "object"
+            ? tokenMapEntry.token
+            : tokenMapEntry;
       const value = tokens[tokenName];
+
+      if (value === undefined && typeof tokenMapEntry === "object") {
+        const fallbackTokenName = tokenMapEntry.fallback(componentKind);
+        const fallbackValue = tokens[fallbackTokenName];
+
+        if (fallbackValue !== undefined) {
+          return fallbackValue;
+        }
+      }
 
       if (value === undefined) {
         throw new Error(
