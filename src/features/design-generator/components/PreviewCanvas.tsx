@@ -58,8 +58,24 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
     {}
   );
   const rootStyle = createSlotStyle(bindingsBySlot.root ?? []);
-  const labelStyle = createSlotStyle(bindingsBySlot.label ?? []);
-  const iconStyle = createSlotStyle(bindingsBySlot.icon ?? []);
+  const rootStyleWithLayout: CSSProperties = {
+    ...rootStyle,
+    alignItems: "center",
+    color:
+      rootStyle.color === rootStyle.background ? undefined : rootStyle.color,
+    display: "inline-flex",
+    gap: rootStyle.gap ?? "8px",
+    justifyContent: "center"
+  };
+  const labelStyle: CSSProperties = {
+    ...createSlotStyle(bindingsBySlot.label ?? []),
+    opacity: 1,
+    outline: "1px solid red"
+  };
+  const iconStyle: CSSProperties = {
+    ...createSlotStyle(bindingsBySlot.icon ?? []),
+    outline: "1px solid blue"
+  };
   const hasIconSlot = resolved.schema.slots.some((slot) => slot.name === "icon");
 
   return (
@@ -93,7 +109,7 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
           </span>
         </div>
       </div>
-      <button style={rootStyle}>
+      <button style={rootStyleWithLayout}>
         {hasIconSlot ? <span style={iconStyle}>{"\u2022"}</span> : null}
         <span style={labelStyle}>Button</span>
       </button>
