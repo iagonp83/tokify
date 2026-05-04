@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { Layers, MousePointer2, Wand2 } from "lucide-react";
 import { buttonSchema } from "../../../compiler/component-model/button.schema";
+import type { ResolvedComponentBinding } from "../../../compiler/component-model/component.types";
 import { resolveComponent } from "../../../compiler/component-model/resolveComponent";
 import { createTokenResolver } from "../../../compiler/component-model/tokenResolver";
 import type { DesignState } from "../types";
@@ -10,6 +11,35 @@ type PreviewCanvasProps = {
   state: DesignState;
 };
 
+function toCssProperty(target: ResolvedComponentBinding["target"]) {
+  switch (target) {
+    case "background":
+    case "borderRadius":
+    case "color":
+    case "gap":
+    case "paddingBlock":
+    case "paddingInline":
+      return target;
+    default:
+      return undefined;
+  }
+}
+
+function createSlotStyle(bindings: ResolvedComponentBinding[]) {
+  return bindings.reduce<CSSProperties>((styleObject, binding) => {
+    const cssProperty = toCssProperty(binding.target);
+
+    if (!cssProperty) {
+      return styleObject;
+    }
+
+    return {
+      ...styleObject,
+      [cssProperty]: binding.value
+    };
+  }, {});
+}
+
 export function PreviewCanvas({ state }: PreviewCanvasProps) {
   const tokens = useDesignTokens(state);
   const tokenResolver = createTokenResolver(tokens);
@@ -18,13 +48,19 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
     size: "md",
     state: "default"
   });
-  const buttonStyle = resolved.bindings.reduce<CSSProperties>(
-    (styleObject, binding) => ({
-      ...styleObject,
-      [binding.target]: binding.value
+  const bindingsBySlot = resolved.bindings.reduce<
+    Record<string, ResolvedComponentBinding[]>
+  >(
+    (slots, binding) => ({
+      ...slots,
+      [binding.slot]: [...(slots[binding.slot] ?? []), binding]
     }),
     {}
   );
+  const rootStyle = createSlotStyle(bindingsBySlot.root ?? []);
+  const labelStyle = createSlotStyle(bindingsBySlot.label ?? []);
+  const iconStyle = createSlotStyle(bindingsBySlot.icon ?? []);
+  const hasIconSlot = resolved.schema.slots.some((slot) => slot.name === "icon");
 
   return (
     <div className="preview-canvas">
@@ -57,7 +93,10 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
           </span>
         </div>
       </div>
-      <button style={buttonStyle}>Button</button>
+      <button style={rootStyle}>
+        {hasIconSlot ? <span style={iconStyle}>{"\u2022"}</span> : null}
+        <span style={labelStyle}>Button</span>
+      </button>
     </div>
   );
 }
