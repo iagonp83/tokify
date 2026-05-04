@@ -6,6 +6,7 @@ export type ComponentState = {
 
 export type ColorState = {
   accent: string;
+  onAccent?: string;
 };
 
 export type LayoutState = {

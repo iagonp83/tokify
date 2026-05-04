@@ -146,6 +146,7 @@ Current token shape is CSS-variable oriented:
 ```ts
 {
   "--color-accent": "...",
+  "--color-on-accent": "...",
   "--layout-radius": "...",
   "--layout-density": "...",
   "--layout-elevation": "...",
@@ -224,6 +225,7 @@ Example mappings:
 
 ```ts
 semantic.color.accent -> --color-accent
+semantic.color.onAccent -> --color-on-accent
 semantic.state.hover.background -> --state-hover-background
 semantic.state.active.opacity -> --state-active-opacity
 semantic.state.focus.ring -> --state-focus-ring
@@ -254,9 +256,8 @@ component.button.state.focus.paddingBlock -> --layout-radius
 component.button.state.focus.ring -> --layout-elevation
 ```
 
-`semantic.color.onAccent` currently maps to `--color-accent`. This preserves
-current behavior but should become a dedicated foreground token in a later
-safe correction.
+`semantic.color.onAccent` maps to `--color-on-accent`, which defaults to
+`#ffffff` when older state or imported JSON does not provide it.
 
 If a path is not mapped, the resolver throws a clear error.
 

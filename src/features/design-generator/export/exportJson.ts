@@ -19,6 +19,7 @@ export type ExportedDesignTokens = {
   global: {
     color: {
       accent: string;
+      onAccent: string;
     };
     layout: {
       density: string;
@@ -40,7 +41,8 @@ export function exportJson(tokens: DesignTokens): ExportedDesignTokens {
   return {
     global: {
       color: {
-        accent: tokens["--color-accent"]
+        accent: tokens["--color-accent"],
+        onAccent: tokens["--color-on-accent"]
       },
       layout: {
         density: tokens["--layout-density"],

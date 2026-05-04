@@ -2,7 +2,8 @@ import type { DesignPreset, DesignState } from "./types";
 
 export const initialDesignState: DesignState = {
   color: {
-    accent: "#2f7d69"
+    accent: "#2f7d69",
+    onAccent: "#ffffff"
   },
   component: {
     kind: "card"

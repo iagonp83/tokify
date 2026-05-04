@@ -31,7 +31,7 @@ const tokenPathMap = {
   "motion.ease.standard": "--motion-ease",
   "motion.transition.property": "--motion-transition-property",
   "semantic.color.accent": "--color-accent",
-  "semantic.color.onAccent": "--color-accent",
+  "semantic.color.onAccent": "--color-on-accent",
   "semantic.state.active.opacity": "--state-active-opacity",
   "semantic.state.disabled.opacity": "--state-disabled-opacity",
   "semantic.state.focus.ring": "--state-focus-ring",

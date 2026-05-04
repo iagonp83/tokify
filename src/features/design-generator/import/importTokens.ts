@@ -11,6 +11,7 @@ import type {
 type TokenGroup = {
   color?: {
     accent?: unknown;
+    onAccent?: unknown;
   };
   layout?: {
     density?: unknown;
@@ -48,6 +49,11 @@ export function parseDesignState(input: unknown): DesignState {
       globalTokens.color?.accent,
       initialDesignState.color.accent,
       "global.color.accent"
+    ),
+    onAccent: readString(
+      globalTokens.color?.onAccent,
+      initialDesignState.color.onAccent ?? "#ffffff",
+      "global.color.onAccent"
     )
   };
   const layout = readLayout(globalTokens.layout, initialDesignState.layout, "global");

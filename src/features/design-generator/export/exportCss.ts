@@ -3,6 +3,7 @@ import { componentKinds } from "../tokens/componentTokens";
 
 const globalTokenOrder = [
   "--color-accent",
+  "--color-on-accent",
   "--layout-radius",
   "--layout-density",
   "--layout-elevation",

@@ -42,6 +42,7 @@ components. In the current state model, these are represented by:
 Current global CSS variables include examples such as:
 
 - `--color-accent`
+- `--color-on-accent`
 - `--layout-radius`
 - `--layout-density`
 - `--layout-elevation`
@@ -229,13 +230,12 @@ paths, but they are not yet fully modeled as a JSON `state` token group.
 This should be addressed as an additive export/import enhancement in a later
 change.
 
-### `semantic.color.onAccent` Lacks A Dedicated Token
+### `semantic.color.onAccent` Uses A Dedicated Token
 
-`semantic.color.onAccent` currently maps to `--color-accent`.
+`semantic.color.onAccent` maps to `--color-on-accent`.
 
-This preserves current behavior but is not semantically correct because
-foreground-on-accent and accent background should be independently addressable.
+This keeps foreground-on-accent and accent background independently
+addressable.
 
-A future safe correction should introduce a dedicated foreground token, such as
-`--color-on-accent`, with backward-compatible defaults.
-
+Older state and imported JSON that do not provide `onAccent` fall back to the
+safe default `#ffffff`.
