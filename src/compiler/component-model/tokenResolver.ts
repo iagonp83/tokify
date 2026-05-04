@@ -33,7 +33,11 @@ const tokenPathMap = {
     `--${componentKind}-motion-duration`,
   "motion.ease.standard": "--motion-ease",
   "semantic.color.accent": "--color-accent",
-  "semantic.color.onAccent": "--color-accent"
+  "semantic.color.onAccent": "--color-accent",
+  "semantic.state.active.opacity": "--state-active-opacity",
+  "semantic.state.disabled.opacity": "--state-disabled-opacity",
+  "semantic.state.focus.ring": "--state-focus-ring",
+  "semantic.state.hover.background": "--state-hover-background"
 } satisfies Record<string, TokenMapEntry>;
 
 export type TokenPath = keyof typeof tokenPathMap;

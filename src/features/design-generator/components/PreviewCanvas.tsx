@@ -60,28 +60,7 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
   const [uiState, setUiState] = useState<ComponentStateName>("default");
   const tokens = useDesignTokens(state);
   const tokenResolver = createTokenResolver(tokens, state.component.kind);
-  const previewTokenResolver = {
-    get(path: string) {
-      if (path === "semantic.state.active.opacity") {
-        return "0.8";
-      }
-
-      if (path === "semantic.state.disabled.opacity") {
-        return "0.48";
-      }
-
-      if (path === "semantic.state.focus.ring") {
-        return "0 0 0 3px rgba(47, 125, 105, 0.35)";
-      }
-
-      if (path === "semantic.state.hover.background") {
-        return "#3168b7";
-      }
-
-      return tokenResolver.get(path);
-    }
-  };
-  const resolved = resolveComponent(buttonSchema, previewTokenResolver, {
+  const resolved = resolveComponent(buttonSchema, tokenResolver, {
     intent: "secondary",
     size: "sm",
     state: uiState

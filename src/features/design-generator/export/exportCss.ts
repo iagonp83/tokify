@@ -10,7 +10,11 @@ const globalTokenOrder = [
   "--motion-ease",
   "--motion-distance",
   "--motion-delay",
-  "--motion-stagger"
+  "--motion-stagger",
+  "--state-hover-background",
+  "--state-active-opacity",
+  "--state-focus-ring",
+  "--state-disabled-opacity"
 ] as const;
 
 export function exportCss(tokens: DesignTokens) {
