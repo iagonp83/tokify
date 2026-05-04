@@ -1,7 +1,9 @@
 import type { DesignTokens } from "../useDesignTokens";
 import { componentKinds, formatElevation } from "../tokens/componentTokens";
 import type {
+  AuthoredComponentNamespace,
   ComponentKind,
+  ComponentNamespace,
   ComponentTokenOverrides,
   DesignState
 } from "../types";
@@ -31,7 +33,7 @@ export type ExportedDesignTokens = {
       };
     }
   >;
-  overrides: Partial<Record<ComponentKind, ExportedComponentOverride>>;
+  overrides: Partial<Record<ComponentNamespace, ExportedComponentOverride>>;
   global: {
     color: {
       accent: string;
@@ -58,6 +60,11 @@ export type ExportedDesignTokens = {
       };
   };
 };
+
+const authoredComponentNamespaces: AuthoredComponentNamespace[] = [
+  "button",
+  "input"
+];
 
 export function exportJson(
   tokens: DesignTokens,
@@ -116,7 +123,9 @@ function exportComponentOverrides(
     return {};
   }
 
-  return componentKinds.reduce<ExportedDesignTokens["overrides"]>(
+  const componentOverrides = componentKinds.reduce<
+    ExportedDesignTokens["overrides"]
+  >(
     (overrides, componentKind) => {
       const componentOverride = exportComponentOverride(
         componentTokens[componentKind]
@@ -132,6 +141,24 @@ function exportComponentOverrides(
       };
     },
     {}
+  );
+
+  return authoredComponentNamespaces.reduce<ExportedDesignTokens["overrides"]>(
+    (overrides, namespace) => {
+      const componentOverride = exportComponentOverride(
+        componentTokens[namespace]
+      );
+
+      if (!componentOverride) {
+        return overrides;
+      }
+
+      return {
+        ...overrides,
+        [namespace]: componentOverride
+      };
+    },
+    componentOverrides
   );
 }
 
