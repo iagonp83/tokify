@@ -143,22 +143,6 @@ export const buttonSchema = {
     },
     {
       conditions: {
-        intent: "secondary"
-      },
-      slot: "root",
-      target: "borderRadius",
-      token: "component.button.intent.secondary.radius"
-    },
-    {
-      conditions: {
-        state: "hover"
-      },
-      slot: "root",
-      target: "borderRadius",
-      token: "component.button.state.hover.radius"
-    },
-    {
-      conditions: {
         state: "active"
       },
       slot: "root",

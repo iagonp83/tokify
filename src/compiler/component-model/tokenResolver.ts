@@ -13,8 +13,6 @@ const tokenPathMap = {
   "component.button.intent.primary.background": "--color-accent",
   "component.button.elevation": (componentKind) =>
     `--${componentKind}-elevation`,
-  "component.button.intent.secondary.radius": (componentKind) =>
-    `--${componentKind}-density`,
   "component.button.paddingBlock": (componentKind) =>
     `--${componentKind}-density`,
   "component.button.paddingInline": (componentKind) =>
@@ -27,8 +25,6 @@ const tokenPathMap = {
   "component.button.state.active.paddingInline": "--layout-radius",
   "component.button.state.focus.paddingBlock": "--layout-radius",
   "component.button.state.focus.ring": "--layout-elevation",
-  "component.button.state.hover.radius": (componentKind) =>
-    `--${componentKind}-density`,
   "motion.delay.none": "--motion-delay",
   "motion.duration.fast": (componentKind) =>
     `--${componentKind}-motion-duration`,
