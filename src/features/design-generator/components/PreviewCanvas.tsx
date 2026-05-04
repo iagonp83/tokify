@@ -1,11 +1,31 @@
+import type { CSSProperties } from "react";
 import { Layers, MousePointer2, Wand2 } from "lucide-react";
+import { buttonSchema } from "../../../compiler/component-model/button.schema";
+import { resolveComponent } from "../../../compiler/component-model/resolveComponent";
+import { createTokenResolver } from "../../../compiler/component-model/tokenResolver";
 import type { DesignState } from "../types";
+import { useDesignTokens } from "../useDesignTokens";
 
 type PreviewCanvasProps = {
   state: DesignState;
 };
 
 export function PreviewCanvas({ state }: PreviewCanvasProps) {
+  const tokens = useDesignTokens(state);
+  const tokenResolver = createTokenResolver(tokens);
+  const resolved = resolveComponent(buttonSchema, tokenResolver, {
+    intent: "primary",
+    size: "md",
+    state: "default"
+  });
+  const buttonStyle = resolved.bindings.reduce<CSSProperties>(
+    (styleObject, binding) => ({
+      ...styleObject,
+      [binding.target]: binding.value
+    }),
+    {}
+  );
+
   return (
     <div className="preview-canvas">
       <div
@@ -37,6 +57,7 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
           </span>
         </div>
       </div>
+      <button style={buttonStyle}>Button</button>
     </div>
   );
 }
