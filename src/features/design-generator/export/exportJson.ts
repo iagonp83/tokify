@@ -21,6 +21,12 @@ export type ExportedDesignTokens = {
       accent: string;
       onAccent: string;
     };
+    state: {
+      activeOpacity: string;
+      disabledOpacity: string;
+      focusRing: string;
+      hoverBackground: string;
+    };
     layout: {
       density: string;
       elevation: string;
@@ -43,6 +49,12 @@ export function exportJson(tokens: DesignTokens): ExportedDesignTokens {
       color: {
         accent: tokens["--color-accent"],
         onAccent: tokens["--color-on-accent"]
+      },
+      state: {
+        activeOpacity: tokens["--state-active-opacity"],
+        disabledOpacity: tokens["--state-disabled-opacity"],
+        focusRing: tokens["--state-focus-ring"],
+        hoverBackground: tokens["--state-hover-background"]
       },
       layout: {
         density: tokens["--layout-density"],

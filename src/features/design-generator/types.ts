@@ -24,6 +24,13 @@ export type MotionState = {
   stagger: number;
 };
 
+export type StateTokensState = {
+  activeOpacity: string;
+  disabledOpacity: string;
+  focusRing: string;
+  hoverBackground: string;
+};
+
 export type DesignPreset = {
   id: string;
   label: string;
@@ -32,6 +39,7 @@ export type DesignPreset = {
     color?: Partial<ColorState>;
     layout?: Partial<LayoutState>;
     motion?: Partial<MotionState>;
+    state?: Partial<StateTokensState>;
   };
 };
 
@@ -51,6 +59,7 @@ export type DesignState = {
   componentTokens: ComponentTokensState;
   layout: LayoutState;
   motion: MotionState;
+  state?: Partial<StateTokensState>;
 };
 
 export type ComponentTokenOverrides = {

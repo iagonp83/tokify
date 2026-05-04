@@ -14,7 +14,7 @@ export type DesignTokenStyle = CSSProperties & DesignTokens;
 
 export function useDesignTokens(state: DesignState): DesignTokenStyle {
   return {
-    ...createColorTokens(state.color),
+    ...createColorTokens(state.color, state.state),
     ...createLayoutTokens(state.layout),
     ...createMotionTokens(state.motion),
     ...createComponentTokens(state)

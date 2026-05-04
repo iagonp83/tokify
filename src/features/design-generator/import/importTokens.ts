@@ -5,7 +5,8 @@ import type {
   ComponentTokenOverrides,
   DesignState,
   LayoutState,
-  MotionState
+  MotionState,
+  StateTokensState
 } from "../types";
 
 type TokenGroup = {
@@ -24,6 +25,12 @@ type TokenGroup = {
     duration?: unknown;
     ease?: unknown;
     stagger?: unknown;
+  };
+  state?: {
+    activeOpacity?: unknown;
+    disabledOpacity?: unknown;
+    focusRing?: unknown;
+    hoverBackground?: unknown;
   };
 };
 
@@ -58,12 +65,14 @@ export function parseDesignState(input: unknown): DesignState {
   };
   const layout = readLayout(globalTokens.layout, initialDesignState.layout, "global");
   const motion = readMotion(globalTokens.motion, initialDesignState.motion, "global");
+  const state = readState(globalTokens.state, "global");
 
   return {
     ...initialDesignState,
     color,
     layout,
     motion,
+    state,
     componentTokens: readComponentTokens(payload.components, layout, motion)
   };
 }
@@ -152,6 +161,51 @@ function readMotion(
       "ms"
     )
   };
+}
+
+function readState(
+  state: TokenGroup["state"],
+  path: string
+): Partial<StateTokensState> | undefined {
+  if (!state) {
+    return undefined;
+  }
+
+  const parsedState: Partial<StateTokensState> = {};
+
+  if (state.activeOpacity !== undefined) {
+    parsedState.activeOpacity = readString(
+      state.activeOpacity,
+      "0.8",
+      `${path}.state.activeOpacity`
+    );
+  }
+
+  if (state.disabledOpacity !== undefined) {
+    parsedState.disabledOpacity = readString(
+      state.disabledOpacity,
+      "0.48",
+      `${path}.state.disabledOpacity`
+    );
+  }
+
+  if (state.focusRing !== undefined) {
+    parsedState.focusRing = readString(
+      state.focusRing,
+      "",
+      `${path}.state.focusRing`
+    );
+  }
+
+  if (state.hoverBackground !== undefined) {
+    parsedState.hoverBackground = readString(
+      state.hoverBackground,
+      "",
+      `${path}.state.hoverBackground`
+    );
+  }
+
+  return parsedState;
 }
 
 function readString(value: unknown, fallback: string, fieldName: string) {

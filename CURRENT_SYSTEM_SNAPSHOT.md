@@ -167,8 +167,9 @@ State tokens are now part of the real token engine:
 - `--state-focus-ring`
 - `--state-disabled-opacity`
 
-These state tokens exist at runtime and in CSS export, but they are not yet
-fully modeled as a JSON `state` token group.
+These state tokens exist at runtime, in CSS export, and in JSON export under
+`global.state`. JSON import accepts `global.state` additively and falls back to
+the existing generated state token values when the group is missing.
 
 Component Model token bindings use semantic string paths:
 
