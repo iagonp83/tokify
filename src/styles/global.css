@@ -218,6 +218,17 @@ button {
   accent-color: var(--color-accent);
 }
 
+.slider-with-source {
+  display: grid;
+  gap: 4px;
+}
+
+.slider-source {
+  margin: -4px 0 0;
+  color: #687169;
+  font-size: 0.78rem;
+}
+
 .component-override-status {
   display: grid;
   gap: 8px;

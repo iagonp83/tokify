@@ -84,6 +84,11 @@ export function DesignGenerator() {
     designState,
     editingNamespace
   );
+  const sliderSourceLabel = isEditingAuthoredNamespace
+    ? hasEditingNamespaceOverride
+      ? "custom override"
+      : `from ${designState.component.kind}`
+    : undefined;
   const tokens = useDesignTokens(designState);
 
   useEffect(() => {
@@ -300,64 +305,84 @@ export function DesignGenerator() {
               />
             ))}
           </div>
-          <SliderField
-            label="Radio"
-            max={22}
-            min={2}
-            onChange={(value) =>
-              setDesignState((current) =>
-                updateComponentNamespaceTokens(current, editingNamespace, {
-                  layout: { radius: value }
-                })
-              )
-            }
-            suffix="px"
-            value={editingNamespaceTokens.layout.radius}
-          />
-          <SliderField
-            label="Densidad"
-            max={72}
-            min={36}
-            onChange={(value) =>
-              setDesignState((current) =>
-                updateComponentNamespaceTokens(current, editingNamespace, {
-                  layout: { density: value }
-                })
-              )
-            }
-            suffix="px"
-            value={editingNamespaceTokens.layout.density}
-          />
-          {editingNamespace === "input" ? null : (
+          <div className="slider-with-source">
             <SliderField
-              label="Elevacion"
-              max={60}
-              min={0}
+              label="Radio"
+              max={22}
+              min={2}
               onChange={(value) =>
                 setDesignState((current) =>
                   updateComponentNamespaceTokens(current, editingNamespace, {
-                    layout: { elevation: value }
+                    layout: { radius: value }
                   })
                 )
               }
-              value={editingNamespaceTokens.layout.elevation}
+              suffix="px"
+              value={editingNamespaceTokens.layout.radius}
             />
+            {sliderSourceLabel ? (
+              <p className="slider-source">{sliderSourceLabel}</p>
+            ) : null}
+          </div>
+          <div className="slider-with-source">
+            <SliderField
+              label="Densidad"
+              max={72}
+              min={36}
+              onChange={(value) =>
+                setDesignState((current) =>
+                  updateComponentNamespaceTokens(current, editingNamespace, {
+                    layout: { density: value }
+                  })
+                )
+              }
+              suffix="px"
+              value={editingNamespaceTokens.layout.density}
+            />
+            {sliderSourceLabel ? (
+              <p className="slider-source">{sliderSourceLabel}</p>
+            ) : null}
+          </div>
+          {editingNamespace === "input" ? null : (
+            <div className="slider-with-source">
+              <SliderField
+                label="Elevacion"
+                max={60}
+                min={0}
+                onChange={(value) =>
+                  setDesignState((current) =>
+                    updateComponentNamespaceTokens(current, editingNamespace, {
+                      layout: { elevation: value }
+                    })
+                  )
+                }
+                value={editingNamespaceTokens.layout.elevation}
+              />
+              {sliderSourceLabel ? (
+                <p className="slider-source">{sliderSourceLabel}</p>
+              ) : null}
+            </div>
           )}
-          <SliderField
-            label="Duracion"
-            max={900}
-            min={160}
-            onChange={(value) =>
-              setDesignState((current) =>
-                updateComponentNamespaceTokens(current, editingNamespace, {
-                  motion: { duration: clamp(value, 160, 900) }
-                })
-              )
-            }
-            step={20}
-            suffix="ms"
-            value={editingNamespaceTokens.motion.duration}
-          />
+          <div className="slider-with-source">
+            <SliderField
+              label="Duracion"
+              max={900}
+              min={160}
+              onChange={(value) =>
+                setDesignState((current) =>
+                  updateComponentNamespaceTokens(current, editingNamespace, {
+                    motion: { duration: clamp(value, 160, 900) }
+                  })
+                )
+              }
+              step={20}
+              suffix="ms"
+              value={editingNamespaceTokens.motion.duration}
+            />
+            {sliderSourceLabel ? (
+              <p className="slider-source">{sliderSourceLabel}</p>
+            ) : null}
+          </div>
         </ControlGroup>
 
         <ControlGroup title="Mis presets">
