@@ -34,6 +34,7 @@ import type {
 } from "./types";
 import {
   hasAuthoredComponentNamespaceOverride,
+  hasComponentFieldOverride,
   resolveComponentNamespaceTokens,
   resetAuthoredComponentNamespaceOverride,
   updateComponentNamespaceTokens
@@ -84,11 +85,23 @@ export function DesignGenerator() {
     designState,
     editingNamespace
   );
-  const sliderSourceLabel = isEditingAuthoredNamespace
-    ? hasEditingNamespaceOverride
+  const getSliderSourceLabel = (
+    group: "layout" | "motion",
+    field: "density" | "duration" | "elevation" | "radius"
+  ) => {
+    if (!isEditingAuthoredNamespace) {
+      return undefined;
+    }
+
+    return hasComponentFieldOverride(
+      designState,
+      editingNamespace,
+      group,
+      field
+    )
       ? "custom override"
-      : `from ${designState.component.kind}`
-    : undefined;
+      : `from ${designState.component.kind}`;
+  };
   const tokens = useDesignTokens(designState);
 
   useEffect(() => {
@@ -320,8 +333,10 @@ export function DesignGenerator() {
               suffix="px"
               value={editingNamespaceTokens.layout.radius}
             />
-            {sliderSourceLabel ? (
-              <p className="slider-source">{sliderSourceLabel}</p>
+            {getSliderSourceLabel("layout", "radius") ? (
+              <p className="slider-source">
+                {getSliderSourceLabel("layout", "radius")}
+              </p>
             ) : null}
           </div>
           <div className="slider-with-source">
@@ -339,8 +354,10 @@ export function DesignGenerator() {
               suffix="px"
               value={editingNamespaceTokens.layout.density}
             />
-            {sliderSourceLabel ? (
-              <p className="slider-source">{sliderSourceLabel}</p>
+            {getSliderSourceLabel("layout", "density") ? (
+              <p className="slider-source">
+                {getSliderSourceLabel("layout", "density")}
+              </p>
             ) : null}
           </div>
           {editingNamespace === "input" ? null : (
@@ -358,8 +375,10 @@ export function DesignGenerator() {
                 }
                 value={editingNamespaceTokens.layout.elevation}
               />
-              {sliderSourceLabel ? (
-                <p className="slider-source">{sliderSourceLabel}</p>
+              {getSliderSourceLabel("layout", "elevation") ? (
+                <p className="slider-source">
+                  {getSliderSourceLabel("layout", "elevation")}
+                </p>
               ) : null}
             </div>
           )}
@@ -379,8 +398,10 @@ export function DesignGenerator() {
               suffix="ms"
               value={editingNamespaceTokens.motion.duration}
             />
-            {sliderSourceLabel ? (
-              <p className="slider-source">{sliderSourceLabel}</p>
+            {getSliderSourceLabel("motion", "duration") ? (
+              <p className="slider-source">
+                {getSliderSourceLabel("motion", "duration")}
+              </p>
             ) : null}
           </div>
         </ControlGroup>
