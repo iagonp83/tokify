@@ -22,6 +22,12 @@ export type ResolvedComponentTokens = {
   motion: MotionState;
 };
 
+type ResolvedMotionDurations = {
+  duration: number;
+  enterDuration: number;
+  exitDuration: number;
+};
+
 type ComponentOverrideGroup = "layout" | "motion";
 type ComponentOverrideField<TGroup extends ComponentOverrideGroup> =
   TGroup extends "layout" ? "density" | "elevation" | "radius" : "duration";
@@ -212,18 +218,25 @@ function resolveAuthoredNamespaceTokens(
 export function createComponentTokens(state: DesignState) {
   const buttonTokens = resolveAuthoredNamespaceTokens(state, "button");
   const inputTokens = resolveAuthoredNamespaceTokens(state, "input");
+  const buttonMotionDurations = resolveMotionDurations(buttonTokens.motion);
+  const inputMotionDurations = resolveMotionDurations(inputTokens.motion);
   const referenceComponentTokens = {
     "--button-density": `${buttonTokens.layout.density}px`,
     "--button-elevation": formatElevation(buttonTokens.layout.elevation),
-    "--button-motion-duration": `${buttonTokens.motion.duration}ms`,
+    "--button-enter-motion-duration": `${buttonMotionDurations.enterDuration}ms`,
+    "--button-exit-motion-duration": `${buttonMotionDurations.exitDuration}ms`,
+    "--button-motion-duration": `${buttonMotionDurations.enterDuration}ms`,
     "--button-radius": `${buttonTokens.layout.radius}px`,
     "--input-density": `${inputTokens.layout.density}px`,
-    "--input-motion-duration": `${inputTokens.motion.duration}ms`,
+    "--input-enter-motion-duration": `${inputMotionDurations.enterDuration}ms`,
+    "--input-exit-motion-duration": `${inputMotionDurations.exitDuration}ms`,
+    "--input-motion-duration": `${inputMotionDurations.enterDuration}ms`,
     "--input-radius": `${inputTokens.layout.radius}px`
   };
 
   return componentKinds.reduce<Record<string, string>>((tokens, componentKind) => {
     const resolvedTokens = resolveComponentTokens(state, componentKind);
+    const motionDurations = resolveMotionDurations(resolvedTokens.motion);
 
     return {
       ...tokens,
@@ -231,10 +244,20 @@ export function createComponentTokens(state: DesignState) {
       [`--${componentKind}-elevation`]: formatElevation(
         resolvedTokens.layout.elevation
       ),
-      [`--${componentKind}-motion-duration`]: `${resolvedTokens.motion.duration}ms`,
+      [`--${componentKind}-enter-motion-duration`]: `${motionDurations.enterDuration}ms`,
+      [`--${componentKind}-exit-motion-duration`]: `${motionDurations.exitDuration}ms`,
+      [`--${componentKind}-motion-duration`]: `${motionDurations.enterDuration}ms`,
       [`--${componentKind}-radius`]: `${resolvedTokens.layout.radius}px`
     };
   }, referenceComponentTokens);
+}
+
+function resolveMotionDurations(motion: MotionState): ResolvedMotionDurations {
+  return {
+    duration: motion.duration,
+    enterDuration: motion.enterDuration ?? motion.duration,
+    exitDuration: motion.exitDuration ?? motion.duration
+  };
 }
 
 export function formatElevation(elevation: number) {

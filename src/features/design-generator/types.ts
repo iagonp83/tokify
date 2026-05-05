@@ -21,6 +21,8 @@ export type MotionState = {
   distance: number;
   duration: number;
   ease: string;
+  enterDuration?: number;
+  exitDuration?: number;
   presetId: string;
   stagger: number;
 };
