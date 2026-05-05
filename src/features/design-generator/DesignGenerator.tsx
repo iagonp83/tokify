@@ -33,8 +33,8 @@ import type {
   UserDesignPreset
 } from "./types";
 import {
-  resolveComponentTokens,
-  updateActiveComponentTokens
+  resolveComponentNamespaceTokens,
+  updateComponentNamespaceTokens
 } from "./tokens/componentTokens";
 import { useDesignTokens } from "./useDesignTokens";
 
@@ -73,9 +73,9 @@ export function DesignGenerator() {
   const [selectedProfileId, setSelectedProfileId] = useState("minimal");
   const [userPresets, setUserPresets] = useState<UserDesignPreset[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const activeComponentTokens = resolveComponentTokens(
+  const editingNamespaceTokens = resolveComponentNamespaceTokens(
     designState,
-    designState.component.kind
+    editingNamespace
   );
   const tokens = useDesignTokens(designState);
 
@@ -270,13 +270,13 @@ export function DesignGenerator() {
             min={2}
             onChange={(value) =>
               setDesignState((current) =>
-                updateActiveComponentTokens(current, {
+                updateComponentNamespaceTokens(current, editingNamespace, {
                   layout: { radius: value }
                 })
               )
             }
             suffix="px"
-            value={activeComponentTokens.layout.radius}
+            value={editingNamespaceTokens.layout.radius}
           />
           <SliderField
             label="Densidad"
@@ -284,41 +284,43 @@ export function DesignGenerator() {
             min={36}
             onChange={(value) =>
               setDesignState((current) =>
-                updateActiveComponentTokens(current, {
+                updateComponentNamespaceTokens(current, editingNamespace, {
                   layout: { density: value }
                 })
               )
             }
             suffix="px"
-            value={activeComponentTokens.layout.density}
+            value={editingNamespaceTokens.layout.density}
           />
-          <SliderField
-            label="Elevacion"
-            max={60}
-            min={0}
-            onChange={(value) =>
-              setDesignState((current) =>
-                updateActiveComponentTokens(current, {
-                  layout: { elevation: value }
-                })
-              )
-            }
-            value={activeComponentTokens.layout.elevation}
-          />
+          {editingNamespace === "input" ? null : (
+            <SliderField
+              label="Elevacion"
+              max={60}
+              min={0}
+              onChange={(value) =>
+                setDesignState((current) =>
+                  updateComponentNamespaceTokens(current, editingNamespace, {
+                    layout: { elevation: value }
+                  })
+                )
+              }
+              value={editingNamespaceTokens.layout.elevation}
+            />
+          )}
           <SliderField
             label="Duracion"
             max={900}
             min={160}
             onChange={(value) =>
               setDesignState((current) =>
-                updateActiveComponentTokens(current, {
+                updateComponentNamespaceTokens(current, editingNamespace, {
                   motion: { duration: clamp(value, 160, 900) }
                 })
               )
             }
             step={20}
             suffix="ms"
-            value={activeComponentTokens.motion.duration}
+            value={editingNamespaceTokens.motion.duration}
           />
         </ControlGroup>
 
