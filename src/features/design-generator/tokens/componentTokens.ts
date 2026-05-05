@@ -30,14 +30,21 @@ export function updateActiveComponentTokens(
   state: DesignState,
   patch: ComponentTokenOverrides
 ): DesignState {
-  const activeKind = state.component.kind;
-  const currentTokens = getActiveComponentTokens(state);
+  return updateComponentNamespaceTokens(state, state.component.kind, patch);
+}
+
+export function updateComponentNamespaceTokens(
+  state: DesignState,
+  namespace: ComponentNamespace,
+  patch: ComponentTokenOverrides
+): DesignState {
+  const currentTokens = state.componentTokens?.[namespace] ?? {};
 
   return {
     ...state,
     componentTokens: {
       ...state.componentTokens,
-      [activeKind]: {
+      [namespace]: {
         layout: {
           ...currentTokens.layout,
           ...patch.layout
@@ -66,6 +73,47 @@ export function resolveComponentTokens(
       ...state.motion,
       ...overrides.motion
     }
+  };
+}
+
+export function resolveComponentNamespaceTokens(
+  state: DesignState,
+  namespace: ComponentNamespace
+): ResolvedComponentTokens {
+  if (isAuthoredComponentNamespace(namespace)) {
+    return resolveAuthoredNamespaceTokens(state, namespace);
+  }
+
+  return resolveComponentTokens(state, namespace);
+}
+
+export function hasAuthoredComponentNamespaceOverride(
+  state: DesignState,
+  namespace: ComponentNamespace
+): boolean {
+  if (!isAuthoredComponentNamespace(namespace)) {
+    return false;
+  }
+
+  const override = state.componentTokens?.[namespace];
+
+  return Boolean(override?.layout || override?.motion);
+}
+
+export function resetAuthoredComponentNamespaceOverride(
+  state: DesignState,
+  namespace: ComponentNamespace
+): DesignState {
+  if (!isAuthoredComponentNamespace(namespace)) {
+    return state;
+  }
+
+  const { [namespace]: _removedOverride, ...componentTokens } =
+    state.componentTokens;
+
+  return {
+    ...state,
+    componentTokens
   };
 }
 
@@ -123,4 +171,10 @@ export function formatElevation(elevation: number) {
   return `0 ${Math.round(elevation / 2)}px ${
     elevation * 2
   }px rgb(18 28 23 / 0.18)`;
+}
+
+function isAuthoredComponentNamespace(
+  namespace: ComponentNamespace
+): namespace is AuthoredComponentNamespace {
+  return namespace === "button" || namespace === "input";
 }
