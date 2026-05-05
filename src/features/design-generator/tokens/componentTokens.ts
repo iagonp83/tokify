@@ -22,6 +22,10 @@ export type ResolvedComponentTokens = {
   motion: MotionState;
 };
 
+type ComponentOverrideGroup = "layout" | "motion";
+type ComponentOverrideField<TGroup extends ComponentOverrideGroup> =
+  TGroup extends "layout" ? "density" | "elevation" | "radius" : "duration";
+
 export function getActiveComponentTokens(state: DesignState) {
   return state.componentTokens?.[state.component.kind] ?? {};
 }
@@ -98,6 +102,29 @@ export function hasAuthoredComponentNamespaceOverride(
   const override = state.componentTokens?.[namespace];
 
   return Boolean(override?.layout || override?.motion);
+}
+
+export function hasComponentFieldOverride<
+  TGroup extends ComponentOverrideGroup
+>(
+  state: DesignState,
+  namespace: ComponentNamespace,
+  group: TGroup,
+  field: ComponentOverrideField<TGroup>
+): boolean {
+  if (!isAuthoredComponentNamespace(namespace)) {
+    return false;
+  }
+
+  const override = state.componentTokens?.[namespace];
+
+  if (group === "layout") {
+    return (
+      override?.layout?.[field as ComponentOverrideField<"layout">] !== undefined
+    );
+  }
+
+  return override?.motion?.[field as ComponentOverrideField<"motion">] !== undefined;
 }
 
 export function resetAuthoredComponentNamespaceOverride(
