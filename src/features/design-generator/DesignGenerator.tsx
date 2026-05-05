@@ -260,10 +260,16 @@ export function DesignGenerator() {
             value={editingNamespace}
           />
           {isEditingAuthoredNamespace ? (
-            <div className="user-presets__empty">
-              <p>Inheriting from: {designState.component.kind}</p>
+            <div className="component-override-status">
               <p>
-                {hasEditingNamespaceOverride ? "Overridden" : "Reference"}
+                {hasEditingNamespaceOverride
+                  ? "Custom override"
+                  : "Reference mode"}
+              </p>
+              <p>
+                {hasEditingNamespaceOverride
+                  ? `Fallback: ${designState.component.kind}`
+                  : `Inheriting from: ${designState.component.kind}`}
               </p>
               {hasEditingNamespaceOverride ? (
                 <Button

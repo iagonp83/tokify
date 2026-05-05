@@ -218,6 +218,26 @@ button {
   accent-color: var(--color-accent);
 }
 
+.component-override-status {
+  display: grid;
+  gap: 8px;
+  color: #687169;
+  font-size: 0.82rem;
+}
+
+.component-override-status p {
+  margin: 0;
+}
+
+.component-override-status p:first-child {
+  color: #171d19;
+  font-weight: 800;
+}
+
+.component-override-status .button {
+  justify-self: start;
+}
+
 .user-presets {
   display: grid;
   gap: 12px;
