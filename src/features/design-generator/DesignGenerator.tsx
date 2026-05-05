@@ -33,7 +33,9 @@ import type {
   UserDesignPreset
 } from "./types";
 import {
+  hasAuthoredComponentNamespaceOverride,
   resolveComponentNamespaceTokens,
+  resetAuthoredComponentNamespaceOverride,
   updateComponentNamespaceTokens
 } from "./tokens/componentTokens";
 import { useDesignTokens } from "./useDesignTokens";
@@ -74,6 +76,11 @@ export function DesignGenerator() {
   const [userPresets, setUserPresets] = useState<UserDesignPreset[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editingNamespaceTokens = resolveComponentNamespaceTokens(
+    designState,
+    editingNamespace
+  );
+  const isEditingAuthoredNamespace = isAuthoredNamespace(editingNamespace);
+  const hasEditingNamespaceOverride = hasAuthoredComponentNamespaceOverride(
     designState,
     editingNamespace
   );
@@ -252,6 +259,29 @@ export function DesignGenerator() {
             options={componentNamespaceOptions}
             value={editingNamespace}
           />
+          {isEditingAuthoredNamespace ? (
+            <div className="user-presets__empty">
+              <p>Inheriting from: {designState.component.kind}</p>
+              <p>
+                {hasEditingNamespaceOverride ? "Overridden" : "Reference"}
+              </p>
+              {hasEditingNamespaceOverride ? (
+                <Button
+                  onClick={() =>
+                    setDesignState((current) =>
+                      resetAuthoredComponentNamespaceOverride(
+                        current,
+                        editingNamespace
+                      )
+                    )
+                  }
+                  variant="ghost"
+                >
+                  Reset
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
           <div className="swatch-row" aria-label="Color principal">
             {accentOptions.map((accent) => (
               <button
@@ -465,4 +495,8 @@ function isComponentKind(
   namespace: ComponentNamespace
 ): namespace is ComponentKind {
   return namespace === "card" || namespace === "toolbar" || namespace === "panel";
+}
+
+function isAuthoredNamespace(namespace: ComponentNamespace) {
+  return namespace === "button" || namespace === "input";
 }
