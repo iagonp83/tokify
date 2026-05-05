@@ -86,6 +86,34 @@ export function DesignGenerator() {
     designState,
     editingNamespace
   );
+  const overrideFieldCount = isEditingAuthoredNamespace
+    ? [
+        hasComponentFieldOverride(
+          designState,
+          editingNamespace,
+          "layout",
+          "radius"
+        ),
+        hasComponentFieldOverride(
+          designState,
+          editingNamespace,
+          "layout",
+          "density"
+        ),
+        hasComponentFieldOverride(
+          designState,
+          editingNamespace,
+          "layout",
+          "elevation"
+        ),
+        hasComponentFieldOverride(
+          designState,
+          editingNamespace,
+          "motion",
+          "duration"
+        )
+      ].filter(Boolean).length
+    : 0;
   const getSliderSourceLabel = (
     group: "layout" | "motion",
     field: "density" | "duration" | "elevation" | "radius"
@@ -100,8 +128,8 @@ export function DesignGenerator() {
       group,
       field
     )
-      ? "custom override"
-      : `from ${designState.component.kind}`;
+      ? "Override"
+      : `Inherited from ${designState.component.kind}`;
   };
   const renderSliderSource = (
     group: "layout" | "motion",
@@ -318,8 +346,10 @@ export function DesignGenerator() {
             <div className="component-override-status">
               <p>
                 {hasEditingNamespaceOverride
-                  ? "Custom override"
-                  : "Reference mode"}
+                  ? `Override · ${overrideFieldCount} ${
+                      overrideFieldCount === 1 ? "field" : "fields"
+                    }`
+                  : "Reference"}
               </p>
               <p>
                 {hasEditingNamespaceOverride

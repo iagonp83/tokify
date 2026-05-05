@@ -224,9 +224,22 @@ button {
 }
 
 .slider-source {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: -4px 0 0;
   color: #687169;
   font-size: 0.78rem;
+}
+
+.slider-source button {
+  padding: 0;
+  border: 0;
+  color: var(--color-accent);
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .component-override-status {
