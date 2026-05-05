@@ -12,6 +12,8 @@ type PreviewCanvasProps = {
   state: DesignState;
 };
 
+type MotionPreviewPhase = "enter" | "exit" | "idle";
+
 const previewStates: ComponentStateName[] = [
   "default",
   "hover",
@@ -22,8 +24,8 @@ const previewStates: ComponentStateName[] = [
 
 export function PreviewCanvas({ state }: PreviewCanvasProps) {
   const [uiState, setUiState] = useState<ComponentStateName>("default");
-  const [isMotionPreviewAnimating, setIsMotionPreviewAnimating] =
-    useState(false);
+  const [motionPreviewPhase, setMotionPreviewPhase] =
+    useState<MotionPreviewPhase>("idle");
   const tokens = useDesignTokens(state);
   const tokenResolver = createTokenResolver(tokens, state.component.kind);
   const resolved = resolveComponent(buttonSchema, tokenResolver, {
@@ -63,8 +65,21 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
     ...(stateStyles.icon ?? {})
   };
   const hasIconSlot = resolved.schema.slots.some((slot) => slot.name === "icon");
-  const buttonMotionDuration = String(rootStyle.transitionDuration ?? "0ms");
-  const buttonMotionDurationMs = parseDurationMs(buttonMotionDuration);
+  const buttonEnterDuration = getButtonMotionDuration(
+    tokens,
+    "--button-enter-motion-duration"
+  );
+  const buttonExitDuration = getButtonMotionDuration(
+    tokens,
+    "--button-exit-motion-duration"
+  );
+  const buttonEnterDurationMs = parseDurationMs(buttonEnterDuration);
+  const buttonExitDurationMs = parseDurationMs(buttonExitDuration);
+  const buttonPulseStyle = createButtonPulseStyle(
+    motionPreviewPhase,
+    buttonEnterDuration,
+    buttonExitDuration
+  );
   const inputStyle: CSSProperties = {
     ...inputRootStyle,
     border: 0,
@@ -74,40 +89,33 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
   };
 
   useEffect(() => {
-    setIsMotionPreviewAnimating(false);
+    setMotionPreviewPhase("idle");
 
     const animationFrame = window.requestAnimationFrame(() => {
-      setIsMotionPreviewAnimating(true);
+      setMotionPreviewPhase("enter");
     });
-    const timeout = window.setTimeout(() => {
-      setIsMotionPreviewAnimating(false);
-    }, buttonMotionDurationMs);
+    const exitTimeout = window.setTimeout(() => {
+      setMotionPreviewPhase("exit");
+    }, buttonEnterDurationMs);
+    const idleTimeout = window.setTimeout(() => {
+      setMotionPreviewPhase("idle");
+    }, buttonEnterDurationMs + buttonExitDurationMs);
 
     return () => {
       window.cancelAnimationFrame(animationFrame);
-      window.clearTimeout(timeout);
+      window.clearTimeout(exitTimeout);
+      window.clearTimeout(idleTimeout);
     };
-  }, [buttonMotionDuration, buttonMotionDurationMs, uiState]);
+  }, [
+    buttonEnterDuration,
+    buttonEnterDurationMs,
+    buttonExitDuration,
+    buttonExitDurationMs,
+    uiState
+  ]);
 
   return (
     <div className="preview-canvas">
-      <style>
-        {`
-          @keyframes component-motion-preview-pulse {
-            0% {
-              transform: scale(1);
-            }
-            50% {
-              box-shadow: 0 18px 44px rgb(18 28 23 / 0.24);
-              opacity: 0.92;
-              transform: scale(1.05);
-            }
-            100% {
-              transform: scale(1);
-            }
-          }
-        `}
-      </style>
       <div
         className={`preview-card preview-card--${state.component.kind} component-preview component-preview--${state.component.kind}`}
         data-component={state.component.kind}
@@ -149,11 +157,12 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
         ))}
       </div>
       <button
+        onPointerDown={() => setUiState("active")}
+        onPointerLeave={() => setUiState("default")}
+        onPointerUp={() => setUiState("default")}
         style={{
           ...rootStyleWithLayout,
-          animation: isMotionPreviewAnimating
-            ? `component-motion-preview-pulse ${buttonMotionDuration} ${rootStyle.transitionTimingFunction ?? "ease"}`
-            : undefined
+          ...buttonPulseStyle
         }}
       >
         {hasIconSlot ? <span style={iconStyle}>{"\u2022"}</span> : null}
@@ -168,6 +177,40 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
       />
     </div>
   );
+}
+
+function getButtonMotionDuration(
+  tokens: Record<string, string>,
+  tokenName:
+    | "--button-enter-motion-duration"
+    | "--button-exit-motion-duration"
+) {
+  return tokens[tokenName] ?? tokens["--button-motion-duration"] ?? "0ms";
+}
+
+function createButtonPulseStyle(
+  phase: MotionPreviewPhase,
+  enterDuration: string,
+  exitDuration: string
+): CSSProperties {
+  if (phase === "enter") {
+    return {
+      boxShadow: "0 18px 44px rgb(18 28 23 / 0.24)",
+      opacity: 0.92,
+      transform: "scale(1.05)",
+      transitionDuration: enterDuration
+    };
+  }
+
+  if (phase === "exit") {
+    return {
+      opacity: 1,
+      transform: "scale(1)",
+      transitionDuration: exitDuration
+    };
+  }
+
+  return {};
 }
 
 function parseDurationMs(duration: string) {
