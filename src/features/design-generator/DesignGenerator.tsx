@@ -27,6 +27,7 @@ import {
 } from "./storage/presetStorage";
 import type {
   ComponentKind,
+  ComponentNamespace,
   DesignPreset,
   DesignState,
   UserDesignPreset
@@ -43,6 +44,17 @@ const componentOptions: Array<{ label: string; value: ComponentKind }> = [
   { label: "Panel", value: "panel" }
 ];
 
+const componentNamespaceOptions: Array<{
+  label: string;
+  value: ComponentNamespace;
+}> = [
+  { label: "Card", value: "card" },
+  { label: "Toolbar", value: "toolbar" },
+  { label: "Panel", value: "panel" },
+  { label: "Button", value: "button" },
+  { label: "Input", value: "input" }
+];
+
 const presetOptions = designPresets.map((preset) => ({
   label: preset.label,
   value: preset.id
@@ -56,6 +68,8 @@ const profileOptions = designSystemProfiles.map((profile) => ({
 export function DesignGenerator() {
   const [designState, setDesignState] =
     useState<DesignState>(initialDesignState);
+  const [editingNamespace, setEditingNamespace] =
+    useState<ComponentNamespace>(initialDesignState.component.kind);
   const [selectedProfileId, setSelectedProfileId] = useState("minimal");
   const [userPresets, setUserPresets] = useState<UserDesignPreset[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -189,6 +203,13 @@ export function DesignGenerator() {
     reader.readAsText(file);
   };
 
+  const handleActiveComponentChange = (value: ComponentKind) => {
+    updateDomain("component", { kind: value });
+    setEditingNamespace((currentNamespace) =>
+      isComponentKind(currentNamespace) ? value : currentNamespace
+    );
+  };
+
   return (
     <main className="generator-shell" style={tokens}>
       <aside className="generator-sidebar" aria-label="Controles del generador">
@@ -212,7 +233,7 @@ export function DesignGenerator() {
           />
           <SegmentedControl
             label="Componente"
-            onChange={(value) => updateDomain("component", { kind: value })}
+            onChange={handleActiveComponentChange}
             options={componentOptions}
             value={designState.component.kind}
           />
@@ -225,6 +246,12 @@ export function DesignGenerator() {
         </ControlGroup>
 
         <ControlGroup title="Sistema visual">
+          <SegmentedControl
+            label="Editando"
+            onChange={setEditingNamespace}
+            options={componentNamespaceOptions}
+            value={editingNamespace}
+          />
           <div className="swatch-row" aria-label="Color principal">
             {accentOptions.map((accent) => (
               <button
@@ -430,4 +457,10 @@ function createPresetId() {
   }
 
   return `preset-${Date.now()}`;
+}
+
+function isComponentKind(
+  namespace: ComponentNamespace
+): namespace is ComponentKind {
+  return namespace === "card" || namespace === "toolbar" || namespace === "panel";
 }
