@@ -9,7 +9,7 @@ type TokenMapEntry =
   | keyof DesignTokens
   | ((componentKind: ComponentKind) => string)
   | {
-      fallback: (componentKind: ComponentKind) => string;
+      fallback: (componentKind: ComponentKind) => string | string[];
       token: keyof DesignTokens;
     };
 
@@ -20,8 +20,12 @@ const tokenPathMap = {
     token: "--button-elevation"
   },
   "component.button.motion.duration": {
-    fallback: (componentKind) => `--${componentKind}-motion-duration`,
-    token: "--button-motion-duration"
+    fallback: (componentKind) => [
+      "--button-motion-duration",
+      `--${componentKind}-enter-motion-duration`,
+      `--${componentKind}-motion-duration`
+    ],
+    token: "--button-enter-motion-duration"
   },
   "component.button.paddingBlock": {
     fallback: (componentKind) => `--${componentKind}-density`,
@@ -57,8 +61,12 @@ const tokenPathMap = {
   },
   "component.button.state.focus.ring": "--state-focus-ring",
   "component.input.motion.duration": {
-    fallback: (componentKind) => `--${componentKind}-motion-duration`,
-    token: "--input-motion-duration"
+    fallback: (componentKind) => [
+      "--input-motion-duration",
+      `--${componentKind}-enter-motion-duration`,
+      `--${componentKind}-motion-duration`
+    ],
+    token: "--input-enter-motion-duration"
   },
   "component.input.paddingBlock": {
     fallback: (componentKind) => `--${componentKind}-density`,
@@ -108,11 +116,14 @@ export function createTokenResolver(
       const value = tokens[tokenName];
 
       if (value === undefined && typeof tokenMapEntry === "object") {
-        const fallbackTokenName = tokenMapEntry.fallback(componentKind);
-        const fallbackValue = tokens[fallbackTokenName];
+        const fallbackTokenNames = [tokenMapEntry.fallback(componentKind)].flat();
 
-        if (fallbackValue !== undefined) {
-          return fallbackValue;
+        for (const fallbackTokenName of fallbackTokenNames) {
+          const fallbackValue = tokens[fallbackTokenName];
+
+          if (fallbackValue !== undefined) {
+            return fallbackValue;
+          }
         }
       }
 
