@@ -22,6 +22,14 @@ export type ResolvedComponentTokens = {
   motion: MotionState;
 };
 
+export type ComponentIdentityLayer = "base" | "override";
+
+export type AuthoredComponentIdentityTokens = {
+  base: ResolvedComponentTokens;
+  override: ComponentTokenOverrides;
+  resolved: ResolvedComponentTokens;
+};
+
 type ResolvedMotionDurations = {
   duration: number;
   enterDuration: number;
@@ -105,7 +113,7 @@ export function hasAuthoredComponentNamespaceOverride(
     return false;
   }
 
-  const override = state.componentTokens?.[namespace];
+  const override = readAuthoredComponentNamespaceOverride(state, namespace);
 
   return Boolean(override?.layout || override?.motion);
 }
@@ -122,7 +130,7 @@ export function hasComponentFieldOverride<
     return false;
   }
 
-  const override = state.componentTokens?.[namespace];
+  const override = readAuthoredComponentNamespaceOverride(state, namespace);
 
   if (group === "layout") {
     return (
@@ -151,7 +159,9 @@ export function resetComponentFieldOverride<
     return state;
   }
 
-  const { [field]: _removedField, ...groupOverride } = namespaceOverride[group];
+  const groupOverride = Object.fromEntries(
+    Object.entries(namespaceOverride[group]).filter(([key]) => key !== field)
+  );
   const nextNamespaceOverride = {
     ...namespaceOverride,
     [group]: Object.keys(groupOverride).length > 0 ? groupOverride : undefined
@@ -161,8 +171,8 @@ export function resetComponentFieldOverride<
       ([, value]) => value !== undefined
     )
   ) as ComponentTokenOverrides;
-  const { [namespace]: _removedNamespace, ...componentTokens } =
-    state.componentTokens;
+  const componentTokens = { ...state.componentTokens };
+  delete componentTokens[namespace];
 
   return {
     ...state,
@@ -184,8 +194,8 @@ export function resetAuthoredComponentNamespaceOverride(
     return state;
   }
 
-  const { [namespace]: _removedOverride, ...componentTokens } =
-    state.componentTokens;
+  const componentTokens = { ...state.componentTokens };
+  delete componentTokens[namespace];
 
   return {
     ...state,
@@ -193,26 +203,58 @@ export function resetAuthoredComponentNamespaceOverride(
   };
 }
 
+export function readAuthoredComponentNamespaceOverride(
+  state: DesignState,
+  namespace: AuthoredComponentNamespace
+): ComponentTokenOverrides {
+  return state.componentTokens?.[namespace] ?? {};
+}
+
+export function readVirtualAuthoredComponentNamespaceBase(
+  state: DesignState,
+  namespace: AuthoredComponentNamespace
+): ResolvedComponentTokens {
+  const virtualBaseResolvers: Record<
+    AuthoredComponentNamespace,
+    (state: DesignState) => ResolvedComponentTokens
+  > = {
+    button: (currentState) =>
+      resolveComponentTokens(currentState, currentState.component.kind),
+    input: (currentState) =>
+      resolveComponentTokens(currentState, currentState.component.kind)
+  };
+
+  return virtualBaseResolvers[namespace](state);
+}
+
+export function readAuthoredComponentIdentityTokens(
+  state: DesignState,
+  namespace: AuthoredComponentNamespace
+): AuthoredComponentIdentityTokens {
+  const base = readVirtualAuthoredComponentNamespaceBase(state, namespace);
+  const override = readAuthoredComponentNamespaceOverride(state, namespace);
+
+  return {
+    base,
+    override,
+    resolved: {
+      layout: {
+        ...base.layout,
+        ...override.layout
+      },
+      motion: {
+        ...base.motion,
+        ...override.motion
+      }
+    }
+  };
+}
+
 function resolveAuthoredNamespaceTokens(
   state: DesignState,
   namespace: AuthoredComponentNamespace
 ): ResolvedComponentTokens {
-  const activeComponentTokens = resolveComponentTokens(
-    state,
-    state.component.kind
-  );
-  const overrides = state.componentTokens?.[namespace] ?? {};
-
-  return {
-    layout: {
-      ...activeComponentTokens.layout,
-      ...overrides.layout
-    },
-    motion: {
-      ...activeComponentTokens.motion,
-      ...overrides.motion
-    }
-  };
+  return readAuthoredComponentIdentityTokens(state, namespace).resolved;
 }
 
 export function createComponentTokens(state: DesignState) {
