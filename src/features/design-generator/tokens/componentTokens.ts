@@ -127,6 +127,49 @@ export function hasComponentFieldOverride<
   return override?.motion?.[field as ComponentOverrideField<"motion">] !== undefined;
 }
 
+export function resetComponentFieldOverride<
+  TGroup extends ComponentOverrideGroup
+>(
+  state: DesignState,
+  namespace: ComponentNamespace,
+  group: TGroup,
+  field: ComponentOverrideField<TGroup>
+): DesignState {
+  if (!isAuthoredComponentNamespace(namespace)) {
+    return state;
+  }
+
+  const namespaceOverride = state.componentTokens?.[namespace];
+
+  if (!namespaceOverride?.[group]) {
+    return state;
+  }
+
+  const { [field]: _removedField, ...groupOverride } = namespaceOverride[group];
+  const nextNamespaceOverride = {
+    ...namespaceOverride,
+    [group]: Object.keys(groupOverride).length > 0 ? groupOverride : undefined
+  };
+  const cleanedNamespaceOverride = Object.fromEntries(
+    Object.entries(nextNamespaceOverride).filter(
+      ([, value]) => value !== undefined
+    )
+  ) as ComponentTokenOverrides;
+  const { [namespace]: _removedNamespace, ...componentTokens } =
+    state.componentTokens;
+
+  return {
+    ...state,
+    componentTokens:
+      Object.keys(cleanedNamespaceOverride).length > 0
+        ? {
+            ...componentTokens,
+            [namespace]: cleanedNamespaceOverride
+          }
+        : componentTokens
+  };
+}
+
 export function resetAuthoredComponentNamespaceOverride(
   state: DesignState,
   namespace: ComponentNamespace
