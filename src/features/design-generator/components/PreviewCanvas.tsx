@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Layers, MousePointer2, Wand2 } from "lucide-react";
 import { buttonSchema } from "../../../compiler/component-model/button.schema";
 import { inputSchema } from "../../../compiler/component-model/input.schema";
@@ -22,6 +22,8 @@ const previewStates: ComponentStateName[] = [
 
 export function PreviewCanvas({ state }: PreviewCanvasProps) {
   const [uiState, setUiState] = useState<ComponentStateName>("default");
+  const [isMotionPreviewAnimating, setIsMotionPreviewAnimating] =
+    useState(false);
   const tokens = useDesignTokens(state);
   const tokenResolver = createTokenResolver(tokens, state.component.kind);
   const resolved = resolveComponent(buttonSchema, tokenResolver, {
@@ -61,6 +63,8 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
     ...(stateStyles.icon ?? {})
   };
   const hasIconSlot = resolved.schema.slots.some((slot) => slot.name === "icon");
+  const buttonMotionDuration = String(rootStyle.transitionDuration ?? "0ms");
+  const buttonMotionDurationMs = parseDurationMs(buttonMotionDuration);
   const inputStyle: CSSProperties = {
     ...inputRootStyle,
     border: 0,
@@ -69,8 +73,41 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
     outline: 0
   };
 
+  useEffect(() => {
+    setIsMotionPreviewAnimating(false);
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      setIsMotionPreviewAnimating(true);
+    });
+    const timeout = window.setTimeout(() => {
+      setIsMotionPreviewAnimating(false);
+    }, buttonMotionDurationMs);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(timeout);
+    };
+  }, [buttonMotionDuration, buttonMotionDurationMs, uiState]);
+
   return (
     <div className="preview-canvas">
+      <style>
+        {`
+          @keyframes component-motion-preview-pulse {
+            0% {
+              transform: scale(1);
+            }
+            50% {
+              box-shadow: 0 18px 44px rgb(18 28 23 / 0.24);
+              opacity: 0.92;
+              transform: scale(1.05);
+            }
+            100% {
+              transform: scale(1);
+            }
+          }
+        `}
+      </style>
       <div
         className={`preview-card preview-card--${state.component.kind} component-preview component-preview--${state.component.kind}`}
         data-component={state.component.kind}
@@ -111,7 +148,14 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
           </button>
         ))}
       </div>
-      <button style={rootStyleWithLayout}>
+      <button
+        style={{
+          ...rootStyleWithLayout,
+          animation: isMotionPreviewAnimating
+            ? `component-motion-preview-pulse ${buttonMotionDuration} ${rootStyle.transitionTimingFunction ?? "ease"}`
+            : undefined
+        }}
+      >
         {hasIconSlot ? <span style={iconStyle}>{"\u2022"}</span> : null}
         <span style={labelStyle}>Button</span>
       </button>
@@ -124,4 +168,18 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
       />
     </div>
   );
+}
+
+function parseDurationMs(duration: string) {
+  const trimmedDuration = duration.trim();
+
+  if (trimmedDuration.endsWith("ms")) {
+    return Number.parseFloat(trimmedDuration);
+  }
+
+  if (trimmedDuration.endsWith("s")) {
+    return Number.parseFloat(trimmedDuration) * 1000;
+  }
+
+  return Number.parseFloat(trimmedDuration) || 0;
 }
