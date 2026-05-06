@@ -296,13 +296,16 @@ component.input.paddingInline -> --${componentKind}-density
 ```
 
 `Button` and `Input` are currently reference components rendered through the
-active component skin. They are not yet real component token namespaces in
-`ComponentKind`, `componentKinds`, or `DesignState.componentTokens`.
+active component skin. They are authored/reference-mode `ComponentNamespace`
+entries, not `ComponentKind` skins. `ComponentKind` remains limited to `card`,
+`toolbar`, and `panel`.
 
 This is intentional for the current consolidation phase. Reference components
-inherit the active `card`, `toolbar`, or `panel` skin so the system can validate
-Component Model rendering, state handling, resolver behavior, and JSON
-export/import without adding new component namespaces yet.
+inherit a virtual base from the active `card`, `toolbar`, or `panel` skin, then
+apply optional authored namespace overrides from `DesignState.componentTokens`.
+The resulting runtime contract remains flat CSS variables such as `--button-*`
+and `--input-*`, and JSON import/export preserves the namespace override shape
+for compatibility.
 
 Future direction:
 

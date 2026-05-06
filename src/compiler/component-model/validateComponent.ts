@@ -8,11 +8,6 @@ export type ComponentValidationResult = {
   valid: boolean;
 };
 
-const requiredVariantAxes: readonly ComponentVariantAxisName[] = [
-  "intent",
-  "size"
-];
-
 export function validateComponent(
   schema: ComponentSchema
 ): ComponentValidationResult {
@@ -35,20 +30,12 @@ export function validateComponent(
     errors.push('Component requires a "default" state.');
   }
 
-  requiredVariantAxes.forEach((axisName) => {
-    const options = variantAxes.get(axisName);
-
-    if (!options) {
-      errors.push(`Component requires a "${axisName}" variant axis.`);
+  schema.variants.forEach((axis) => {
+    if (axis.options.length === 0) {
+      errors.push(`Variant axis "${axis.name}" requires at least one option.`);
       return;
     }
 
-    if (options.length === 0) {
-      errors.push(`Variant axis "${axisName}" requires at least one option.`);
-    }
-  });
-
-  schema.variants.forEach((axis) => {
     if (!axis.options.includes(axis.default)) {
       errors.push(
         `Variant axis "${axis.name}" default "${axis.default}" must be one of its options.`
