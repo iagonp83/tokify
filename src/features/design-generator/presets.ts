@@ -25,7 +25,8 @@ export const initialDesignState: DesignState = {
     ease: "cubic-bezier(0.2, 0.8, 0.2, 1)",
     presetId: "focused",
     stagger: 40
-  }
+  },
+  variantSelections: {}
 };
 
 export const accentOptions = [

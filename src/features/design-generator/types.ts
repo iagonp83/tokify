@@ -65,6 +65,7 @@ export type DesignState = {
   layout: LayoutState;
   motion: MotionState;
   state?: Partial<StateTokensState>;
+  variantSelections: ComponentVariantSelectionsState;
 };
 
 export type ComponentTokenOverrides = {

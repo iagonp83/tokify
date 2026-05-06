@@ -582,6 +582,10 @@ function normalizeDesignState(state: DesignState): DesignState {
     componentTokens: {
       ...initialDesignState.componentTokens,
       ...state.componentTokens
+    },
+    variantSelections: {
+      ...initialDesignState.variantSelections,
+      ...state.variantSelections
     }
   };
 }
