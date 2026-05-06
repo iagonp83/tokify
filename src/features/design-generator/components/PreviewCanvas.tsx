@@ -2,10 +2,13 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { Layers, MousePointer2, Wand2 } from "lucide-react";
 import { buttonSchema } from "../../../compiler/component-model/button.schema";
 import { inputSchema } from "../../../compiler/component-model/input.schema";
-import type { ComponentStateName } from "../../../compiler/component-model/component.types";
+import type {
+  ComponentResolutionContext,
+  ComponentStateName
+} from "../../../compiler/component-model/component.types";
 import { resolveComponent } from "../../../compiler/component-model/resolveComponent";
 import { createTokenResolver } from "../../../compiler/component-model/tokenResolver";
-import type { DesignState } from "../types";
+import type { AuthoredComponentNamespace, DesignState } from "../types";
 import { useDesignTokens } from "../useDesignTokens";
 
 type PreviewCanvasProps = {
@@ -28,14 +31,16 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
     useState<MotionPreviewPhase>("idle");
   const tokens = useDesignTokens(state);
   const tokenResolver = createTokenResolver(tokens, state.component.kind);
-  const resolved = resolveComponent(buttonSchema, tokenResolver, {
-    intent: "secondary",
-    size: "sm",
-    state: uiState
-  });
-  const resolvedInput = resolveComponent(inputSchema, tokenResolver, {
-    state: uiState
-  });
+  const resolved = resolveComponent(
+    buttonSchema,
+    tokenResolver,
+    createPreviewResolutionContext(state, "button", uiState)
+  );
+  const resolvedInput = resolveComponent(
+    inputSchema,
+    tokenResolver,
+    createPreviewResolutionContext(state, "input", uiState)
+  );
   const stateStyles = resolved.styles.states[uiState] ?? {};
   const inputStateStyles = resolvedInput.styles.states[uiState] ?? {};
   const rootStyle = {
@@ -177,6 +182,17 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
       />
     </div>
   );
+}
+
+function createPreviewResolutionContext(
+  designState: DesignState,
+  namespace: AuthoredComponentNamespace,
+  previewState: ComponentStateName
+): ComponentResolutionContext {
+  return {
+    ...designState.variantSelections[namespace],
+    state: previewState
+  };
 }
 
 function getButtonMotionDuration(

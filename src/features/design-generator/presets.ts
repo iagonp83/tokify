@@ -26,7 +26,12 @@ export const initialDesignState: DesignState = {
     presetId: "focused",
     stagger: 40
   },
-  variantSelections: {}
+  variantSelections: {
+    button: {
+      intent: "secondary",
+      size: "sm"
+    }
+  }
 };
 
 export const accentOptions = [
