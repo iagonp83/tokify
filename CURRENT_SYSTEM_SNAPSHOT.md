@@ -71,6 +71,20 @@ Current Button size options:
 
 State is not part of the variant axes.
 
+Internal variant typing is split between schema-facing selection and future
+design-state-facing namespace selection:
+
+- `ComponentVariantSelection` describes a partial axis selection for one
+  component schema.
+- `ResolvedComponentVariantSelection` describes the resolver's normalized
+  selection after schema defaults are applied.
+- `ComponentVariantSelectionsState` is reserved for selected variants on
+  authored namespaces such as `button` and `input`.
+
+Selected variants are not component token overrides. They should remain separate
+from `DesignState.componentTokens`, which continues to represent authored
+layout/motion overrides only.
+
 Variant-specific bindings are expressed through binding conditions:
 
 ```ts
@@ -205,6 +219,25 @@ Validation remains in `validateComponent.ts`.
 4. Select bindings whose variant conditions match.
 5. Select bindings whose state conditions match.
 6. Resolve each binding value through `tokenResolver.get(binding.token)`.
+
+Current resolver precedence is intentionally binding-order based:
+
+1. Build the normalized variant selection from schema defaults plus the
+   caller-provided context.
+2. Build base styles from bindings without a state condition whose variant
+   conditions match the normalized selection.
+3. Build state styles separately from bindings whose state condition matches each
+   schema state and whose variant conditions also match the normalized
+   selection.
+4. When multiple bindings target the same slot/property within the same style
+   group, the later binding wins through object merge order.
+5. Preview rendering overlays the active state's style group on top of base
+   styles.
+
+The resolver does not currently read `DesignState`, active skins, namespace
+overrides, import/export data, or UI selections directly. Those inputs are
+adapted before resolution through `createTokenResolver(...)` and the explicit
+`ComponentResolutionContext`.
 
 The returned resolved component includes:
 

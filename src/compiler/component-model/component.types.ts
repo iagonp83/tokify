@@ -39,13 +39,15 @@ export type ComponentVariantSelection = Partial<
   Record<ComponentVariantAxisName, string>
 >;
 
+export type ResolvedComponentVariantSelection = Required<
+  Record<ComponentVariantAxisName, string>
+>;
+
 export type ComponentResolutionContext = ComponentVariantSelection & {
   state?: ComponentStateName;
 };
 
-export type ComponentVariantCondition = Partial<
-  Record<ComponentVariantAxisName, string>
->;
+export type ComponentVariantCondition = ComponentVariantSelection;
 
 export type TokenBindingTarget =
   | "background"
@@ -107,7 +109,7 @@ export type ResolvedComponentStateStyles = Partial<
 export type ResolvedComponent = {
   bindings: readonly ResolvedComponentBinding[];
   schema: ComponentSchema;
-  selection: Required<Record<ComponentVariantAxisName, string>>;
+  selection: ResolvedComponentVariantSelection;
   state: ComponentStateName;
   styles: {
     base: ResolvedComponentSlotStyles;

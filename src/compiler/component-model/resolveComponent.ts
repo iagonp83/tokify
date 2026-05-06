@@ -6,6 +6,7 @@ import type {
   ComponentVariantAxisName,
   ResolvedComponent,
   ResolvedComponentBinding,
+  ResolvedComponentVariantSelection,
   ResolvedComponentSlotStyles,
   ResolvedComponentStyle,
   TokenBindingTarget
@@ -18,7 +19,7 @@ export function resolveComponent(
   context: ComponentResolutionContext = {}
 ): ResolvedComponent {
   const resolvedSelection = schema.variants.reduce<
-    Required<Record<ComponentVariantAxisName, string>>
+    ResolvedComponentVariantSelection
   >(
     (currentSelection, axis) => ({
       ...currentSelection,
@@ -91,7 +92,7 @@ export function resolveComponent(
 
 function matchesVariantConditions(
   binding: ComponentTokenBinding,
-  selection: Required<Record<ComponentVariantAxisName, string>>
+  selection: ResolvedComponentVariantSelection
 ) {
   return Object.entries(binding.conditions ?? {}).every(
     ([conditionName, option]) => {

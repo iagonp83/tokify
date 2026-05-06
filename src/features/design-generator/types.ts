@@ -1,3 +1,5 @@
+import type { ComponentVariantSelection } from "../../compiler/component-model/component.types";
+
 export type ComponentKind = "card" | "toolbar" | "panel";
 export type ComponentNamespace = ComponentKind | "button" | "input";
 
@@ -71,6 +73,10 @@ export type ComponentTokenOverrides = {
 };
 
 export type AuthoredComponentNamespace = Exclude<ComponentNamespace, ComponentKind>;
+
+export type ComponentVariantSelectionsState = Partial<
+  Record<AuthoredComponentNamespace, ComponentVariantSelection>
+>;
 
 export type ComponentTokensState = Record<ComponentKind, ComponentTokenOverrides> &
   Partial<Record<AuthoredComponentNamespace, ComponentTokenOverrides>>;
