@@ -39,6 +39,10 @@ type ResolvedMotionDurations = {
 type ComponentOverrideGroup = "layout" | "motion";
 type ComponentOverrideField<TGroup extends ComponentOverrideGroup> =
   TGroup extends "layout" ? "density" | "elevation" | "radius" : "duration";
+type ComponentOverrideFieldValue<TGroup extends ComponentOverrideGroup> =
+  TGroup extends "layout"
+    ? NonNullable<ComponentTokenOverrides["layout"]>[ComponentOverrideField<"layout">]
+    : NonNullable<ComponentTokenOverrides["motion"]>[ComponentOverrideField<"motion">];
 
 export function getActiveComponentTokens(state: DesignState) {
   return state.componentTokens?.[state.component.kind] ?? {};
@@ -56,6 +60,10 @@ export function updateComponentNamespaceTokens(
   namespace: ComponentNamespace,
   patch: ComponentTokenOverrides
 ): DesignState {
+  if (isAuthoredComponentNamespace(namespace)) {
+    return updateAuthoredComponentNamespaceOverride(state, namespace, patch);
+  }
+
   const currentTokens = state.componentTokens?.[namespace] ?? {};
 
   return {
@@ -74,6 +82,27 @@ export function updateComponentNamespaceTokens(
       }
     }
   };
+}
+
+export function updateComponentFieldOverride<
+  TGroup extends ComponentOverrideGroup
+>(
+  state: DesignState,
+  namespace: AuthoredComponentNamespace,
+  group: TGroup,
+  field: ComponentOverrideField<TGroup>,
+  value: ComponentOverrideFieldValue<TGroup>
+): DesignState {
+  const override = readAuthoredComponentNamespaceOverride(state, namespace);
+  const nextOverride = {
+    ...override,
+    [group]: {
+      ...override[group],
+      [field]: value
+    }
+  };
+
+  return setAuthoredComponentNamespaceOverride(state, namespace, nextOverride);
 }
 
 export function resolveComponentTokens(
@@ -113,7 +142,7 @@ export function hasAuthoredComponentNamespaceOverride(
     return false;
   }
 
-  const override = readAuthoredComponentNamespaceOverride(state, namespace);
+  const { override } = readAuthoredComponentIdentityTokens(state, namespace);
 
   return Boolean(override?.layout || override?.motion);
 }
@@ -130,7 +159,7 @@ export function hasComponentFieldOverride<
     return false;
   }
 
-  const override = readAuthoredComponentNamespaceOverride(state, namespace);
+  const { override } = readAuthoredComponentIdentityTokens(state, namespace);
 
   if (group === "layout") {
     return (
@@ -153,7 +182,10 @@ export function resetComponentFieldOverride<
     return state;
   }
 
-  const namespaceOverride = state.componentTokens?.[namespace];
+  const namespaceOverride = readAuthoredComponentNamespaceOverride(
+    state,
+    namespace
+  );
 
   if (!namespaceOverride?.[group]) {
     return state;
@@ -171,19 +203,13 @@ export function resetComponentFieldOverride<
       ([, value]) => value !== undefined
     )
   ) as ComponentTokenOverrides;
-  const componentTokens = { ...state.componentTokens };
-  delete componentTokens[namespace];
-
-  return {
-    ...state,
-    componentTokens:
-      Object.keys(cleanedNamespaceOverride).length > 0
-        ? {
-            ...componentTokens,
-            [namespace]: cleanedNamespaceOverride
-          }
-        : componentTokens
-  };
+  return Object.keys(cleanedNamespaceOverride).length > 0
+    ? setAuthoredComponentNamespaceOverride(
+        state,
+        namespace,
+        cleanedNamespaceOverride
+      )
+    : clearAuthoredComponentNamespaceOverride(state, namespace);
 }
 
 export function resetAuthoredComponentNamespaceOverride(
@@ -194,13 +220,7 @@ export function resetAuthoredComponentNamespaceOverride(
     return state;
   }
 
-  const componentTokens = { ...state.componentTokens };
-  delete componentTokens[namespace];
-
-  return {
-    ...state,
-    componentTokens
-  };
+  return clearAuthoredComponentNamespaceOverride(state, namespace);
 }
 
 export function readAuthoredComponentNamespaceOverride(
@@ -247,6 +267,80 @@ export function readAuthoredComponentIdentityTokens(
         ...override.motion
       }
     }
+  };
+}
+
+function updateAuthoredComponentNamespaceOverride(
+  state: DesignState,
+  namespace: AuthoredComponentNamespace,
+  patch: ComponentTokenOverrides
+): DesignState {
+  let nextState = state;
+
+  if (patch.layout) {
+    for (const [field, value] of Object.entries(patch.layout)) {
+      nextState = updateComponentFieldOverride(
+        nextState,
+        namespace,
+        "layout",
+        field as ComponentOverrideField<"layout">,
+        value as ComponentOverrideFieldValue<"layout">
+      );
+    }
+  }
+
+  if (patch.motion) {
+    for (const [field, value] of Object.entries(patch.motion)) {
+      nextState = updateComponentFieldOverride(
+        nextState,
+        namespace,
+        "motion",
+        field as ComponentOverrideField<"motion">,
+        value as ComponentOverrideFieldValue<"motion">
+      );
+    }
+  }
+
+  return setAuthoredComponentNamespaceOverride(
+    nextState,
+    namespace,
+    {
+      layout: {
+        ...readAuthoredComponentNamespaceOverride(nextState, namespace).layout,
+        ...patch.layout
+      },
+      motion: {
+        ...readAuthoredComponentNamespaceOverride(nextState, namespace).motion,
+        ...patch.motion
+      }
+    }
+  );
+}
+
+function setAuthoredComponentNamespaceOverride(
+  state: DesignState,
+  namespace: AuthoredComponentNamespace,
+  override: ComponentTokenOverrides
+): DesignState {
+  return {
+    ...state,
+    componentTokens: {
+      ...state.componentTokens,
+      [namespace]: override
+    }
+  };
+}
+
+function clearAuthoredComponentNamespaceOverride(
+  state: DesignState,
+  namespace: AuthoredComponentNamespace
+): DesignState {
+  const componentTokens = { ...state.componentTokens };
+  delete componentTokens[namespace];
+
+  return {
+    ...state,
+    componentTokens
   };
 }
 
