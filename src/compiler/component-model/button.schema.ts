@@ -67,11 +67,83 @@ export const buttonSchema = {
     },
     {
       conditions: {
+        intent: "primary"
+      },
+      slot: "root",
+      target: "background",
+      token: "component.button.intent.primary.background"
+    },
+    {
+      conditions: {
+        intent: "primary"
+      },
+      slot: "root",
+      target: "color",
+      token: "component.button.intent.primary.color"
+    },
+    {
+      conditions: {
+        intent: "secondary"
+      },
+      slot: "root",
+      target: "background",
+      token: "component.button.intent.secondary.background"
+    },
+    {
+      conditions: {
+        intent: "secondary"
+      },
+      slot: "root",
+      target: "color",
+      token: "component.button.intent.secondary.color"
+    },
+    {
+      conditions: {
+        intent: "danger"
+      },
+      slot: "root",
+      target: "background",
+      token: "component.button.intent.danger.background"
+    },
+    {
+      conditions: {
+        intent: "danger"
+      },
+      slot: "root",
+      target: "color",
+      token: "component.button.intent.danger.color"
+    },
+    {
+      conditions: {
+        intent: "neutral"
+      },
+      slot: "root",
+      target: "background",
+      token: "component.button.intent.neutral.background"
+    },
+    {
+      conditions: {
+        intent: "neutral"
+      },
+      slot: "root",
+      target: "color",
+      token: "component.button.intent.neutral.color"
+    },
+    {
+      conditions: {
         size: "sm"
       },
       slot: "root",
       target: "paddingBlock",
       token: "component.button.size.sm.paddingBlock"
+    },
+    {
+      conditions: {
+        size: "sm"
+      },
+      slot: "root",
+      target: "paddingInline",
+      token: "component.button.size.sm.paddingInline"
     },
     {
       conditions: {
@@ -83,11 +155,27 @@ export const buttonSchema = {
     },
     {
       conditions: {
+        size: "md"
+      },
+      slot: "root",
+      target: "paddingInline",
+      token: "component.button.size.md.paddingInline"
+    },
+    {
+      conditions: {
         size: "lg"
       },
       slot: "root",
       target: "paddingBlock",
       token: "component.button.size.lg.paddingBlock"
+    },
+    {
+      conditions: {
+        size: "lg"
+      },
+      slot: "root",
+      target: "paddingInline",
+      token: "component.button.size.lg.paddingInline"
     },
     {
       conditions: {

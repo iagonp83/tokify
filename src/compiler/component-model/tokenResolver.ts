@@ -9,12 +9,30 @@ type TokenMapEntry =
   | keyof DesignTokens
   | ((componentKind: ComponentKind) => string)
   | {
+      resolve: (tokens: DesignTokens, componentKind: ComponentKind) => string;
+    }
+  | {
       fallback: (componentKind: ComponentKind) => string | string[];
       token: keyof DesignTokens;
     };
 
 const tokenPathMap = {
   "component.button.intent.primary.background": "--color-accent",
+  "component.button.intent.primary.color": "--color-on-accent",
+  "component.button.intent.secondary.background": {
+    resolve: (tokens) =>
+      `color-mix(in srgb, ${tokens["--color-accent"]} 12%, ${tokens["--color-on-accent"]})`
+  },
+  "component.button.intent.secondary.color": "--color-accent",
+  "component.button.intent.danger.background": {
+    resolve: () => "#b03755"
+  },
+  "component.button.intent.danger.color": "--color-on-accent",
+  "component.button.intent.neutral.background": {
+    resolve: (tokens) =>
+      `color-mix(in srgb, ${tokens["--color-accent"]} 16%, #1f2937)`
+  },
+  "component.button.intent.neutral.color": "--color-on-accent",
   "component.button.elevation": {
     fallback: (componentKind) => `--${componentKind}-elevation`,
     token: "--button-elevation"
@@ -40,16 +58,28 @@ const tokenPathMap = {
     token: "--button-radius"
   },
   "component.button.size.lg.paddingBlock": {
-    fallback: (componentKind) => `--${componentKind}-density`,
-    token: "--button-density"
+    resolve: (tokens, componentKind) =>
+      scaleToken(tokens, "--button-density", componentKind, 0.38)
+  },
+  "component.button.size.lg.paddingInline": {
+    resolve: (tokens, componentKind) =>
+      scaleToken(tokens, "--button-density", componentKind, 0.68)
   },
   "component.button.size.md.paddingBlock": {
-    fallback: (componentKind) => `--${componentKind}-density`,
-    token: "--button-density"
+    resolve: (tokens, componentKind) =>
+      scaleToken(tokens, "--button-density", componentKind, 0.28)
+  },
+  "component.button.size.md.paddingInline": {
+    resolve: (tokens, componentKind) =>
+      scaleToken(tokens, "--button-density", componentKind, 0.54)
   },
   "component.button.size.sm.paddingBlock": {
-    fallback: (componentKind) => `--${componentKind}-density`,
-    token: "--button-density"
+    resolve: (tokens, componentKind) =>
+      scaleToken(tokens, "--button-density", componentKind, 0.2)
+  },
+  "component.button.size.sm.paddingInline": {
+    resolve: (tokens, componentKind) =>
+      scaleToken(tokens, "--button-density", componentKind, 0.42)
   },
   "component.button.state.active.paddingInline": {
     fallback: (componentKind) => `--${componentKind}-density`,
@@ -107,6 +137,10 @@ export function createTokenResolver(
         throw new Error(`Token path "${path}" is not mapped to the token engine.`);
       }
 
+      if (typeof tokenMapEntry === "object" && "resolve" in tokenMapEntry) {
+        return tokenMapEntry.resolve(tokens, componentKind);
+      }
+
       const tokenName =
         typeof tokenMapEntry === "function"
           ? tokenMapEntry(componentKind)
@@ -136,4 +170,28 @@ export function createTokenResolver(
       return value;
     }
   };
+}
+
+function scaleToken(
+  tokens: DesignTokens,
+  tokenName: keyof DesignTokens,
+  componentKind: ComponentKind,
+  scale: number
+) {
+  const value = tokens[tokenName] ?? tokens[`--${componentKind}-density`];
+
+  if (value === undefined) {
+    throw new Error(
+      `Token path resolved to missing token "${String(tokenName)}".`
+    );
+  }
+
+  const numericValue = Number.parseFloat(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return `calc(${value} * ${scale})`;
+  }
+
+  const unit = value.trim().replace(String(numericValue), "") || "px";
+  return `${Math.round(numericValue * scale)}${unit}`;
 }
