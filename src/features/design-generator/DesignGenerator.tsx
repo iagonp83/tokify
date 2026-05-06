@@ -11,6 +11,7 @@ import { Button } from "../../components/Button";
 import { ControlGroup } from "../../components/ControlGroup";
 import { SegmentedControl } from "../../components/SegmentedControl";
 import { SliderField } from "../../components/SliderField";
+import type { ComponentVariantAxisName } from "../../compiler/component-model/component.types";
 import { downloadTextFile } from "../../lib/downloadTextFile";
 import { clamp } from "../../lib/number";
 import { PreviewCanvas } from "./components/PreviewCanvas";
@@ -300,6 +301,22 @@ export function DesignGenerator() {
     );
   };
 
+  const handleButtonVariantChange = (
+    axis: ComponentVariantAxisName,
+    value: string
+  ) => {
+    setDesignState((current) => ({
+      ...current,
+      variantSelections: {
+        ...current.variantSelections,
+        button: {
+          ...current.variantSelections.button,
+          [axis]: value
+        }
+      }
+    }));
+  };
+
   return (
     <main className="generator-shell" style={tokens}>
       <aside className="generator-sidebar" aria-label="Controles del generador">
@@ -541,7 +558,10 @@ export function DesignGenerator() {
       </aside>
 
       <section className="generator-stage" aria-label="Vista previa">
-        <PreviewCanvas state={designState} />
+        <PreviewCanvas
+          onButtonVariantChange={handleButtonVariantChange}
+          state={designState}
+        />
         <TokenInspector code={cssSnippet} state={designState} />
       </section>
     </main>

@@ -4,6 +4,7 @@ import { buttonSchema } from "../../../compiler/component-model/button.schema";
 import { inputSchema } from "../../../compiler/component-model/input.schema";
 import type {
   ComponentResolutionContext,
+  ComponentVariantAxisName,
   ComponentStateName
 } from "../../../compiler/component-model/component.types";
 import { resolveComponent } from "../../../compiler/component-model/resolveComponent";
@@ -12,6 +13,10 @@ import type { AuthoredComponentNamespace, DesignState } from "../types";
 import { useDesignTokens } from "../useDesignTokens";
 
 type PreviewCanvasProps = {
+  onButtonVariantChange: (
+    axis: ComponentVariantAxisName,
+    value: string
+  ) => void;
   state: DesignState;
 };
 
@@ -25,7 +30,10 @@ const previewStates: ComponentStateName[] = [
   "disabled"
 ];
 
-export function PreviewCanvas({ state }: PreviewCanvasProps) {
+export function PreviewCanvas({
+  onButtonVariantChange,
+  state
+}: PreviewCanvasProps) {
   const [uiState, setUiState] = useState<ComponentStateName>("default");
   const [motionPreviewPhase, setMotionPreviewPhase] =
     useState<MotionPreviewPhase>("idle");
@@ -149,6 +157,23 @@ export function PreviewCanvas({ state }: PreviewCanvasProps) {
             Reusable
           </span>
         </div>
+      </div>
+      <div>
+        {buttonSchema.variants.map((axis) => (
+          <div key={axis.name}>
+            <span>{axis.name}</span>
+            {axis.options.map((option) => (
+              <button
+                aria-pressed={resolved.selection[axis.name] === option}
+                key={option}
+                onClick={() => onButtonVariantChange(axis.name, option)}
+                type="button"
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        ))}
       </div>
       <div>
         {previewStates.map((stateName) => (
