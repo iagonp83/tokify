@@ -41,10 +41,14 @@ type ComponentTokenGroup = {
   motion?: Pick<NonNullable<TokenGroup["motion"]>, "duration">;
 };
 
+type ComponentIdentityTokenGroup = ComponentTokenGroup & {
+  override?: ComponentTokenGroup;
+};
+
 type ImportPayload = TokenGroup & {
   components?: Partial<Record<ComponentKind, ComponentTokenGroup>>;
   global?: TokenGroup;
-  overrides?: Partial<Record<ComponentNamespace, ComponentTokenGroup>>;
+  overrides?: Partial<Record<ComponentNamespace, ComponentIdentityTokenGroup>>;
 };
 
 const authoredComponentNamespaces: AuthoredComponentNamespace[] = [
@@ -141,7 +145,7 @@ function readAuthoredComponentOverrides(
       ...componentTokens,
       [componentKind]: readAuthoredComponentOverride(
         overrides?.[componentKind],
-        componentKind
+        `overrides.${componentKind}`
       )
     }),
     initialDesignState.componentTokens
@@ -149,7 +153,7 @@ function readAuthoredComponentOverrides(
 
   return authoredComponentNamespaces.reduce<DesignState["componentTokens"]>(
     (componentTokens, namespace) => {
-      const namespaceOverride = readAuthoredComponentOverride(
+      const namespaceOverride = readAuthoredComponentNamespaceOverride(
         overrides?.[namespace],
         namespace
       );
@@ -167,22 +171,55 @@ function readAuthoredComponentOverrides(
   );
 }
 
+function readAuthoredComponentNamespaceOverride(
+  component: ComponentIdentityTokenGroup | undefined,
+  namespace: AuthoredComponentNamespace
+): ComponentTokenOverrides {
+  const { override, path } = normalizeAuthoredComponentOverrideInput(
+    component,
+    namespace
+  );
+
+  return readAuthoredComponentOverride(override, path);
+}
+
+function normalizeAuthoredComponentOverrideInput(
+  component: ComponentIdentityTokenGroup | undefined,
+  namespace: AuthoredComponentNamespace
+): {
+  override: ComponentTokenGroup | undefined;
+  path: string;
+} {
+  if (!component) {
+    return {
+      override: undefined,
+      path: `overrides.${namespace}`
+    };
+  }
+
+  if (component.override) {
+    return {
+      override: component.override,
+      path: `overrides.${namespace}.override`
+    };
+  }
+
+  return {
+    override: component,
+    path: `overrides.${namespace}`
+  };
+}
+
 function readAuthoredComponentOverride(
   component: ComponentTokenGroup | undefined,
-  componentKind: ComponentNamespace
+  path: string
 ): ComponentTokenOverrides {
   if (!component) {
     return {};
   }
 
-  const layout = readLayoutOverride(
-    component.layout,
-    `overrides.${componentKind}`
-  );
-  const motion = readMotionOverride(
-    component.motion,
-    `overrides.${componentKind}`
-  );
+  const layout = readLayoutOverride(component.layout, path);
+  const motion = readMotionOverride(component.motion, path);
 
   return {
     ...(layout ? { layout } : {}),
