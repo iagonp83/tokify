@@ -228,22 +228,6 @@ export const buttonSchema = {
       slot: "root",
       target: "boxShadow",
       token: "semantic.state.focus.ring"
-    },
-    {
-      conditions: {
-        state: "active"
-      },
-      slot: "root",
-      target: "paddingInline",
-      token: "component.button.state.active.paddingInline"
-    },
-    {
-      conditions: {
-        state: "focus"
-      },
-      slot: "root",
-      target: "paddingBlock",
-      token: "component.button.state.focus.paddingBlock"
     }
   ],
   variants: [
