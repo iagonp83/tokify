@@ -309,13 +309,14 @@ for compatibility.
 
 Future direction:
 
-- Introduce real component token namespaces such as `component.button.*`.
-- Introduce real component token namespaces such as `component.input.*`.
-- Keep reference/skin mode only if it is explicitly supported as a separate
-  compatibility mode.
-
-Do not implement `button` or `input` namespaces until that model change and
-migration path are explicitly planned.
+- Materialize a namespace base for `button` and `input` only if a later model
+  change needs source-of-truth values beyond the current virtual inherited base.
+- Expand `component.button.*` and `component.input.*` token mappings safely
+  without broadening `ComponentKind`.
+- Keep runtime CSS variables flat.
+- Preserve reference-mode compatibility so existing `button` and `input`
+  namespace overrides continue to inherit from the active `card`, `toolbar`, or
+  `panel` skin unless explicitly overridden.
 
 Previously invalid placeholder mappings in `tokenResolver.ts` have been
 corrected so padding-related paths resolve to active component density and the
