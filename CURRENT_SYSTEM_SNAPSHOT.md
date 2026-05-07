@@ -1,5 +1,33 @@
 # Current System Snapshot
 
+## Stable State
+
+The project is currently a React + TypeScript + Vite application.
+
+The runtime token contract remains a flat CSS variable map. The system does not
+emit nested runtime token objects.
+
+Current stabilized areas:
+
+- resolver system
+- token resolver
+- variant system
+- namespace inheritance
+- flat runtime token output
+- Composition System Foundation
+
+Automated regression tests cover:
+
+- resolver behavior
+- token resolver mappings and failures
+- variant defaults and explicit selections
+- schema-derived variant axes
+- compound variant behavior through `tokenBindings.conditions`
+- state-specific bindings
+- namespace inheritance
+- flat runtime output
+- composition metadata validation
+
 ## Component Model Structure
 
 The Component Model lives in `src/compiler/component-model/`.
@@ -17,6 +45,7 @@ The core schema shape is:
 
 ```ts
 ComponentSchema = {
+  composition?,
   editable,
   name,
   slots,
@@ -27,31 +56,81 @@ ComponentSchema = {
 }
 ```
 
-Components are library-agnostic. They do not describe React, DOM, CSS classes, or adapters. They describe:
+Components are library-agnostic. They do not describe React, DOM, CSS classes,
+or adapters. They describe:
 
 - available slots
 - supported states
 - variant axes
 - token bindings
 - edit policy
+- optional composition metadata
 
-The current reference components are `Button` and `Input`.
+`ComponentKind` remains limited to:
 
-Button slots:
+- `card`
+- `toolbar`
+- `panel`
+
+`ComponentNamespace` includes authored/reference namespaces:
+
+- `button`
+- `input`
+
+`Button` and `Input` remain reference-mode components by default. They inherit
+from the active `card`, `toolbar`, or `panel` skin and may receive optional
+field-level overrides through `DesignState.componentTokens`.
+
+Button is already multi-slot in schema terms:
 
 - `root`
 - `label`
 - `icon`
 
-Input slots:
+Input currently uses only:
 
 - `root`
 
-## Variant System
+## Composition Foundation
+
+The Composition System Foundation is completed.
+
+Composition is currently schema-level and metadata-level only. It is not yet a
+runtime behavior layer.
+
+Slots are flat semantic addresses, not DOM structure. A slot may eventually map
+to rendered output, but the schema does not encode tag names, wrappers, CSS
+selectors, adapter details, or React structure.
+
+Optional composition metadata exists on `ComponentSchema` as `composition`.
+
+Composition metadata can describe:
+
+- slot relations
+- parts
+- child components
+
+Composition metadata validation currently checks:
+
+- slot relations reference existing slots
+- part metadata references existing slots
+- child component metadata references existing slots
+- duplicate slot relation identifiers are rejected
+- duplicate part identifiers are rejected
+- duplicate child component identifiers are rejected
+
+The resolver does not consume composition metadata yet.
+
+The runtime does not emit new slot-level variables yet.
+
+## Variant Foundation
 
 Variants are declarative and separate from states.
 
-Current variant axes:
+Variant axes are now schema-derived generic string axes. Components no longer
+need `intent` and `size`.
+
+Button still supports:
 
 - `intent`
 - `size`
@@ -69,41 +148,41 @@ Current Button size options:
 - `md`
 - `lg`
 
-State is not part of the variant axes.
+Input works with no variants.
 
-Internal variant typing is split between schema-facing selection and future
+Internal variant typing is split between schema-facing selection and
 design-state-facing namespace selection:
 
 - `ComponentVariantSelection` describes a partial axis selection for one
   component schema.
 - `ResolvedComponentVariantSelection` describes the resolver's normalized
   selection after schema defaults are applied.
-- `ComponentVariantSelectionsState` is reserved for selected variants on
-  authored namespaces such as `button` and `input`.
+- `ComponentVariantSelectionsState` stores selected variants on authored
+  namespaces such as `button` and `input`.
 
-Selected variants are not component token overrides. They should remain separate
-from `DesignState.componentTokens`, which continues to represent authored
+Selected variants are not component token overrides. They remain separate from
+`DesignState.componentTokens`, which continues to represent authored
 layout/motion overrides only.
 
-Variant-specific bindings are expressed through binding conditions:
+Existing `tokenBindings.conditions` already support compound variant behavior:
 
 ```ts
 conditions: {
-  intent: "secondary"
+  intent: "danger",
+  size: "lg"
 }
 ```
 
-or:
+A binding with multiple variant conditions applies only when all conditions
+match. Binding-order precedence is documented by tests: when multiple matching
+bindings target the same slot/property within the same style group, the later
+binding wins.
 
-```ts
-conditions: {
-  size: "sm"
-}
-```
+There is no `compoundVariants` field yet.
 
 ## State System
 
-States are defined only through the component schema `states` field.
+States are defined through the component schema `states` field.
 
 Current Button states:
 
@@ -129,14 +208,8 @@ conditions: {
 }
 ```
 
-State rendering in the preview is driven manually by local UI state in `PreviewCanvas`. It does not use CSS pseudo-classes like `:hover`.
-
-Current visible state behavior:
-
-- `hover` changes background
-- `active` changes opacity
-- `focus` changes box shadow
-- `disabled` changes opacity
+State rendering in the preview is driven manually by local UI state in
+`PreviewCanvas`. It does not use CSS pseudo-classes like `:hover`.
 
 ## Token Flow
 
@@ -165,7 +238,8 @@ Token creation functions:
 - `createMotionTokens`
 - `createComponentTokens`
 
-`useDesignTokens(state)` combines those token groups into one flat `DesignTokens` object.
+`useDesignTokens(state)` combines those token groups into one flat
+`DesignTokens` object.
 
 Current token shape is CSS-variable oriented:
 
@@ -186,7 +260,7 @@ Current token shape is CSS-variable oriented:
 }
 ```
 
-State tokens are now part of the real token engine:
+State tokens are part of the real token engine:
 
 - `--state-hover-background`
 - `--state-active-opacity`
@@ -195,7 +269,7 @@ State tokens are now part of the real token engine:
 
 These state tokens exist at runtime, in CSS export, and in JSON export under
 `global.state`. JSON import accepts `global.state` additively and falls back to
-the existing generated state token values when the group is missing.
+generated state token values when the group is missing.
 
 Component Model token bindings use semantic string paths:
 
@@ -205,6 +279,53 @@ token: "semantic.state.hover.background"
 
 They do not store token metadata objects.
 
+## Flat Slot Naming Contract
+
+Future slot-level variables must preserve the flat CSS variable runtime
+contract.
+
+Non-root slot variables should use:
+
+```txt
+--{component}-{slot}-{property}
+```
+
+Examples:
+
+- `--button-icon-size`
+- `--card-header-padding`
+- `--input-label-color`
+
+Root slot variables should use:
+
+```txt
+--{component}-{property}
+```
+
+The `root` slot is omitted.
+
+Examples:
+
+- `--button-background`
+- `--button-radius`
+
+Avoid root-prefixed variables such as:
+
+```txt
+--button-root-background
+```
+
+Existing flat variables remain compatible and must not be redesigned:
+
+- `--button-radius`
+- `--button-density`
+- `--card-radius`
+- `--input-radius`
+
+Slot names must remain semantic and schema-derived. Variable names should not be
+derived from DOM tags, CSS selectors, adapter implementation details, generated
+React component names, or wrapper hierarchy.
+
 ## Resolver Logic
 
 `resolveComponent` is intentionally small and does not validate schemas.
@@ -213,21 +334,21 @@ Validation remains in `validateComponent.ts`.
 
 `resolveComponent` does only:
 
-1. Resolve variant defaults.
+1. Resolve variant defaults from `schema.variants`.
 2. Keep state separate from variants.
 3. Select base bindings.
 4. Select bindings whose variant conditions match.
 5. Select bindings whose state conditions match.
 6. Resolve each binding value through `tokenResolver.get(binding.token)`.
 
-Current resolver precedence is intentionally binding-order based:
+Current resolver precedence is binding-order based:
 
 1. Build the normalized variant selection from schema defaults plus the
    caller-provided context.
 2. Build base styles from bindings without a state condition whose variant
    conditions match the normalized selection.
-3. Build state styles separately from bindings whose state condition matches each
-   schema state and whose variant conditions also match the normalized
+3. Build state styles separately from bindings whose state condition matches
+   each schema state and whose variant conditions also match the normalized
    selection.
 4. When multiple bindings target the same slot/property within the same style
    group, the later binding wins through object merge order.
@@ -235,37 +356,14 @@ Current resolver precedence is intentionally binding-order based:
    styles.
 
 The resolver does not currently read `DesignState`, active skins, namespace
-overrides, import/export data, or UI selections directly. Those inputs are
-adapted before resolution through `createTokenResolver(...)` and the explicit
-`ComponentResolutionContext`.
-
-The returned resolved component includes:
-
-```ts
-{
-  schema,
-  selection,
-  state,
-  bindings
-}
-```
-
-Each resolved binding includes:
-
-```ts
-{
-  slot,
-  target,
-  token,
-  value,
-  conditions?,
-  id
-}
-```
+overrides, import/export data, UI selections, or composition metadata directly.
+Those inputs are adapted before resolution through `createTokenResolver(...)`
+and the explicit `ComponentResolutionContext`.
 
 ## Token Resolver
 
-`tokenResolver.ts` adapts Component Model semantic token paths to the existing flat `DesignTokens` map.
+`tokenResolver.ts` adapts Component Model semantic token paths to the existing
+flat `DesignTokens` map.
 
 Example mappings:
 
@@ -295,87 +393,60 @@ component.input.paddingBlock -> --${componentKind}-density
 component.input.paddingInline -> --${componentKind}-density
 ```
 
-`Button` and `Input` are currently reference components rendered through the
-active component skin. They are authored/reference-mode `ComponentNamespace`
-entries, not `ComponentKind` skins. `ComponentKind` remains limited to `card`,
+`Button` and `Input` are authored/reference-mode `ComponentNamespace` entries,
+not `ComponentKind` skins. `ComponentKind` remains limited to `card`,
 `toolbar`, and `panel`.
 
-This is intentional for the current consolidation phase. Reference components
-inherit a virtual base from the active `card`, `toolbar`, or `panel` skin, then
-apply optional authored namespace overrides from `DesignState.componentTokens`.
+Reference components inherit a virtual base from the active `card`, `toolbar`,
+or `panel` skin, then apply optional authored namespace overrides from
+`DesignState.componentTokens`.
+
 The resulting runtime contract remains flat CSS variables such as `--button-*`
 and `--input-*`, and JSON import/export preserves the namespace override shape
 for compatibility.
 
-Future direction:
-
-- Materialize a namespace base for `button` and `input` only if a later model
-  change needs source-of-truth values beyond the current virtual inherited base.
-- Expand `component.button.*` and `component.input.*` token mappings safely
-  without broadening `ComponentKind`.
-- Keep runtime CSS variables flat.
-- Preserve reference-mode compatibility so existing `button` and `input`
-  namespace overrides continue to inherit from the active `card`, `toolbar`, or
-  `panel` skin unless explicitly overridden.
-
-Previously invalid placeholder mappings in `tokenResolver.ts` have been
-corrected so padding-related paths resolve to active component density and the
-focus ring path resolves to the state focus ring:
-
-```ts
-component.button.size.md.paddingBlock -> --${componentKind}-density
-component.button.size.sm.paddingBlock -> --${componentKind}-density
-component.button.state.active.paddingInline -> --${componentKind}-density
-component.button.state.focus.paddingBlock -> --${componentKind}-density
-component.button.state.focus.ring -> --state-focus-ring
-```
-
-`semantic.color.onAccent` maps to `--color-on-accent`, which defaults to
-`#ffffff` when older state or imported JSON does not provide it.
-
 If a path is not mapped, the resolver throws a clear error.
 
-If a mapped token key is missing from `DesignTokens`, the resolver throws a clear error.
+If a mapped token key is missing from `DesignTokens`, the resolver throws a
+clear error.
+
+## Namespace Inheritance
+
+Namespace inheritance is stabilized.
+
+`button` and `input` inherit layout and motion values from the active
+`ComponentKind` unless they have authored field-level overrides.
+
+Authored overrides remain partial source-of-truth data. Inherited resolved
+values are not written back as authored overrides.
+
+Changing the active `card`, `toolbar`, or `panel` skin changes inherited fields
+while preserving authored namespace overrides.
 
 ## Preview Rendering Approach
 
-`PreviewCanvas.tsx` currently renders the Button preview directly from the Component Model.
-It also renders the Input preview through the same resolver and state controls.
+`PreviewCanvas.tsx` currently renders the Button preview directly from the
+Component Model. It also renders the Input preview through the same resolver and
+state controls.
 
 Flow:
 
 1. `useDesignTokens(state)` creates the current token map.
 2. `createTokenResolver(tokens, state.component.kind)` creates the resolver.
-3. `resolveComponent(buttonSchema, tokenResolver, { intent, size, state })` resolves the Button.
+3. `resolveComponent(buttonSchema, tokenResolver, { intent, size, state })`
+   resolves the Button.
 4. `resolveComponent(inputSchema, tokenResolver, { state })` resolves the Input.
 5. Resolved bindings are grouped by slot.
 6. Each slot gets an inline style object.
-7. Slots are rendered as DOM elements.
+7. Slots are rendered as DOM elements by the current preview only.
 
-Current slot mapping:
+Current preview slot mapping:
 
 - `root` -> `<button>`
 - `label` -> `<span>`
 - `icon` -> `<span>`
 
-Current rendered structure:
-
-```tsx
-<button style={rootStyle}>
-  <span style={iconStyle}>{"\\u2022"}</span>
-  <span style={labelStyle}>Button</span>
-</button>
-```
-
-Temporary state controls remain in `PreviewCanvas`:
-
-- `default`
-- `hover`
-- `active`
-- `focus`
-- `disabled`
-
-These controls exist only to validate Component Model state rendering.
+This preview mapping is not part of the Component Model contract.
 
 ## Export Architecture
 
@@ -389,24 +460,6 @@ src/features/design-generator/export/exportCss.ts
 
 - global `:root` declarations
 - component-specific blocks for existing component kinds
-
-Global exports include:
-
-- color tokens
-- layout tokens
-- motion tokens
-- state tokens
-
-Component exports include blocks like:
-
-```css
-[data-component="card"] {
-  --card-radius: ...;
-  --card-density: ...;
-  --card-elevation: ...;
-  --card-motion-duration: ...;
-}
-```
 
 JSON export is handled separately by:
 
@@ -427,12 +480,37 @@ JSON import prefers `overrides` when that section exists. If `overrides` is
 missing, import falls back to the legacy `components` path, where resolved
 component values are treated as component overrides for backward compatibility.
 
+Composition metadata does not change import/export shapes yet.
+
+## What Composition Is Not Yet
+
+Composition is not yet:
+
+- slot-aware resolver precedence
+- slot inheritance runtime behavior
+- child component runtime resolution
+- nested runtime token objects
+- adapter integration
+- React restructuring
+- visual composition editor
+- import/export shape changes
+
+There is also no:
+
+- `compoundVariants` field
+- new slot variable emission
+- generated React component composition
+- library-specific output
+
 ## Current Non-Goals
 
-- No redesign.
-- No runtime behavior change.
+- No runtime redesign.
+- No resolver consumption of composition metadata yet.
 - No export or import behavior change.
-- No resolver mapping change.
-- No token migration yet.
+- No adapter work.
+- No React/UI redesign.
+- No nested token runtime.
 
-At this snapshot, the Component Model is connected to preview rendering and real `DesignTokens`, but there are still no adapters, no generated React components, and no library-specific output.
+## Next Recommended Phase
+
+Composition Resolver Integration.
