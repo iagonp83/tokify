@@ -939,4 +939,109 @@ describe("resolveComponent", () => {
     expect(resolved.styles.states.hover?.label.background).toBeUndefined();
     expect(resolved.styles.states.hover?.icon.background).toBeUndefined();
   });
+
+  it("plans flat runtime variables with root slot names omitted", () => {
+    const resolved = resolveComponent(slotInheritanceSchema, tokenResolver);
+
+    expect(resolved.runtimePlan.variables).toContainEqual({
+      name: "--slot-inheritance-component-background",
+      property: "background",
+      slot: "root",
+      source: "base"
+    });
+    expect(resolved.runtimePlan.variables).toContainEqual({
+      name: "--slot-inheritance-component-color",
+      property: "color",
+      slot: "root",
+      source: "base"
+    });
+  });
+
+  it("plans flat runtime variables with non-root slot names included", () => {
+    const resolved = resolveComponent(slotInheritanceSchema, tokenResolver);
+
+    expect(resolved.runtimePlan.variables).toContainEqual({
+      name: "--slot-inheritance-component-label-color",
+      property: "color",
+      slot: "label",
+      source: "base"
+    });
+    expect(resolved.runtimePlan.variables).toContainEqual({
+      name: "--slot-inheritance-component-icon-color",
+      property: "color",
+      slot: "icon",
+      source: "base"
+    });
+  });
+
+  it("includes state-aware runtime planning entries", () => {
+    const resolved = resolveComponent(slotInheritanceSchema, tokenResolver);
+
+    expect(resolved.runtimePlan.variables).toContainEqual({
+      name: "--slot-inheritance-component-label-color",
+      property: "color",
+      slot: "label",
+      source: "state",
+      state: "hover"
+    });
+    expect(resolved.runtimePlan.variables).toContainEqual({
+      name: "--slot-inheritance-component-icon-transition-duration",
+      property: "transitionDuration",
+      slot: "icon",
+      source: "state",
+      state: "hover"
+    });
+  });
+
+  it("keeps runtime planning variables in stable schema and style order", () => {
+    const resolved = resolveComponent(slotInheritanceSchema, tokenResolver);
+
+    expect(resolved.runtimePlan.variables.map((variable) => variable.name)).toEqual(
+      [
+        "--slot-inheritance-component-background",
+        "--slot-inheritance-component-color",
+        "--slot-inheritance-component-padding-inline",
+        "--slot-inheritance-component-transition-property",
+        "--slot-inheritance-component-transition-duration",
+        "--slot-inheritance-component-transition-timing-function",
+        "--slot-inheritance-component-transition-delay",
+        "--slot-inheritance-component-transition",
+        "--slot-inheritance-component-label-color",
+        "--slot-inheritance-component-label-transition-property",
+        "--slot-inheritance-component-label-transition-duration",
+        "--slot-inheritance-component-label-transition-timing-function",
+        "--slot-inheritance-component-label-transition-delay",
+        "--slot-inheritance-component-label-transition",
+        "--slot-inheritance-component-icon-color",
+        "--slot-inheritance-component-icon-transition-property",
+        "--slot-inheritance-component-icon-transition-duration",
+        "--slot-inheritance-component-icon-transition-timing-function",
+        "--slot-inheritance-component-icon-transition-delay",
+        "--slot-inheritance-component-icon-transition",
+        "--slot-inheritance-component-background",
+        "--slot-inheritance-component-color",
+        "--slot-inheritance-component-transition-duration",
+        "--slot-inheritance-component-label-color",
+        "--slot-inheritance-component-label-transition-duration",
+        "--slot-inheritance-component-icon-color",
+        "--slot-inheritance-component-icon-transition-duration"
+      ]
+    );
+  });
+
+  it("keeps runtime planning metadata flat and internal", () => {
+    const resolved = resolveComponent(slotInheritanceSchema, tokenResolver);
+
+    expect(Object.keys(resolved.runtimePlan)).toEqual(["variables"]);
+    expect(Array.isArray(resolved.runtimePlan.variables)).toBe(true);
+    resolved.runtimePlan.variables.forEach((variable) => {
+      expect(Object.keys(variable).sort()).toEqual(
+        variable.source === "state"
+          ? ["name", "property", "slot", "source", "state"]
+          : ["name", "property", "slot", "source"]
+      );
+      expect(variable.name.startsWith("--")).toBe(true);
+      expect(variable.name).not.toContain("root");
+    });
+  });
 });

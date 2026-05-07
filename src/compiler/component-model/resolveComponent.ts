@@ -12,6 +12,7 @@ import type {
 } from "./component.types";
 import type { CompositionSlotRelationGraph } from "./compositionSlotRelations";
 import { deriveCompositionSlotRelationGraph } from "./compositionSlotRelations";
+import { createComponentRuntimePlan } from "./runtimePlan";
 import type { TokenResolver } from "./tokenResolver";
 
 const inheritedSlotProperties = new Set([
@@ -79,27 +80,29 @@ export function resolveComponent(
     ...baseBindings,
     ...Object.values(stateBindingsByState).flat()
   ];
+  const styles = {
+    base: createSlotStyles(baseBindings, {
+      includeTransition: true,
+      slotRelationGraph
+    }),
+    states: Object.fromEntries(
+      Object.entries(stateBindingsByState).map(([stateName, stateBindings]) => [
+        stateName,
+        createSlotStyles(stateBindings, {
+          includeTransition: false,
+          slotRelationGraph
+        })
+      ])
+    )
+  };
 
   return {
     bindings,
+    runtimePlan: createComponentRuntimePlan(schema, styles),
     schema,
     selection: resolvedSelection,
     state,
-    styles: {
-      base: createSlotStyles(baseBindings, {
-        includeTransition: true,
-        slotRelationGraph
-      }),
-      states: Object.fromEntries(
-        Object.entries(stateBindingsByState).map(([stateName, stateBindings]) => [
-          stateName,
-          createSlotStyles(stateBindings, {
-            includeTransition: false,
-            slotRelationGraph
-          })
-        ])
-      )
-    }
+    styles
   };
 }
 

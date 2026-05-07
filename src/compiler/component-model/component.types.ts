@@ -137,8 +137,21 @@ export type ResolvedComponentStateStyles = Partial<
   Record<ComponentStateName, ResolvedComponentSlotStyles>
 >;
 
+export type ResolvedComponentRuntimePlanVariable = {
+  name: string;
+  property: string;
+  slot: ComponentSlotName;
+  source: "base" | "state";
+  state?: ComponentStateName;
+};
+
+export type ResolvedComponentRuntimePlan = {
+  variables: readonly ResolvedComponentRuntimePlanVariable[];
+};
+
 export type ResolvedComponent = {
   bindings: readonly ResolvedComponentBinding[];
+  runtimePlan: ResolvedComponentRuntimePlan;
   schema: ComponentSchema;
   selection: ResolvedComponentVariantSelection;
   state: ComponentStateName;
