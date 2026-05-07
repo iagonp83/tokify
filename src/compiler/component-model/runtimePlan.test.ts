@@ -72,20 +72,58 @@ describe("createComponentRuntimePlan", () => {
         name: "--runtime-plan-component-background",
         property: "background",
         slot: "root",
-        source: "base"
+        source: "base",
+        sourceType: "explicit",
+        styleLayer: "base"
       },
       {
         name: "--runtime-plan-component-transition",
         property: "transition",
         slot: "root",
-        source: "base"
+        source: "base",
+        sourceType: "derived",
+        styleLayer: "base"
       },
       {
         name: "--runtime-plan-component-color",
         property: "color",
         slot: "root",
         source: "state",
-        state: "hover"
+        sourceType: "explicit",
+        state: "hover",
+        styleLayer: "state"
+      }
+    ]);
+  });
+
+  it("uses provided provenance metadata for inherited runtime variables", () => {
+    const runtimePlan = createComponentRuntimePlan(
+      runtimePlanSchema,
+      {
+        base: {
+          root: {
+            color: "base-color"
+          }
+        },
+        states: {}
+      },
+      {
+        base: {
+          root: {
+            color: "inherited"
+          }
+        }
+      }
+    );
+
+    expect(runtimePlan.variables).toEqual([
+      {
+        name: "--runtime-plan-component-color",
+        property: "color",
+        slot: "root",
+        source: "base",
+        sourceType: "inherited",
+        styleLayer: "base"
       }
     ]);
   });

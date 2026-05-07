@@ -3,10 +3,20 @@ import type {
   ComponentSlotName,
   ResolvedComponentRuntimePlan,
   ResolvedComponentRuntimePlanVariable,
+  ResolvedComponentSlotStyleProvenance,
+  ResolvedComponentStateStyleProvenance,
   ResolvedComponentSlotStyles,
   ResolvedComponentStateStyles
 } from "./component.types";
-import { isRuntimeEmittableStyleProperty } from "./propertyRegistry";
+import {
+  getComponentStyleProperty,
+  isRuntimeEmittableStyleProperty
+} from "./propertyRegistry";
+
+export type ComponentRuntimePlanStyleProvenance = {
+  base?: ResolvedComponentSlotStyleProvenance;
+  states?: ResolvedComponentStateStyleProvenance;
+};
 
 export function createFlatSlotVariableName(
   componentName: string,
@@ -28,18 +38,27 @@ export function createComponentRuntimePlan(
   styles: {
     base: ResolvedComponentSlotStyles;
     states: ResolvedComponentStateStyles;
-  }
+  },
+  provenance: ComponentRuntimePlanStyleProvenance = {}
 ): ResolvedComponentRuntimePlan {
   return {
     variables: [
-      ...createStyleVariables(schema, styles.base, "base"),
+      ...createStyleVariables(
+        schema,
+        styles.base,
+        "base",
+        provenance.base ?? {}
+      ),
       ...schema.states.flatMap((state) =>
-        createStyleVariables(schema, styles.states[state.name] ?? {}, "state").map(
-          (variable) => ({
-            ...variable,
-            state: state.name
-          })
-        )
+        createStyleVariables(
+          schema,
+          styles.states[state.name] ?? {},
+          "state",
+          provenance.states?.[state.name] ?? {}
+        ).map((variable) => ({
+          ...variable,
+          state: state.name
+        }))
       )
     ]
   };
@@ -48,7 +67,8 @@ export function createComponentRuntimePlan(
 function createStyleVariables(
   schema: ComponentSchema,
   slotStyles: ResolvedComponentSlotStyles,
-  source: ResolvedComponentRuntimePlanVariable["source"]
+  styleLayer: ResolvedComponentRuntimePlanVariable["styleLayer"],
+  provenance: ResolvedComponentSlotStyleProvenance
 ): ResolvedComponentRuntimePlanVariable[] {
   return schema.slots.flatMap((slot) => {
     const style = slotStyles[slot.name];
@@ -58,14 +78,36 @@ function createStyleVariables(
     }
 
     return Object.keys(style)
-      .filter((property) => isRuntimeEmittableStyleProperty(property, source))
+      .filter((property) =>
+        isRuntimeEmittableStyleProperty(property, styleLayer)
+      )
       .map((property) => ({
         name: createFlatSlotVariableName(schema.name, slot.name, property),
         property,
         slot: slot.name,
-        source
+        source: styleLayer,
+        sourceType: getRuntimeVariableSourceType(
+          property,
+          slot.name,
+          provenance
+        ),
+        styleLayer
       }));
   });
+}
+
+function getRuntimeVariableSourceType(
+  property: string,
+  slot: ComponentSlotName,
+  provenance: ResolvedComponentSlotStyleProvenance
+): ResolvedComponentRuntimePlanVariable["sourceType"] {
+  const sourceType = provenance[slot]?.[property];
+
+  if (sourceType) {
+    return sourceType;
+  }
+
+  return getComponentStyleProperty(property)?.derived ? "derived" : "explicit";
 }
 
 function toKebabSegment(value: string) {

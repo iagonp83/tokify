@@ -5,7 +5,9 @@ import type {
   ComponentSchema,
   ResolvedComponent,
   ResolvedComponentBinding,
+  ResolvedComponentRuntimePlanSourceType,
   ResolvedComponentVariantSelection,
+  ResolvedComponentSlotStyleProvenance,
   ResolvedComponentSlotStyles,
   ResolvedComponentStyle
 } from "./component.types";
@@ -75,25 +77,40 @@ export function resolveComponent(
     ...baseBindings,
     ...Object.values(stateBindingsByState).flat()
   ];
+  const baseStyleResolution = createSlotStyles(baseBindings, {
+    includeTransition: true,
+    slotRelationGraph
+  });
+  const stateStyleResolutions = Object.fromEntries(
+    Object.entries(stateBindingsByState).map(([stateName, stateBindings]) => [
+      stateName,
+      createSlotStyles(stateBindings, {
+        includeTransition: false,
+        slotRelationGraph
+      })
+    ])
+  );
   const styles = {
-    base: createSlotStyles(baseBindings, {
-      includeTransition: true,
-      slotRelationGraph
-    }),
+    base: baseStyleResolution.styles,
     states: Object.fromEntries(
-      Object.entries(stateBindingsByState).map(([stateName, stateBindings]) => [
+      Object.entries(stateStyleResolutions).map(([stateName, resolution]) => [
         stateName,
-        createSlotStyles(stateBindings, {
-          includeTransition: false,
-          slotRelationGraph
-        })
+        resolution.styles
       ])
     )
   };
 
   return {
     bindings,
-    runtimePlan: createComponentRuntimePlan(schema, styles),
+    runtimePlan: createComponentRuntimePlan(schema, styles, {
+      base: baseStyleResolution.provenance,
+      states: Object.fromEntries(
+        Object.entries(stateStyleResolutions).map(([stateName, resolution]) => [
+          stateName,
+          resolution.provenance
+        ])
+      )
+    }),
     schema,
     selection: resolvedSelection,
     state,
@@ -116,70 +133,107 @@ function matchesVariantConditions(
   );
 }
 
+type SlotStyleResolution = {
+  provenance: ResolvedComponentSlotStyleProvenance;
+  styles: ResolvedComponentSlotStyles;
+};
+
 function createSlotStyles(
   bindings: readonly ResolvedComponentBinding[],
   options: {
     includeTransition: boolean;
     slotRelationGraph: CompositionSlotRelationGraph;
   }
-): ResolvedComponentSlotStyles {
-  const explicitStyles = bindings.reduce<ResolvedComponentSlotStyles>(
-    (slotStyles, binding) => {
+): SlotStyleResolution {
+  const explicitResolution = bindings.reduce<SlotStyleResolution>(
+    (resolution, binding) => {
       const cssProperty = getCssPropertyForTokenBindingTarget(binding.target);
 
       if (!cssProperty) {
-        return slotStyles;
+        return resolution;
       }
 
       return {
-        ...slotStyles,
-        [binding.slot]: {
-          ...(slotStyles[binding.slot] ?? {}),
-          [cssProperty]: binding.value
+        provenance: {
+          ...resolution.provenance,
+          [binding.slot]: {
+            ...(resolution.provenance[binding.slot] ?? {}),
+            [cssProperty]: "explicit"
+          }
+        },
+        styles: {
+          ...resolution.styles,
+          [binding.slot]: {
+            ...(resolution.styles[binding.slot] ?? {}),
+            [cssProperty]: binding.value
+          }
         }
       };
     },
-    {}
+    {
+      provenance: {},
+      styles: {}
+    }
   );
-  const styles = applySlotInheritance(
-    explicitStyles,
+  const inheritedResolution = applySlotInheritance(
+    explicitResolution,
     options.slotRelationGraph
   );
 
   if (!options.includeTransition) {
-    return styles;
+    return inheritedResolution;
   }
 
-  return Object.fromEntries(
-    Object.entries(styles).map(([slot, style]) => [
-      slot,
-      addTransitionShorthand(style)
-    ])
+  return Object.entries(inheritedResolution.styles).reduce<SlotStyleResolution>(
+    (resolution, [slot, style]) => {
+      const shorthandResolution = addTransitionShorthand(
+        style,
+        inheritedResolution.provenance[slot] ?? {}
+      );
+
+      return {
+        provenance: {
+          ...resolution.provenance,
+          [slot]: shorthandResolution.provenance
+        },
+        styles: {
+          ...resolution.styles,
+          [slot]: shorthandResolution.style
+        }
+      };
+    },
+    {
+      provenance: {},
+      styles: {}
+    }
   );
 }
 
 function applySlotInheritance(
-  styles: ResolvedComponentSlotStyles,
+  resolution: SlotStyleResolution,
   slotRelationGraph: CompositionSlotRelationGraph
-): ResolvedComponentSlotStyles {
+): SlotStyleResolution {
   if (slotRelationGraph.relations.length === 0) {
-    return styles;
+    return resolution;
   }
 
-  let inheritedStyles = styles;
+  let inheritedResolution = resolution;
 
   for (let pass = 0; pass < slotRelationGraph.relations.length; pass += 1) {
     let changed = false;
 
     for (const relation of slotRelationGraph.relations) {
-      const parentStyle = inheritedStyles[relation.parentSlot];
+      const parentStyle = inheritedResolution.styles[relation.parentSlot];
 
       if (!parentStyle) {
         continue;
       }
 
-      const childStyle = inheritedStyles[relation.slot] ?? {};
+      const childStyle = inheritedResolution.styles[relation.slot] ?? {};
+      const childProvenance =
+        inheritedResolution.provenance[relation.slot] ?? {};
       const nextChildStyle = { ...childStyle };
+      const nextChildProvenance = { ...childProvenance };
       let relationChanged = false;
 
       Object.entries(parentStyle).forEach(([property, value]) => {
@@ -188,14 +242,21 @@ function applySlotInheritance(
           nextChildStyle[property] === undefined
         ) {
           nextChildStyle[property] = value;
+          nextChildProvenance[property] = "inherited";
           relationChanged = true;
         }
       });
 
       if (relationChanged) {
-        inheritedStyles = {
-          ...inheritedStyles,
-          [relation.slot]: nextChildStyle
+        inheritedResolution = {
+          provenance: {
+            ...inheritedResolution.provenance,
+            [relation.slot]: nextChildProvenance
+          },
+          styles: {
+            ...inheritedResolution.styles,
+            [relation.slot]: nextChildStyle
+          }
         };
         changed = true;
       }
@@ -206,25 +267,38 @@ function applySlotInheritance(
     }
   }
 
-  return inheritedStyles;
+  return inheritedResolution;
 }
 
 function addTransitionShorthand(
-  style: ResolvedComponentStyle
-): ResolvedComponentStyle {
+  style: ResolvedComponentStyle,
+  provenance: Record<string, ResolvedComponentRuntimePlanSourceType>
+): {
+  provenance: Record<string, ResolvedComponentRuntimePlanSourceType>;
+  style: ResolvedComponentStyle;
+} {
   if (!style.transitionProperty || !style.transitionDuration) {
-    return style;
+    return {
+      provenance,
+      style
+    };
   }
 
   return {
-    ...style,
-    transition: [
-      style.transitionProperty,
-      style.transitionDuration,
-      style.transitionTimingFunction,
-      style.transitionDelay
-    ]
-      .filter(Boolean)
-      .join(" ")
+    provenance: {
+      ...provenance,
+      transition: "derived"
+    },
+    style: {
+      ...style,
+      transition: [
+        style.transitionProperty,
+        style.transitionDuration,
+        style.transitionTimingFunction,
+        style.transitionDelay
+      ]
+        .filter(Boolean)
+        .join(" ")
+    }
   };
 }

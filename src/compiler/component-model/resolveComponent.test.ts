@@ -960,13 +960,17 @@ describe("resolveComponent", () => {
       name: "--slot-inheritance-component-background",
       property: "background",
       slot: "root",
-      source: "base"
+      source: "base",
+      sourceType: "explicit",
+      styleLayer: "base"
     });
     expect(resolved.runtimePlan.variables).toContainEqual({
       name: "--slot-inheritance-component-color",
       property: "color",
       slot: "root",
-      source: "base"
+      source: "base",
+      sourceType: "explicit",
+      styleLayer: "base"
     });
   });
 
@@ -977,13 +981,17 @@ describe("resolveComponent", () => {
       name: "--slot-inheritance-component-label-color",
       property: "color",
       slot: "label",
-      source: "base"
+      source: "base",
+      sourceType: "inherited",
+      styleLayer: "base"
     });
     expect(resolved.runtimePlan.variables).toContainEqual({
       name: "--slot-inheritance-component-icon-color",
       property: "color",
       slot: "icon",
-      source: "base"
+      source: "base",
+      sourceType: "inherited",
+      styleLayer: "base"
     });
   });
 
@@ -995,14 +1003,108 @@ describe("resolveComponent", () => {
       property: "color",
       slot: "label",
       source: "state",
-      state: "hover"
+      sourceType: "inherited",
+      state: "hover",
+      styleLayer: "state"
     });
     expect(resolved.runtimePlan.variables).toContainEqual({
       name: "--slot-inheritance-component-icon-transition-duration",
       property: "transitionDuration",
       slot: "icon",
       source: "state",
-      state: "hover"
+      sourceType: "inherited",
+      state: "hover",
+      styleLayer: "state"
+    });
+  });
+
+  it("tracks explicit, inherited, and derived runtime provenance", () => {
+    const resolved = resolveComponent(slotInheritanceSchema, tokenResolver);
+    const rootBackground = resolved.runtimePlan.variables.find(
+      (variable) =>
+        variable.slot === "root" &&
+        variable.property === "background" &&
+        variable.styleLayer === "base"
+    );
+    const labelColor = resolved.runtimePlan.variables.find(
+      (variable) =>
+        variable.slot === "label" &&
+        variable.property === "color" &&
+        variable.styleLayer === "base"
+    );
+    const labelTransition = resolved.runtimePlan.variables.find(
+      (variable) =>
+        variable.slot === "label" &&
+        variable.property === "transition" &&
+        variable.styleLayer === "base"
+    );
+    const rootStateColor = resolved.runtimePlan.variables.find(
+      (variable) =>
+        variable.slot === "root" &&
+        variable.property === "color" &&
+        variable.styleLayer === "state" &&
+        variable.state === "hover"
+    );
+    const iconStateColor = resolved.runtimePlan.variables.find(
+      (variable) =>
+        variable.slot === "icon" &&
+        variable.property === "color" &&
+        variable.styleLayer === "state" &&
+        variable.state === "hover"
+    );
+
+    expect(rootBackground).toMatchObject({
+      source: "base",
+      sourceType: "explicit",
+      styleLayer: "base"
+    });
+    expect(labelColor).toMatchObject({
+      source: "base",
+      sourceType: "inherited",
+      styleLayer: "base"
+    });
+    expect(labelTransition).toMatchObject({
+      source: "base",
+      sourceType: "derived",
+      styleLayer: "base"
+    });
+    expect(rootStateColor).toMatchObject({
+      source: "state",
+      sourceType: "explicit",
+      state: "hover",
+      styleLayer: "state"
+    });
+    expect(iconStateColor).toMatchObject({
+      source: "state",
+      sourceType: "inherited",
+      state: "hover",
+      styleLayer: "state"
+    });
+  });
+
+  it("keeps authored child-slot runtime provenance explicit", () => {
+    const resolved = resolveComponent(
+      slotInheritanceOverrideSchema,
+      tokenResolver
+    );
+    const labelColor = resolved.runtimePlan.variables.find(
+      (variable) =>
+        variable.slot === "label" &&
+        variable.property === "color" &&
+        variable.styleLayer === "base"
+    );
+    const iconColor = resolved.runtimePlan.variables.find(
+      (variable) =>
+        variable.slot === "icon" &&
+        variable.property === "color" &&
+        variable.styleLayer === "base"
+    );
+
+    expect(labelColor).toMatchObject({
+      sourceType: "explicit"
+    });
+    expect(iconColor).toMatchObject({
+      sourceType: "inherited"
     });
   });
 
@@ -1050,8 +1152,16 @@ describe("resolveComponent", () => {
     resolved.runtimePlan.variables.forEach((variable) => {
       expect(Object.keys(variable).sort()).toEqual(
         variable.source === "state"
-          ? ["name", "property", "slot", "source", "state"]
-          : ["name", "property", "slot", "source"]
+          ? [
+              "name",
+              "property",
+              "slot",
+              "source",
+              "sourceType",
+              "state",
+              "styleLayer"
+            ]
+          : ["name", "property", "slot", "source", "sourceType", "styleLayer"]
       );
       expect(variable.name.startsWith("--")).toBe(true);
       expect(variable.name).not.toContain("root");

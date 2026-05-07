@@ -137,12 +137,30 @@ export type ResolvedComponentStateStyles = Partial<
   Record<ComponentStateName, ResolvedComponentSlotStyles>
 >;
 
+export type ResolvedComponentRuntimePlanSourceType =
+  | "explicit"
+  | "inherited"
+  | "derived";
+
+export type ResolvedComponentRuntimePlanStyleLayer = "base" | "state";
+
+export type ResolvedComponentSlotStyleProvenance = Record<
+  ComponentSlotName,
+  Record<string, ResolvedComponentRuntimePlanSourceType>
+>;
+
+export type ResolvedComponentStateStyleProvenance = Partial<
+  Record<ComponentStateName, ResolvedComponentSlotStyleProvenance>
+>;
+
 export type ResolvedComponentRuntimePlanVariable = {
   name: string;
   property: string;
   slot: ComponentSlotName;
-  source: "base" | "state";
+  source: ResolvedComponentRuntimePlanStyleLayer;
+  sourceType: ResolvedComponentRuntimePlanSourceType;
   state?: ComponentStateName;
+  styleLayer: ResolvedComponentRuntimePlanStyleLayer;
 };
 
 export type ResolvedComponentRuntimePlan = {
