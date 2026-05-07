@@ -1,7 +1,7 @@
-# Composition System Foundation
+# Composition System
 
-This document defines the integration constraints for the future Composition
-System. It is intentionally documentation-only for the foundation phase.
+This document defines the integration constraints and current resolver behavior
+for the Composition System.
 
 ## Purpose
 
@@ -37,6 +37,25 @@ Examples:
 Slots are not DOM structure. A slot may map to a DOM element later, but the
 schema should not assume a tag name, wrapper hierarchy, CSS selector, or adapter
 implementation.
+
+### Slot Relation
+
+A slot relation is a flat semantic resolver relation between two slots.
+
+Example:
+
+```ts
+slotRelations: [
+  {
+    parentSlot: "root",
+    slot: "label"
+  }
+]
+```
+
+Slot relations are not DOM hierarchy, rendered nesting, CSS selectors, adapter
+structure, or React component structure. They describe how the resolver may
+share a small allowlisted set of style properties between flat slot addresses.
 
 ### Part
 
@@ -101,6 +120,11 @@ changing runtime rendering.
 Input currently uses only a `root` slot, which is also valid. Composition must
 support both single-slot and multi-slot components.
 
+Button currently declares resolver-level slot relations:
+
+- `root -> label`
+- `root -> icon`
+
 ## Integration Constraints
 
 ### Slots Stay Flat
@@ -110,6 +134,41 @@ may later describe relationships between slots, parts, and child components, but
 slot identifiers themselves should stay stable and addressable.
 
 Do not require nested slot paths or DOM-shaped trees for resolver behavior.
+
+### Slot Inheritance
+
+The resolver currently consumes `composition.slotRelations` for conservative
+property-level slot inheritance.
+
+Inheritance is limited to this explicit allowlist:
+
+- `color`
+- `transitionProperty`
+- `transitionDuration`
+- `transitionTimingFunction`
+- `transitionDelay`
+
+Parent slot values may fill missing child-slot properties only. Explicit
+child-slot token bindings always win over inherited parent-slot values.
+
+The same inheritance rule applies to base styles and state styles:
+
+- `styles.base[slot]`
+- `styles.states[state][slot]`
+
+The resolver does not inherit layout or box properties, including:
+
+- `background`
+- `paddingBlock`
+- `paddingInline`
+- `height`
+- `gap`
+- `borderRadius`
+- `boxShadow`
+- `opacity`
+
+Slot inheritance does not change the resolver output shape. Resolved styles
+remain grouped by flat slot names and states.
 
 ### Flat CSS Variable Contract Is Mandatory
 
@@ -210,7 +269,7 @@ Safe order:
 
 ### No Runtime Redesign In This Phase
 
-The foundation phase must not redesign:
+The current composition resolver integration must not redesign:
 
 - runtime token emission
 - CSS export
@@ -230,14 +289,27 @@ redesigned during this phase.
 
 - Preserve existing imports and exports.
 - Preserve existing schema fields.
-- Preserve current resolver behavior unless a later migration phase explicitly
-  changes it with tests.
+- Preserve resolver behavior with tests when adding composition behavior.
 - Preserve binding-order precedence until compound variant precedence is tested
   and documented.
 - Preserve the distinction between authored overrides and inherited values.
 - Preserve the flat `DesignTokens` runtime shape.
 
+## Current Non-Goals
+
+Composition integration currently does not include:
+
+- runtime redesign
+- nested runtime token objects
+- adapter work
+- React restructuring
+- visual composition editor
+- import/export changes
+- runtime variable planning or emission changes
+
 ## Future Migration Order
+
+Completed foundation work:
 
 1. Docs.
 2. Variant typing generalization.
@@ -245,6 +317,14 @@ redesigned during this phase.
 4. Optional composition metadata.
 5. Metadata validation.
 6. Flat token naming rules.
+
+Current resolver integration work:
+
+1. Resolver composition baseline tests.
+2. Slot relation graph derivation.
+3. Button composition slot metadata.
+4. Conservative slot inheritance.
+5. Slot precedence documentation.
 
 Do not continue to later phases until each earlier phase has established the
 needed compatibility boundary.
