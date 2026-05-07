@@ -1,0 +1,185 @@
+# Composition System Foundation
+
+This document defines the integration constraints for the future Composition
+System. It is intentionally documentation-only for the foundation phase.
+
+## Purpose
+
+The Composition System should let the compiler describe how components,
+component parts, and child components relate to each other without changing the
+current runtime contract or introducing adapter-specific behavior.
+
+Composition must remain schema/resolver-first. The Component Model and resolver
+should define the portable structure first; React rendering, DOM structure,
+library adapters, and generated code remain downstream concerns.
+
+## Terms
+
+### Component
+
+A component is a library-agnostic schema entry with a name, slots, states,
+variants, edit policy, and token bindings.
+
+Components are not React components, DOM nodes, CSS classes, or adapter output.
+They are compiler-owned descriptions that can later be rendered or exported by
+adapters.
+
+### Slot
+
+A slot is a flat semantic address inside a component schema.
+
+Examples:
+
+- `root`
+- `label`
+- `icon`
+
+Slots are not DOM structure. A slot may map to a DOM element later, but the
+schema should not assume a tag name, wrapper hierarchy, CSS selector, or adapter
+implementation.
+
+### Part
+
+A part is a meaningful piece of a component that may be addressed by a slot.
+
+For this phase, part behavior should be represented through existing slot names
+and token bindings. A future metadata layer may describe part relationships, but
+the resolver should not need nested part trees to keep resolving current
+components.
+
+### Child Component
+
+A child component is a component used as part of another component's
+composition.
+
+Child components should be represented as schema-level composition metadata in a
+future phase. They should not be introduced by hard-coding React children,
+runtime JSX structure, or adapter-specific imports in the Component Model.
+
+### Compound Variant
+
+A compound variant is behavior that applies when more than one variant condition
+matches at the same time.
+
+The current binding condition shape can already express this form:
+
+```ts
+conditions: {
+  intent: "danger",
+  size: "lg"
+}
+```
+
+Initial compound-variant work should prove and document precedence through
+resolver tests before adding new schema fields.
+
+### Inherited Token
+
+An inherited token is a resolved value that a component namespace receives from
+a broader source when it has no authored override.
+
+Current examples include `button` and `input` namespace values inheriting from
+the active `card`, `toolbar`, or `panel` component kind, while preserving any
+authored namespace overrides.
+
+Inherited values must remain distinguishable from authored overrides in source
+of truth data.
+
+## Current Discovered Reality
+
+The current Button schema is already a multi-slot component:
+
+- `root`
+- `label`
+- `icon`
+
+This means the foundation for multi-part components already exists in the
+Component Model. The resolver already groups resolved styles by slot and by
+state, which gives future composition work a safe extension point without
+changing runtime rendering.
+
+Input currently uses only a `root` slot, which is also valid. Composition must
+support both single-slot and multi-slot components.
+
+## Integration Constraints
+
+### Slots Stay Flat
+
+Slots must remain flat semantic addresses in this phase. Composition metadata
+may later describe relationships between slots, parts, and child components, but
+slot identifiers themselves should stay stable and addressable.
+
+Do not require nested slot paths or DOM-shaped trees for resolver behavior.
+
+### Flat CSS Variable Contract Is Mandatory
+
+The runtime token contract remains a flat map of CSS custom properties.
+
+Valid direction:
+
+```ts
+{
+  "--button-radius": "...",
+  "--button-density": "...",
+  "--state-focus-ring": "..."
+}
+```
+
+Avoid introducing nested runtime token objects as the public CSS/export
+contract.
+
+Future slot-level tokens may add more flat variables, but they must follow a
+predictable flat naming scheme and continue to resolve through the token engine.
+
+### Schema/Resolver First
+
+Composition must be introduced through portable schema concepts and resolver
+behavior before runtime rendering changes.
+
+Safe order:
+
+1. Define schema terms and constraints.
+2. Prove resolver behavior with tests.
+3. Add optional metadata only after behavior is understood.
+4. Let adapters consume the model later.
+
+### No Runtime Redesign In This Phase
+
+The foundation phase must not redesign:
+
+- runtime token emission
+- CSS export
+- JSON import/export
+- preview rendering
+- React component structure
+- library adapters
+
+### No Adapter Or React Restructuring
+
+Composition metadata should not force immediate changes to React rendering.
+
+Adapters are downstream from the Component Model and should not be introduced or
+redesigned during this phase.
+
+## Compatibility Rules
+
+- Preserve existing imports and exports.
+- Preserve existing schema fields.
+- Preserve current resolver behavior unless a later migration phase explicitly
+  changes it with tests.
+- Preserve binding-order precedence until compound variant precedence is tested
+  and documented.
+- Preserve the distinction between authored overrides and inherited values.
+- Preserve the flat `DesignTokens` runtime shape.
+
+## Future Migration Order
+
+1. Docs.
+2. Variant typing generalization.
+3. Compound variant precedence tests.
+4. Optional composition metadata.
+5. Metadata validation.
+6. Flat token naming rules.
+
+Do not continue to later phases until each earlier phase has established the
+needed compatibility boundary.
