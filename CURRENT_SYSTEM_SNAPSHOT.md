@@ -15,6 +15,7 @@ Current stabilized areas:
 - namespace inheritance
 - flat runtime token output
 - Composition System Foundation
+- Composition Resolver Integration
 
 Automated regression tests cover:
 
@@ -27,6 +28,10 @@ Automated regression tests cover:
 - namespace inheritance
 - flat runtime output
 - composition metadata validation
+- baseline composition resolver behavior
+- slot relation graph normalization
+- conservative slot inheritance
+- flat slot runtime planning metadata
 
 ## Component Model Structure
 
@@ -36,8 +41,10 @@ Current files:
 
 - `component.types.ts`
 - `button.schema.ts`
+- `compositionSlotRelations.ts`
 - `input.schema.ts`
 - `resolveComponent.ts`
+- `runtimePlan.ts`
 - `validateComponent.ts`
 - `tokenResolver.ts`
 
@@ -91,16 +98,22 @@ Input currently uses only:
 
 - `root`
 
-## Composition Foundation
+## Composition Foundation And Resolver Integration
 
 The Composition System Foundation is completed.
 
-Composition is currently schema-level and metadata-level only. It is not yet a
-runtime behavior layer.
+Composition Resolver Integration is completed at resolver level. Composition is
+still schema/resolver-first, but the resolver now consumes slot relation
+metadata for conservative, property-level slot inheritance and exposes additive
+flat runtime planning metadata.
 
 Slots are flat semantic addresses, not DOM structure. A slot may eventually map
 to rendered output, but the schema does not encode tag names, wrappers, CSS
 selectors, adapter details, or React structure.
+
+Slot relations are flat semantic resolver relations, not DOM hierarchy. They do
+not imply React nesting, wrapper elements, CSS selectors, adapter output, or
+rendered child structure.
 
 Optional composition metadata exists on `ComponentSchema` as `composition`.
 
@@ -119,7 +132,50 @@ Composition metadata validation currently checks:
 - duplicate part identifiers are rejected
 - duplicate child component identifiers are rejected
 
-The resolver does not consume composition metadata yet.
+Button declares resolver-level slot relations:
+
+- `root -> label`
+- `root -> icon`
+
+The resolver has baseline tests proving composition metadata without slot
+relations does not change output.
+
+The slot relation graph helper normalizes composition slot relations and derives
+lookup maps:
+
+- normalized relation order
+- parent lookup by child slot
+- children lookup by parent slot
+- diagnostics for unknown slot references
+- diagnostics for duplicate slot relations
+
+The resolver consumes valid slot relations for conservative inheritance only.
+Inheritance is limited to this allowlist:
+
+- `color`
+- `transitionProperty`
+- `transitionDuration`
+- `transitionTimingFunction`
+- `transitionDelay`
+
+Parent slot values fill missing child-slot properties only. Explicit child-slot
+bindings always win.
+
+The same inheritance rule applies to:
+
+- base styles
+- state styles
+
+Layout and box properties do not inherit through slot relations, including:
+
+- `background`
+- `paddingBlock`
+- `paddingInline`
+- `height`
+- `gap`
+- `borderRadius`
+- `boxShadow`
+- `opacity`
 
 The runtime does not emit new slot-level variables yet.
 
@@ -326,13 +382,23 @@ Slot names must remain semantic and schema-derived. Variable names should not be
 derived from DOM tags, CSS selectors, adapter implementation details, generated
 React component names, or wrapper hierarchy.
 
+The resolver now derives additive runtime planning metadata using this naming
+contract:
+
+- root slot omits `root`: `--button-background`
+- non-root slots include the slot name: `--button-label-color`
+- names remain flat and schema-derived
+- planning entries may include state metadata
+
+This metadata is not emitted into the runtime yet.
+
 ## Resolver Logic
 
 `resolveComponent` is intentionally small and does not validate schemas.
 
 Validation remains in `validateComponent.ts`.
 
-`resolveComponent` does only:
+`resolveComponent` currently:
 
 1. Resolve variant defaults from `schema.variants`.
 2. Keep state separate from variants.
@@ -340,6 +406,9 @@ Validation remains in `validateComponent.ts`.
 4. Select bindings whose variant conditions match.
 5. Select bindings whose state conditions match.
 6. Resolve each binding value through `tokenResolver.get(binding.token)`.
+7. Build flat slot style maps.
+8. Apply conservative slot inheritance from composition slot relations.
+9. Build additive `runtimePlan` metadata for future flat variable emission.
 
 Current resolver precedence is binding-order based:
 
@@ -352,13 +421,47 @@ Current resolver precedence is binding-order based:
    selection.
 4. When multiple bindings target the same slot/property within the same style
    group, the later binding wins through object merge order.
-5. Preview rendering overlays the active state's style group on top of base
+5. Slot inheritance may fill missing child-slot properties from parent slots for
+   the allowlisted inherited properties only.
+6. Explicit child-slot bindings win over inherited values.
+7. Preview rendering overlays the active state's style group on top of base
    styles.
 
 The resolver does not currently read `DesignState`, active skins, namespace
-overrides, import/export data, UI selections, or composition metadata directly.
-Those inputs are adapted before resolution through `createTokenResolver(...)`
-and the explicit `ComponentResolutionContext`.
+overrides, import/export data, or UI selections directly. Those inputs are
+adapted before resolution through `createTokenResolver(...)` and the explicit
+`ComponentResolutionContext`.
+
+The resolver does consume schema-level `composition.slotRelations` directly for
+slot inheritance. It does not consume composition parts or child component
+metadata for runtime behavior yet.
+
+Resolved component output remains backward-compatible at the existing style
+surface:
+
+```ts
+styles.base[slot]
+styles.states[state][slot]
+```
+
+An additive `runtimePlan` field now exists:
+
+```ts
+runtimePlan: {
+  variables: [
+    {
+      name,
+      property,
+      slot,
+      source,
+      state?
+    }
+  ]
+}
+```
+
+`runtimePlan` is planning metadata only. It does not write CSS variables, mutate
+`DesignTokens`, change import/export data, or alter React rendering.
 
 ## Token Resolver
 
@@ -481,13 +584,13 @@ missing, import falls back to the legacy `components` path, where resolved
 component values are treated as component overrides for backward compatibility.
 
 Composition metadata does not change import/export shapes yet.
+Runtime planning metadata is not exported or imported yet.
 
 ## What Composition Is Not Yet
 
 Composition is not yet:
 
-- slot-aware resolver precedence
-- slot inheritance runtime behavior
+- runtime CSS variable emission for slot-level variables
 - child component runtime resolution
 - nested runtime token objects
 - adapter integration
@@ -505,12 +608,12 @@ There is also no:
 ## Current Non-Goals
 
 - No runtime redesign.
-- No resolver consumption of composition metadata yet.
 - No export or import behavior change.
 - No adapter work.
 - No React/UI redesign.
 - No nested token runtime.
+- No actual runtime emission from `runtimePlan` yet.
 
 ## Next Recommended Phase
 
-Composition Resolver Integration.
+Runtime emission planning or the next explicitly scoped composition phase.
