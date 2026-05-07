@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { buttonSchema } from "./button.schema";
 import type { ComponentSchema } from "./component.types";
+import { inputSchema } from "./input.schema";
 import { resolveComponent } from "./resolveComponent";
 import type { TokenResolver } from "./tokenResolver";
 
@@ -164,7 +166,116 @@ const testSchema = {
   version: "0.1.0"
 } as const satisfies ComponentSchema;
 
+const zeroVariantSchema = {
+  editable: {
+    fields: ["tokenBindings"],
+    tokenOnly: true
+  },
+  name: "ZeroVariantComponent",
+  slots: [
+    {
+      name: "root",
+      required: true,
+      role: "root"
+    }
+  ],
+  states: [{ name: "default" }],
+  tokenBindings: [
+    {
+      slot: "root",
+      target: "background",
+      token: "base.background"
+    }
+  ],
+  variants: [],
+  version: "0.1.0"
+} as const satisfies ComponentSchema;
+
+const oneVariantSchema = {
+  editable: {
+    fields: ["variants", "tokenBindings"],
+    tokenOnly: true
+  },
+  name: "OneVariantComponent",
+  slots: [
+    {
+      name: "root",
+      required: true,
+      role: "root"
+    }
+  ],
+  states: [{ name: "default" }],
+  tokenBindings: [
+    {
+      slot: "root",
+      target: "background",
+      token: "base.background"
+    },
+    {
+      conditions: {
+        size: "compact"
+      },
+      slot: "root",
+      target: "background",
+      token: "size.compact.background"
+    },
+    {
+      conditions: {
+        size: "roomy"
+      },
+      slot: "root",
+      target: "background",
+      token: "size.roomy.background"
+    }
+  ],
+  variants: [
+    {
+      default: "compact",
+      name: "size",
+      options: ["compact", "roomy"]
+    }
+  ],
+  version: "0.1.0"
+} as const satisfies ComponentSchema;
+
 describe("resolveComponent", () => {
+  it("resolves components with zero variant axes without applying variant-conditioned styles", () => {
+    const resolved = resolveComponent(zeroVariantSchema, tokenResolver, {
+      intent: "ignored",
+      size: "ignored"
+    });
+
+    expect(resolved.selection).toEqual({
+      intent: "",
+      size: ""
+    });
+    expect(resolved.styles.base.root.background).toBe("base-bg");
+  });
+
+  it("derives a one-axis selection from the schema default", () => {
+    const resolved = resolveComponent(oneVariantSchema, tokenResolver);
+
+    expect(resolved.selection).toEqual({
+      intent: "",
+      size: "compact"
+    });
+    expect(resolved.styles.base.root.background).toBe(
+      "size.compact.background"
+    );
+  });
+
+  it("uses explicit context over a one-axis schema default", () => {
+    const resolved = resolveComponent(oneVariantSchema, tokenResolver, {
+      size: "roomy"
+    });
+
+    expect(resolved.selection).toEqual({
+      intent: "",
+      size: "roomy"
+    });
+    expect(resolved.styles.base.root.background).toBe("size.roomy.background");
+  });
+
   it("uses default variant selection when context is empty", () => {
     const resolved = resolveComponent(testSchema, tokenResolver);
 
@@ -185,6 +296,49 @@ describe("resolveComponent", () => {
       intent: "danger",
       size: "lg"
     });
+  });
+
+  it("preserves Button intent and size defaults from its schema", () => {
+    const resolved = resolveComponent(buttonSchema, tokenResolver);
+
+    expect(resolved.selection).toEqual({
+      intent: "primary",
+      size: "md"
+    });
+    expect(resolved.styles.base.root.background).toBe(
+      "component.button.intent.primary.background"
+    );
+    expect(resolved.styles.base.root.paddingInline).toBe(
+      "component.button.size.md.paddingInline"
+    );
+  });
+
+  it("preserves explicit Button intent and size selection", () => {
+    const resolved = resolveComponent(buttonSchema, tokenResolver, {
+      intent: "danger",
+      size: "lg"
+    });
+
+    expect(resolved.selection).toEqual({
+      intent: "danger",
+      size: "lg"
+    });
+    expect(resolved.styles.base.root.background).toBe(
+      "component.button.intent.danger.background"
+    );
+    expect(resolved.styles.base.root.paddingInline).toBe(
+      "component.button.size.lg.paddingInline"
+    );
+  });
+
+  it("preserves Input behavior with no variant axes", () => {
+    const resolved = resolveComponent(inputSchema, tokenResolver);
+
+    expect(resolved.selection).toEqual({
+      intent: "",
+      size: ""
+    });
+    expect(resolved.styles.base.root.background).toBe("semantic.color.onAccent");
   });
 
   it("merges unconditional and matching variant bindings into base styles", () => {
