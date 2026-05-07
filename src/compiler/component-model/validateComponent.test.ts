@@ -51,6 +51,23 @@ describe("validateComponent composition metadata", () => {
     });
   });
 
+  it("accepts Button slot relation metadata", () => {
+    expect(buttonSchema.composition?.slotRelations).toEqual([
+      {
+        parentSlot: "root",
+        slot: "label"
+      },
+      {
+        parentSlot: "root",
+        slot: "icon"
+      }
+    ]);
+    expect(validateComponent(buttonSchema)).toEqual({
+      errors: [],
+      valid: true
+    });
+  });
+
   it("accepts composition metadata that references existing flat slots", () => {
     const result = validateComponent({
       ...baseSchema,

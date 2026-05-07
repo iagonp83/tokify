@@ -1,6 +1,18 @@
 import type { ComponentSchema } from "./component.types";
 
 export const buttonSchema = {
+  composition: {
+    slotRelations: [
+      {
+        parentSlot: "root",
+        slot: "label"
+      },
+      {
+        parentSlot: "root",
+        slot: "icon"
+      }
+    ]
+  },
   editable: {
     fields: ["variants", "tokenBindings"],
     tokenOnly: true
