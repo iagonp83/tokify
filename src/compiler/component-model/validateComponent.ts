@@ -79,8 +79,72 @@ export function validateComponent(
     });
   });
 
+  schema.composition?.slotRelations?.forEach((relation) => {
+    if (!slotNames.has(relation.slot)) {
+      errors.push(
+        `Composition slot relation references unknown slot "${relation.slot}".`
+      );
+    }
+
+    if (relation.parentSlot && !slotNames.has(relation.parentSlot)) {
+      errors.push(
+        `Composition slot relation references unknown parent slot "${relation.parentSlot}".`
+      );
+    }
+  });
+
+  schema.composition?.parts?.forEach((part) => {
+    if (!slotNames.has(part.slot)) {
+      errors.push(
+        `Composition part "${part.name}" references unknown slot "${part.slot}".`
+      );
+    }
+  });
+
+  schema.composition?.children?.forEach((child) => {
+    if (!slotNames.has(child.slot)) {
+      errors.push(
+        `Composition child "${child.name}" references unknown slot "${child.slot}".`
+      );
+    }
+  });
+
+  findDuplicates(
+    schema.composition?.slotRelations?.map((relation) => relation.slot) ?? []
+  ).forEach((slot) => {
+    errors.push(`Composition slot relation "${slot}" is duplicated.`);
+  });
+
+  findDuplicates(schema.composition?.parts?.map((part) => part.name) ?? []).forEach(
+    (partName) => {
+      errors.push(`Composition part "${partName}" is duplicated.`);
+    }
+  );
+
+  findDuplicates(
+    schema.composition?.children?.map((child) => child.name) ?? []
+  ).forEach((childName) => {
+    errors.push(`Composition child "${childName}" is duplicated.`);
+  });
+
   return {
     errors,
     valid: errors.length === 0
   };
+}
+
+function findDuplicates(values: readonly string[]) {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+
+  values.forEach((value) => {
+    if (seen.has(value)) {
+      duplicates.add(value);
+      return;
+    }
+
+    seen.add(value);
+  });
+
+  return [...duplicates];
 }
