@@ -1,5 +1,7 @@
 export type ComponentName = string;
 
+export type ComponentSlotName = string;
+
 export type ComponentSlotRole =
   | "root"
   | "content"
@@ -9,7 +11,7 @@ export type ComponentSlotRole =
 
 export type ComponentSlot = {
   description?: string;
-  name: string;
+  name: ComponentSlotName;
   required: boolean;
   role: ComponentSlotRole;
 };
@@ -68,9 +70,36 @@ export type TokenBindingTarget =
 
 export type ComponentTokenBinding = {
   conditions?: ComponentVariantCondition & { state?: ComponentStateName };
-  slot: string;
+  slot: ComponentSlotName;
   target: TokenBindingTarget;
   token: string;
+};
+
+export type ComponentCompositionSlotRelation = {
+  description?: string;
+  parentSlot?: ComponentSlotName;
+  slot: ComponentSlotName;
+};
+
+export type ComponentCompositionPart = {
+  description?: string;
+  name: string;
+  required?: boolean;
+  slot: ComponentSlotName;
+};
+
+export type ComponentCompositionChild = {
+  component: ComponentName;
+  description?: string;
+  name: string;
+  required?: boolean;
+  slot: ComponentSlotName;
+};
+
+export type ComponentCompositionMetadata = {
+  children?: readonly ComponentCompositionChild[];
+  parts?: readonly ComponentCompositionPart[];
+  slotRelations?: readonly ComponentCompositionSlotRelation[];
 };
 
 export type EditableComponentField =
@@ -85,6 +114,7 @@ export type ComponentEditPolicy = {
 };
 
 export type ComponentSchema = {
+  composition?: ComponentCompositionMetadata;
   editable: ComponentEditPolicy;
   name: ComponentName;
   slots: readonly ComponentSlot[];
