@@ -104,6 +104,20 @@ authored namespace overrides.
 Inherited values must remain distinguishable from authored overrides in source
 of truth data.
 
+### Runtime Plan Provenance
+
+Runtime plan provenance is metadata that describes where a planned runtime
+variable declaration came from.
+
+Current provenance values are:
+
+- `explicit`: the value came from a matching token binding on the planned slot
+- `inherited`: the value was filled through slot relation inheritance
+- `derived`: the value was computed from other resolved style properties
+
+Provenance is planning metadata only. It does not emit runtime CSS variables,
+change `DesignTokens`, alter import/export shapes, or change adapter behavior.
+
 ## Current Discovered Reality
 
 The current Button schema is already a multi-slot component:
@@ -140,7 +154,8 @@ Do not require nested slot paths or DOM-shaped trees for resolver behavior.
 The resolver currently consumes `composition.slotRelations` for conservative
 property-level slot inheritance.
 
-Inheritance is limited to this explicit allowlist:
+Inheritance eligibility is driven by the central internal property registry.
+The current registry-marked inheritable properties are:
 
 - `color`
 - `transitionProperty`
@@ -169,6 +184,40 @@ The resolver does not inherit layout or box properties, including:
 
 Slot inheritance does not change the resolver output shape. Resolved styles
 remain grouped by flat slot names and states.
+
+The property registry centralizes style-property behavior that was previously
+spread across resolver CSS-property lookup, slot inheritance allowlists, and
+runtime planning behavior. Registry entries can describe:
+
+- `cssProperty`
+- `inheritable`
+- `runtimeEmittable`
+- `derived`
+- `allowStateEmission`
+
+This registry is internal to the Component Model. It does not redesign public
+schema metadata, imports, exports, React rendering, UI behavior, or adapters.
+
+Derived style properties are distinguishable from explicit token bindings.
+Currently, the base `transition` shorthand is treated as a derived property
+when planned in `runtimePlan`.
+
+### Slot Relation Validation
+
+Composition validation is schema-first. Slot relation safety is checked before
+resolution and before any future runtime emission phase.
+
+Validation rejects:
+
+- relations whose `slot` references an unknown slot
+- relations whose `parentSlot` references an unknown slot
+- relations whose `slot` references itself as parent
+- simple cycles
+- multi-node cycles
+- duplicate child-slot relation identifiers
+
+The resolver assumes validated acyclic relations. It does not implement
+runtime-based cycle handling.
 
 ### Flat CSS Variable Contract Is Mandatory
 
@@ -255,6 +304,50 @@ Scalability requirements:
 - Token resolver paths may stay semantic while resolving to these flat runtime
   variables.
 
+### Runtime Planning Metadata
+
+The resolver now creates additive runtime planning metadata for future flat CSS
+variable emission.
+
+The runtime plan remains flat:
+
+```ts
+runtimePlan.variables[]
+```
+
+Each planned variable currently has this shape:
+
+```ts
+{
+  name,
+  property,
+  slot,
+  source,
+  sourceType,
+  styleLayer,
+  state?
+}
+```
+
+`sourceType` describes where the planned declaration came from:
+
+- `explicit`: a matching token binding on the planned slot
+- `inherited`: a value filled through a slot relation
+- `derived`: a registry-marked derived property, such as base `transition`
+
+`styleLayer` describes which style layer the planned declaration belongs to:
+
+- `base`: a base style planning entry
+- `state`: a state style planning entry
+
+The existing `source` field remains layer-compatible with current planning
+behavior (`"base"` or `"state"`). State-layer entries also retain `state`
+metadata.
+
+`runtimePlan` is planning metadata only. It does not emit runtime CSS variables
+yet, mutate `DesignTokens`, change CSS export, change JSON import/export, alter
+React rendering, or invoke adapters.
+
 ### Schema/Resolver First
 
 Composition must be introduced through portable schema concepts and resolver
@@ -294,6 +387,7 @@ redesigned during this phase.
   and documented.
 - Preserve the distinction between authored overrides and inherited values.
 - Preserve the flat `DesignTokens` runtime shape.
+- Preserve `runtimePlan.variables[]` as a flat planning structure.
 
 ## Current Non-Goals
 
@@ -305,7 +399,7 @@ Composition integration currently does not include:
 - React restructuring
 - visual composition editor
 - import/export changes
-- runtime variable planning or emission changes
+- runtime variable emission changes
 
 ## Future Migration Order
 
@@ -318,13 +412,17 @@ Completed foundation work:
 5. Metadata validation.
 6. Flat token naming rules.
 
-Current resolver integration work:
+Completed resolver integration and hardening work:
 
 1. Resolver composition baseline tests.
 2. Slot relation graph derivation.
 3. Button composition slot metadata.
 4. Conservative slot inheritance.
 5. Slot precedence documentation.
+6. Property registry foundation.
+7. Registry-driven inheritance and runtime planning behavior.
+8. Slot relation self-reference and cycle validation.
+9. Runtime plan provenance metadata.
 
 Do not continue to later phases until each earlier phase has established the
 needed compatibility boundary.

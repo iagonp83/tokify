@@ -16,6 +16,7 @@ Current stabilized areas:
 - flat runtime token output
 - Composition System Foundation
 - Composition Resolver Integration
+- Resolver Hardening
 
 Automated regression tests cover:
 
@@ -32,6 +33,10 @@ Automated regression tests cover:
 - slot relation graph normalization
 - conservative slot inheritance
 - flat slot runtime planning metadata
+- property registry lookup and style metadata
+- registry-driven inheritance and runtime planning behavior
+- slot relation self-reference and cycle validation
+- runtimePlan provenance metadata
 
 ## Component Model Structure
 
@@ -43,6 +48,7 @@ Current files:
 - `button.schema.ts`
 - `compositionSlotRelations.ts`
 - `input.schema.ts`
+- `propertyRegistry.ts`
 - `resolveComponent.ts`
 - `runtimePlan.ts`
 - `validateComponent.ts`
@@ -126,6 +132,8 @@ Composition metadata can describe:
 Composition metadata validation currently checks:
 
 - slot relations reference existing slots
+- slot relations do not reference themselves as parent
+- slot relations do not form simple or multi-node cycles
 - part metadata references existing slots
 - child component metadata references existing slots
 - duplicate slot relation identifiers are rejected
@@ -150,7 +158,8 @@ lookup maps:
 - diagnostics for duplicate slot relations
 
 The resolver consumes valid slot relations for conservative inheritance only.
-Inheritance is limited to this allowlist:
+Inheritance is driven by the internal property registry's `inheritable`
+metadata. The current inheritable properties are:
 
 - `color`
 - `transitionProperty`
@@ -178,6 +187,43 @@ Layout and box properties do not inherit through slot relations, including:
 - `opacity`
 
 The runtime does not emit new slot-level variables yet.
+
+Slot relation validation is schema-first. Cycles and self-references are
+rejected by `validateComponent` before resolution or any future runtime
+emission phase. The resolver does not contain runtime-based cycle handling.
+
+## Property Registry Foundation
+
+The Resolver Hardening property registry foundation is completed.
+
+Component style property behavior is centralized in the internal
+`propertyRegistry.ts` module. The registry is internal to the Component Model
+and does not redesign public imports, exports, adapters, React, UI, JSON
+import, or CSS export.
+
+Each property definition can describe:
+
+- `cssProperty`
+- `inheritable`
+- `runtimeEmittable`
+- `derived`
+- `allowStateEmission`
+
+Registry metadata now drives:
+
+- token binding target to CSS property lookup in the resolver
+- conservative slot inheritance eligibility
+- runtime planning property filtering
+- derived property identification for runtimePlan provenance
+
+Unsupported or intentionally non-emitted binding targets can remain registered
+without becoming style output. For example, `borderColor` is registered but
+does not currently emit into resolved styles or runtime planning.
+
+Derived properties are tracked distinctly from explicit token bindings.
+Currently, the base-style `transition` shorthand is derived from transition
+longhand values and marked as derived metadata. State styles still do not
+receive derived transition shorthand emission.
 
 ## Variant Foundation
 
@@ -388,7 +434,8 @@ contract:
 - root slot omits `root`: `--button-background`
 - non-root slots include the slot name: `--button-label-color`
 - names remain flat and schema-derived
-- planning entries may include state metadata
+- planning entries include provenance and layer metadata
+- state planning entries include state metadata
 
 This metadata is not emitted into the runtime yet.
 
@@ -407,7 +454,8 @@ Validation remains in `validateComponent.ts`.
 5. Select bindings whose state conditions match.
 6. Resolve each binding value through `tokenResolver.get(binding.token)`.
 7. Build flat slot style maps.
-8. Apply conservative slot inheritance from composition slot relations.
+8. Apply registry-driven conservative slot inheritance from composition slot
+   relations.
 9. Build additive `runtimePlan` metadata for future flat variable emission.
 
 Current resolver precedence is binding-order based:
@@ -422,7 +470,7 @@ Current resolver precedence is binding-order based:
 4. When multiple bindings target the same slot/property within the same style
    group, the later binding wins through object merge order.
 5. Slot inheritance may fill missing child-slot properties from parent slots for
-   the allowlisted inherited properties only.
+   registry-marked inheritable properties only.
 6. Explicit child-slot bindings win over inherited values.
 7. Preview rendering overlays the active state's style group on top of base
    styles.
@@ -454,11 +502,32 @@ runtimePlan: {
       property,
       slot,
       source,
+      sourceType,
+      styleLayer,
       state?
     }
   ]
 }
 ```
+
+`runtimePlan.variables[]` remains flat. Each variable now carries provenance
+metadata:
+
+- `sourceType: "explicit"` for values from authored token bindings on the
+  planned slot
+- `sourceType: "inherited"` for values filled through composition slot
+  inheritance
+- `sourceType: "derived"` for registry-marked derived properties such as the
+  base `transition` shorthand
+
+Each variable also carries layer metadata:
+
+- `styleLayer: "base"` for base style planning entries
+- `styleLayer: "state"` for state style planning entries
+
+The existing `source` field remains layer-compatible (`"base"` or `"state"`)
+for compatibility with the current runtime planning surface. State entries also
+retain the `state` field.
 
 `runtimePlan` is planning metadata only. It does not write CSS variables, mutate
 `DesignTokens`, change import/export data, or alter React rendering.
