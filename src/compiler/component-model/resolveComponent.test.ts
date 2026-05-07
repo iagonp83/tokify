@@ -285,6 +285,76 @@ const customAxisSchema = {
   version: "0.1.0"
 } as const satisfies ComponentSchema;
 
+const compoundVariantSchema = {
+  editable: {
+    fields: ["variants", "tokenBindings"],
+    tokenOnly: true
+  },
+  name: "CompoundVariantComponent",
+  slots: [
+    {
+      name: "root",
+      required: true,
+      role: "root"
+    }
+  ],
+  states: [{ name: "default" }],
+  tokenBindings: [
+    {
+      slot: "root",
+      target: "background",
+      token: "base.background"
+    },
+    {
+      conditions: {
+        intent: "danger"
+      },
+      slot: "root",
+      target: "background",
+      token: "intent.danger.background"
+    },
+    {
+      conditions: {
+        size: "lg"
+      },
+      slot: "root",
+      target: "paddingInline",
+      token: "size.lg.padding"
+    },
+    {
+      conditions: {
+        intent: "danger",
+        size: "lg"
+      },
+      slot: "root",
+      target: "background",
+      token: "intent.danger.size.lg.background"
+    },
+    {
+      conditions: {
+        intent: "danger",
+        size: "lg"
+      },
+      slot: "root",
+      target: "background",
+      token: "intent.danger.size.lg.background.later"
+    }
+  ],
+  variants: [
+    {
+      default: "primary",
+      name: "intent",
+      options: ["primary", "danger"]
+    },
+    {
+      default: "md",
+      name: "size",
+      options: ["md", "lg"]
+    }
+  ],
+  version: "0.1.0"
+} as const satisfies ComponentSchema;
+
 describe("resolveComponent", () => {
   it("resolves components with zero variant axes without applying variant-conditioned styles", () => {
     const resolved = resolveComponent(zeroVariantSchema, tokenResolver, {
@@ -390,6 +460,86 @@ describe("resolveComponent", () => {
     );
     expect(resolved.styles.base.root.paddingInline).toBe(
       "component.button.size.lg.paddingInline"
+    );
+  });
+
+  it("applies single variant conditions without requiring other axes to match", () => {
+    const resolved = resolveComponent(compoundVariantSchema, tokenResolver, {
+      intent: "danger",
+      size: "md"
+    });
+
+    expect(resolved.styles.base.root).toMatchObject({
+      background: "danger-bg"
+    });
+    expect(resolved.styles.base.root.paddingInline).toBeUndefined();
+  });
+
+  it("applies multi-axis conditions only when every variant condition matches", () => {
+    const dangerMd = resolveComponent(compoundVariantSchema, tokenResolver, {
+      intent: "danger",
+      size: "md"
+    });
+    const primaryLg = resolveComponent(compoundVariantSchema, tokenResolver, {
+      intent: "primary",
+      size: "lg"
+    });
+    const dangerLg = resolveComponent(compoundVariantSchema, tokenResolver, {
+      intent: "danger",
+      size: "lg"
+    });
+
+    expect(dangerMd.styles.base.root.background).toBe("danger-bg");
+    expect(primaryLg.styles.base.root.background).toBe("base-bg");
+    expect(primaryLg.styles.base.root.paddingInline).toBe("16px");
+    expect(dangerLg.styles.base.root.background).toBe(
+      "intent.danger.size.lg.background.later"
+    );
+  });
+
+  it("uses binding order as precedence for matching compound variant bindings", () => {
+    const resolved = resolveComponent(compoundVariantSchema, tokenResolver, {
+      intent: "danger",
+      size: "lg"
+    });
+
+    expect(
+      resolved.bindings
+        .filter((binding) => binding.target === "background")
+        .map((binding) => binding.token)
+    ).toEqual([
+      "base.background",
+      "intent.danger.background",
+      "intent.danger.size.lg.background",
+      "intent.danger.size.lg.background.later"
+    ]);
+    expect(resolved.styles.base.root.background).toBe(
+      "intent.danger.size.lg.background.later"
+    );
+  });
+
+  it("uses explicit selections over schema defaults for compound variant matching", () => {
+    const defaultResolved = resolveComponent(compoundVariantSchema, tokenResolver);
+    const explicitResolved = resolveComponent(
+      compoundVariantSchema,
+      tokenResolver,
+      {
+        intent: "danger",
+        size: "lg"
+      }
+    );
+
+    expect(defaultResolved.selection).toEqual({
+      intent: "primary",
+      size: "md"
+    });
+    expect(defaultResolved.styles.base.root.background).toBe("base-bg");
+    expect(explicitResolved.selection).toEqual({
+      intent: "danger",
+      size: "lg"
+    });
+    expect(explicitResolved.styles.base.root.background).toBe(
+      "intent.danger.size.lg.background.later"
     );
   });
 
