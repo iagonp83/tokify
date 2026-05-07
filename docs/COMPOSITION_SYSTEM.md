@@ -131,6 +131,71 @@ contract.
 Future slot-level tokens may add more flat variables, but they must follow a
 predictable flat naming scheme and continue to resolve through the token engine.
 
+### Slot-Level Token Naming
+
+Future slot-level CSS variables must preserve the flat runtime contract. The
+variable name should encode:
+
+```txt
+component -> slot -> property
+```
+
+Use this pattern for non-root slots:
+
+```txt
+--{component}-{slot}-{property}
+```
+
+Examples:
+
+- `--button-icon-size`
+- `--card-header-padding`
+- `--input-label-color`
+
+Use this pattern for root slot styles:
+
+```txt
+--{component}-{property}
+```
+
+Examples:
+
+- `--button-background`
+- `--button-radius`
+- `--input-color`
+
+The `root` slot is the component's default style surface, so root-slot variable
+names should omit `root`. Avoid names such as `--button-root-background`.
+
+This preserves compatibility with existing component-level variables such as:
+
+- `--button-radius`
+- `--button-density`
+- `--card-radius`
+- `--input-radius`
+
+Slot names must remain semantic and schema-derived. Variable names should not be
+derived from DOM tags, CSS selectors, adapter implementation details, generated
+React component names, or wrapper hierarchy.
+
+Collision avoidance rules:
+
+- A component owns its own variable prefix.
+- A slot variable should include the slot name unless it targets `root`.
+- A property name should describe the resolved style concern, not the source
+  token group.
+- New slot-level variables must not repurpose existing component-level variable
+  names with incompatible meaning.
+
+Scalability requirements:
+
+- Multi-part components should add flat variables predictably per slot.
+- Adding new slots should not require nested runtime token objects.
+- Adapters may map flat variables to their own output later, but adapter naming
+  must not leak into the Component Model or token contract.
+- Token resolver paths may stay semantic while resolving to these flat runtime
+  variables.
+
 ### Schema/Resolver First
 
 Composition must be introduced through portable schema concepts and resolver
