@@ -1,5 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { createFlatSlotVariableName } from "./runtimePlan";
+import type { ComponentSchema } from "./component.types";
+import {
+  createComponentRuntimePlan,
+  createFlatSlotVariableName
+} from "./runtimePlan";
+
+const runtimePlanSchema = {
+  editable: {
+    fields: ["tokenBindings"],
+    tokenOnly: true
+  },
+  name: "RuntimePlanComponent",
+  slots: [
+    {
+      name: "root",
+      required: true,
+      role: "root"
+    }
+  ],
+  states: [{ name: "default" }, { name: "hover" }],
+  tokenBindings: [],
+  variants: [],
+  version: "0.1.0"
+} as const satisfies ComponentSchema;
 
 describe("createFlatSlotVariableName", () => {
   it("omits the root slot from flat variable names", () => {
@@ -21,5 +44,49 @@ describe("createFlatSlotVariableName", () => {
     expect(
       createFlatSlotVariableName("SearchInput", "leadingIcon", "borderRadius")
     ).toBe("--search-input-leading-icon-border-radius");
+  });
+});
+
+describe("createComponentRuntimePlan", () => {
+  it("uses registry metadata while keeping runtime variables flat", () => {
+    const runtimePlan = createComponentRuntimePlan(runtimePlanSchema, {
+      base: {
+        root: {
+          background: "base-bg",
+          borderColor: "base-border",
+          transition: "background-color 120ms ease-out"
+        }
+      },
+      states: {
+        hover: {
+          root: {
+            color: "hover-color",
+            transition: "opacity 80ms ease-out"
+          }
+        }
+      }
+    });
+
+    expect(runtimePlan.variables).toEqual([
+      {
+        name: "--runtime-plan-component-background",
+        property: "background",
+        slot: "root",
+        source: "base"
+      },
+      {
+        name: "--runtime-plan-component-transition",
+        property: "transition",
+        slot: "root",
+        source: "base"
+      },
+      {
+        name: "--runtime-plan-component-color",
+        property: "color",
+        slot: "root",
+        source: "state",
+        state: "hover"
+      }
+    ]);
   });
 });

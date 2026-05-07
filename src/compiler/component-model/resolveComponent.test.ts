@@ -830,6 +830,19 @@ describe("resolveComponent", () => {
     expect(resolved.styles.base.root.borderColor).toBeUndefined();
   });
 
+  it("preserves registry-backed resolver style behavior", () => {
+    const resolved = resolveComponent(testSchema, tokenResolver);
+
+    expect(resolved.styles.base.root).toMatchObject({
+      background: "primary-bg",
+      color: "later-color",
+      paddingInline: "12px",
+      transition: "background-color 120ms ease-out 25ms"
+    });
+    expect(resolved.styles.base.root.borderColor).toBeUndefined();
+    expect(resolved.styles.states.hover?.root.transition).toBeUndefined();
+  });
+
   it("resolves a multi-slot schema without composition metadata", () => {
     const resolved = resolveComponent(compositionBaselineSchema, tokenResolver, {
       density: "roomy"

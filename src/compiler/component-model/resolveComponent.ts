@@ -7,21 +7,16 @@ import type {
   ResolvedComponentBinding,
   ResolvedComponentVariantSelection,
   ResolvedComponentSlotStyles,
-  ResolvedComponentStyle,
-  TokenBindingTarget
+  ResolvedComponentStyle
 } from "./component.types";
 import type { CompositionSlotRelationGraph } from "./compositionSlotRelations";
 import { deriveCompositionSlotRelationGraph } from "./compositionSlotRelations";
+import {
+  getCssPropertyForTokenBindingTarget,
+  isInheritableStyleProperty
+} from "./propertyRegistry";
 import { createComponentRuntimePlan } from "./runtimePlan";
 import type { TokenResolver } from "./tokenResolver";
-
-const inheritedSlotProperties = new Set([
-  "color",
-  "transitionDelay",
-  "transitionDuration",
-  "transitionProperty",
-  "transitionTimingFunction"
-]);
 
 export function resolveComponent(
   schema: ComponentSchema,
@@ -130,7 +125,7 @@ function createSlotStyles(
 ): ResolvedComponentSlotStyles {
   const explicitStyles = bindings.reduce<ResolvedComponentSlotStyles>(
     (slotStyles, binding) => {
-      const cssProperty = toCssProperty(binding.target);
+      const cssProperty = getCssPropertyForTokenBindingTarget(binding.target);
 
       if (!cssProperty) {
         return slotStyles;
@@ -189,7 +184,7 @@ function applySlotInheritance(
 
       Object.entries(parentStyle).forEach(([property, value]) => {
         if (
-          inheritedSlotProperties.has(property) &&
+          isInheritableStyleProperty(property) &&
           nextChildStyle[property] === undefined
         ) {
           nextChildStyle[property] = value;
@@ -232,25 +227,4 @@ function addTransitionShorthand(
       .filter(Boolean)
       .join(" ")
   };
-}
-
-function toCssProperty(target: TokenBindingTarget) {
-  switch (target) {
-    case "background":
-    case "borderRadius":
-    case "boxShadow":
-    case "color":
-    case "gap":
-    case "height":
-    case "opacity":
-    case "paddingBlock":
-    case "paddingInline":
-    case "transitionDelay":
-    case "transitionDuration":
-    case "transitionProperty":
-    case "transitionTimingFunction":
-      return target;
-    default:
-      return undefined;
-  }
 }

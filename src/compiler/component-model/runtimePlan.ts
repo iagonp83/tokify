@@ -6,6 +6,7 @@ import type {
   ResolvedComponentSlotStyles,
   ResolvedComponentStateStyles
 } from "./component.types";
+import { isRuntimeEmittableStyleProperty } from "./propertyRegistry";
 
 export function createFlatSlotVariableName(
   componentName: string,
@@ -56,12 +57,14 @@ function createStyleVariables(
       return [];
     }
 
-    return Object.keys(style).map((property) => ({
-      name: createFlatSlotVariableName(schema.name, slot.name, property),
-      property,
-      slot: slot.name,
-      source
-    }));
+    return Object.keys(style)
+      .filter((property) => isRuntimeEmittableStyleProperty(property, source))
+      .map((property) => ({
+        name: createFlatSlotVariableName(schema.name, slot.name, property),
+        property,
+        slot: slot.name,
+        source
+      }));
   });
 }
 
