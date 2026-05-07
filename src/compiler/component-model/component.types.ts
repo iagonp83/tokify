@@ -27,7 +27,7 @@ export type ComponentState = {
   name: ComponentStateName;
 };
 
-export type ComponentVariantAxisName = "intent" | "size";
+export type ComponentVariantAxisName = string;
 
 export type ComponentVariantAxis<Option extends string = string> = {
   default: Option;
@@ -39,8 +39,9 @@ export type ComponentVariantSelection = Partial<
   Record<ComponentVariantAxisName, string>
 >;
 
-export type ResolvedComponentVariantSelection = Required<
-  Record<ComponentVariantAxisName, string>
+export type ResolvedComponentVariantSelection = Record<
+  ComponentVariantAxisName,
+  string
 >;
 
 export type ComponentResolutionContext = ComponentVariantSelection & {

@@ -3,7 +3,6 @@ import type {
   ComponentTokenBinding,
   ComponentResolutionContext,
   ComponentSchema,
-  ComponentVariantAxisName,
   ResolvedComponent,
   ResolvedComponentBinding,
   ResolvedComponentVariantSelection,
@@ -25,10 +24,7 @@ export function resolveComponent(
       ...currentSelection,
       [axis.name]: context[axis.name] ?? axis.default
     }),
-    {
-      intent: "",
-      size: ""
-    }
+    {}
   );
   const state = context.state ?? "default";
 
@@ -100,7 +96,7 @@ function matchesVariantConditions(
         return true;
       }
 
-      return selection[conditionName as ComponentVariantAxisName] === option;
+      return selection[conditionName] === option;
     }
   );
 }

@@ -238,6 +238,53 @@ const oneVariantSchema = {
   version: "0.1.0"
 } as const satisfies ComponentSchema;
 
+const customAxisSchema = {
+  editable: {
+    fields: ["variants", "tokenBindings"],
+    tokenOnly: true
+  },
+  name: "CustomAxisComponent",
+  slots: [
+    {
+      name: "root",
+      required: true,
+      role: "root"
+    }
+  ],
+  states: [{ name: "default" }],
+  tokenBindings: [
+    {
+      slot: "root",
+      target: "background",
+      token: "base.background"
+    },
+    {
+      conditions: {
+        tone: "quiet"
+      },
+      slot: "root",
+      target: "background",
+      token: "tone.quiet.background"
+    },
+    {
+      conditions: {
+        tone: "loud"
+      },
+      slot: "root",
+      target: "background",
+      token: "tone.loud.background"
+    }
+  ],
+  variants: [
+    {
+      default: "quiet",
+      name: "tone",
+      options: ["quiet", "loud"]
+    }
+  ],
+  version: "0.1.0"
+} as const satisfies ComponentSchema;
+
 describe("resolveComponent", () => {
   it("resolves components with zero variant axes without applying variant-conditioned styles", () => {
     const resolved = resolveComponent(zeroVariantSchema, tokenResolver, {
@@ -245,10 +292,7 @@ describe("resolveComponent", () => {
       size: "ignored"
     });
 
-    expect(resolved.selection).toEqual({
-      intent: "",
-      size: ""
-    });
+    expect(resolved.selection).toEqual({});
     expect(resolved.styles.base.root.background).toBe("base-bg");
   });
 
@@ -256,7 +300,6 @@ describe("resolveComponent", () => {
     const resolved = resolveComponent(oneVariantSchema, tokenResolver);
 
     expect(resolved.selection).toEqual({
-      intent: "",
       size: "compact"
     });
     expect(resolved.styles.base.root.background).toBe(
@@ -270,10 +313,29 @@ describe("resolveComponent", () => {
     });
 
     expect(resolved.selection).toEqual({
-      intent: "",
       size: "roomy"
     });
     expect(resolved.styles.base.root.background).toBe("size.roomy.background");
+  });
+
+  it("derives custom variant axes from the schema", () => {
+    const resolved = resolveComponent(customAxisSchema, tokenResolver);
+
+    expect(resolved.selection).toEqual({
+      tone: "quiet"
+    });
+    expect(resolved.styles.base.root.background).toBe("tone.quiet.background");
+  });
+
+  it("uses explicit context for custom schema-derived axes", () => {
+    const resolved = resolveComponent(customAxisSchema, tokenResolver, {
+      tone: "loud"
+    });
+
+    expect(resolved.selection).toEqual({
+      tone: "loud"
+    });
+    expect(resolved.styles.base.root.background).toBe("tone.loud.background");
   });
 
   it("uses default variant selection when context is empty", () => {
@@ -334,10 +396,7 @@ describe("resolveComponent", () => {
   it("preserves Input behavior with no variant axes", () => {
     const resolved = resolveComponent(inputSchema, tokenResolver);
 
-    expect(resolved.selection).toEqual({
-      intent: "",
-      size: ""
-    });
+    expect(resolved.selection).toEqual({});
     expect(resolved.styles.base.root.background).toBe("semantic.color.onAccent");
   });
 

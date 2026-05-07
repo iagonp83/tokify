@@ -1,7 +1,4 @@
-import type {
-  ComponentSchema,
-  ComponentVariantAxisName
-} from "./component.types";
+import type { ComponentSchema } from "./component.types";
 
 export type ComponentValidationResult = {
   errors: string[];
@@ -51,6 +48,10 @@ export function validateComponent(
     }
 
     Object.entries(binding.conditions ?? {}).forEach(([axisName, option]) => {
+      if (option === undefined) {
+        return;
+      }
+
       if (axisName === "state") {
         if (!stateNames.has(option)) {
           errors.push(
@@ -61,7 +62,7 @@ export function validateComponent(
         return;
       }
 
-      const axisOptions = variantAxes.get(axisName as ComponentVariantAxisName);
+      const axisOptions = variantAxes.get(axisName);
 
       if (!axisOptions) {
         errors.push(
