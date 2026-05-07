@@ -355,6 +355,110 @@ const compoundVariantSchema = {
   version: "0.1.0"
 } as const satisfies ComponentSchema;
 
+const compositionBaselineSchema = {
+  editable: {
+    fields: ["slots", "variants", "tokenBindings"],
+    tokenOnly: true
+  },
+  name: "CompositionBaselineComponent",
+  slots: [
+    {
+      name: "root",
+      required: true,
+      role: "root"
+    },
+    {
+      name: "label",
+      required: true,
+      role: "label"
+    },
+    {
+      name: "icon",
+      required: false,
+      role: "icon"
+    }
+  ],
+  states: [{ name: "default" }, { name: "hover" }],
+  tokenBindings: [
+    {
+      slot: "root",
+      target: "background",
+      token: "base.background"
+    },
+    {
+      slot: "root",
+      target: "color",
+      token: "base.color"
+    },
+    {
+      slot: "label",
+      target: "color",
+      token: "later.color"
+    },
+    {
+      conditions: {
+        density: "roomy"
+      },
+      slot: "root",
+      target: "paddingInline",
+      token: "size.lg.padding"
+    },
+    {
+      conditions: {
+        state: "hover"
+      },
+      slot: "root",
+      target: "background",
+      token: "state.hover.background"
+    },
+    {
+      conditions: {
+        state: "hover"
+      },
+      slot: "label",
+      target: "color",
+      token: "state.hover.danger.background"
+    }
+  ],
+  variants: [
+    {
+      default: "compact",
+      name: "density",
+      options: ["compact", "roomy"]
+    }
+  ],
+  version: "0.1.0"
+} as const satisfies ComponentSchema;
+
+const compositionMetadataBaselineSchema = {
+  ...compositionBaselineSchema,
+  composition: {
+    children: [
+      {
+        component: "Icon",
+        name: "leadingIcon",
+        slot: "icon"
+      }
+    ],
+    parts: [
+      {
+        name: "text",
+        slot: "label"
+      }
+    ],
+    slotRelations: [
+      {
+        parentSlot: "root",
+        slot: "label"
+      },
+      {
+        parentSlot: "root",
+        slot: "icon"
+      }
+    ]
+  }
+} as const satisfies ComponentSchema;
+
 describe("resolveComponent", () => {
   it("resolves components with zero variant axes without applying variant-conditioned styles", () => {
     const resolved = resolveComponent(zeroVariantSchema, tokenResolver, {
@@ -608,5 +712,59 @@ describe("resolveComponent", () => {
       resolved.bindings.some((binding) => binding.target === "borderColor")
     ).toBe(true);
     expect(resolved.styles.base.root.borderColor).toBeUndefined();
+  });
+
+  it("resolves a multi-slot schema without composition metadata", () => {
+    const resolved = resolveComponent(compositionBaselineSchema, tokenResolver, {
+      density: "roomy"
+    });
+
+    expect(resolved.selection).toEqual({
+      density: "roomy"
+    });
+    expect(resolved.styles.base).toEqual({
+      label: {
+        color: "later-color"
+      },
+      root: {
+        background: "base-bg",
+        color: "base-color",
+        paddingInline: "16px"
+      }
+    });
+    expect(resolved.styles.states.hover).toEqual({
+      label: {
+        color: "hover-danger-bg"
+      },
+      root: {
+        background: "hover-bg"
+      }
+    });
+  });
+
+  it("does not change resolved output when composition metadata is present", () => {
+    const context = {
+      density: "roomy",
+      state: "hover"
+    };
+    const withoutComposition = resolveComponent(
+      compositionBaselineSchema,
+      tokenResolver,
+      context
+    );
+    const withComposition = resolveComponent(
+      compositionMetadataBaselineSchema,
+      tokenResolver,
+      context
+    );
+
+    expect(withComposition).toEqual({
+      ...withoutComposition,
+      schema: compositionMetadataBaselineSchema
+    });
+    expect(withComposition.bindings).toEqual(withoutComposition.bindings);
+    expect(withComposition.selection).toEqual(withoutComposition.selection);
+    expect(withComposition.state).toBe(withoutComposition.state);
+    expect(withComposition.styles).toEqual(withoutComposition.styles);
   });
 });
