@@ -10,7 +10,17 @@ import type {
   ResolvedComponentStyle,
   TokenBindingTarget
 } from "./component.types";
+import type { CompositionSlotRelationGraph } from "./compositionSlotRelations";
+import { deriveCompositionSlotRelationGraph } from "./compositionSlotRelations";
 import type { TokenResolver } from "./tokenResolver";
+
+const inheritedSlotProperties = new Set([
+  "color",
+  "transitionDelay",
+  "transitionDuration",
+  "transitionProperty",
+  "transitionTimingFunction"
+]);
 
 export function resolveComponent(
   schema: ComponentSchema,
@@ -27,6 +37,7 @@ export function resolveComponent(
     {}
   );
   const state = context.state ?? "default";
+  const slotRelationGraph = deriveCompositionSlotRelationGraph(schema);
 
   const resolveBinding = (
     binding: ComponentTokenBinding
@@ -75,11 +86,17 @@ export function resolveComponent(
     selection: resolvedSelection,
     state,
     styles: {
-      base: createSlotStyles(baseBindings, { includeTransition: true }),
+      base: createSlotStyles(baseBindings, {
+        includeTransition: true,
+        slotRelationGraph
+      }),
       states: Object.fromEntries(
         Object.entries(stateBindingsByState).map(([stateName, stateBindings]) => [
           stateName,
-          createSlotStyles(stateBindings, { includeTransition: false })
+          createSlotStyles(stateBindings, {
+            includeTransition: false,
+            slotRelationGraph
+          })
         ])
       )
     }
@@ -103,9 +120,12 @@ function matchesVariantConditions(
 
 function createSlotStyles(
   bindings: readonly ResolvedComponentBinding[],
-  options: { includeTransition: boolean }
+  options: {
+    includeTransition: boolean;
+    slotRelationGraph: CompositionSlotRelationGraph;
+  }
 ): ResolvedComponentSlotStyles {
-  const styles = bindings.reduce<ResolvedComponentSlotStyles>(
+  const explicitStyles = bindings.reduce<ResolvedComponentSlotStyles>(
     (slotStyles, binding) => {
       const cssProperty = toCssProperty(binding.target);
 
@@ -123,6 +143,10 @@ function createSlotStyles(
     },
     {}
   );
+  const styles = applySlotInheritance(
+    explicitStyles,
+    options.slotRelationGraph
+  );
 
   if (!options.includeTransition) {
     return styles;
@@ -134,6 +158,57 @@ function createSlotStyles(
       addTransitionShorthand(style)
     ])
   );
+}
+
+function applySlotInheritance(
+  styles: ResolvedComponentSlotStyles,
+  slotRelationGraph: CompositionSlotRelationGraph
+): ResolvedComponentSlotStyles {
+  if (slotRelationGraph.relations.length === 0) {
+    return styles;
+  }
+
+  let inheritedStyles = styles;
+
+  for (let pass = 0; pass < slotRelationGraph.relations.length; pass += 1) {
+    let changed = false;
+
+    for (const relation of slotRelationGraph.relations) {
+      const parentStyle = inheritedStyles[relation.parentSlot];
+
+      if (!parentStyle) {
+        continue;
+      }
+
+      const childStyle = inheritedStyles[relation.slot] ?? {};
+      const nextChildStyle = { ...childStyle };
+      let relationChanged = false;
+
+      Object.entries(parentStyle).forEach(([property, value]) => {
+        if (
+          inheritedSlotProperties.has(property) &&
+          nextChildStyle[property] === undefined
+        ) {
+          nextChildStyle[property] = value;
+          relationChanged = true;
+        }
+      });
+
+      if (relationChanged) {
+        inheritedStyles = {
+          ...inheritedStyles,
+          [relation.slot]: nextChildStyle
+        };
+        changed = true;
+      }
+    }
+
+    if (!changed) {
+      break;
+    }
+  }
+
+  return inheritedStyles;
 }
 
 function addTransitionShorthand(

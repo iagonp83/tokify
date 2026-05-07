@@ -19,6 +19,7 @@ const tokenValues: Record<string, string> = {
   "size.lg.padding": "16px",
   "size.md.padding": "12px",
   "state.hover.background": "hover-bg",
+  "state.hover.color": "hover-color",
   "state.hover.danger.background": "hover-danger-bg",
   "state.hover.transition.duration": "80ms",
   "state.hover.transition.property": "opacity"
@@ -430,7 +431,7 @@ const compositionBaselineSchema = {
   version: "0.1.0"
 } as const satisfies ComponentSchema;
 
-const compositionMetadataBaselineSchema = {
+const compositionMetadataWithoutRelationsSchema = {
   ...compositionBaselineSchema,
   composition: {
     children: [
@@ -445,7 +446,12 @@ const compositionMetadataBaselineSchema = {
         name: "text",
         slot: "label"
       }
-    ],
+    ]
+  }
+} as const satisfies ComponentSchema;
+
+const slotInheritanceSchema = {
+  composition: {
     slotRelations: [
       {
         parentSlot: "root",
@@ -456,7 +462,105 @@ const compositionMetadataBaselineSchema = {
         slot: "icon"
       }
     ]
-  }
+  },
+  editable: {
+    fields: ["slots", "tokenBindings"],
+    tokenOnly: true
+  },
+  name: "SlotInheritanceComponent",
+  slots: [
+    {
+      name: "root",
+      required: true,
+      role: "root"
+    },
+    {
+      name: "label",
+      required: true,
+      role: "label"
+    },
+    {
+      name: "icon",
+      required: false,
+      role: "icon"
+    }
+  ],
+  states: [{ name: "default" }, { name: "hover" }],
+  tokenBindings: [
+    {
+      slot: "root",
+      target: "background",
+      token: "base.background"
+    },
+    {
+      slot: "root",
+      target: "color",
+      token: "base.color"
+    },
+    {
+      slot: "root",
+      target: "paddingInline",
+      token: "size.md.padding"
+    },
+    {
+      slot: "root",
+      target: "transitionProperty",
+      token: "base.transition.property"
+    },
+    {
+      slot: "root",
+      target: "transitionDuration",
+      token: "base.transition.duration"
+    },
+    {
+      slot: "root",
+      target: "transitionTimingFunction",
+      token: "base.transition.timing"
+    },
+    {
+      slot: "root",
+      target: "transitionDelay",
+      token: "base.transition.delay"
+    },
+    {
+      conditions: {
+        state: "hover"
+      },
+      slot: "root",
+      target: "background",
+      token: "state.hover.background"
+    },
+    {
+      conditions: {
+        state: "hover"
+      },
+      slot: "root",
+      target: "color",
+      token: "state.hover.color"
+    },
+    {
+      conditions: {
+        state: "hover"
+      },
+      slot: "root",
+      target: "transitionDuration",
+      token: "state.hover.transition.duration"
+    }
+  ],
+  variants: [],
+  version: "0.1.0"
+} as const satisfies ComponentSchema;
+
+const slotInheritanceOverrideSchema = {
+  ...slotInheritanceSchema,
+  tokenBindings: [
+    ...slotInheritanceSchema.tokenBindings,
+    {
+      slot: "label",
+      target: "color",
+      token: "later.color"
+    }
+  ]
 } as const satisfies ComponentSchema;
 
 describe("resolveComponent", () => {
@@ -547,6 +651,12 @@ describe("resolveComponent", () => {
     expect(resolved.styles.base.root.paddingInline).toBe(
       "component.button.size.md.paddingInline"
     );
+    expect(resolved.styles.base.label.color).toBe(
+      "component.button.intent.primary.color"
+    );
+    expect(resolved.styles.base.icon.color).toBe(
+      "component.button.intent.primary.color"
+    );
   });
 
   it("preserves explicit Button intent and size selection", () => {
@@ -564,6 +674,12 @@ describe("resolveComponent", () => {
     );
     expect(resolved.styles.base.root.paddingInline).toBe(
       "component.button.size.lg.paddingInline"
+    );
+    expect(resolved.styles.base.label.color).toBe(
+      "component.button.intent.danger.color"
+    );
+    expect(resolved.styles.base.icon.color).toBe(
+      "component.button.intent.danger.color"
     );
   });
 
@@ -746,25 +862,81 @@ describe("resolveComponent", () => {
     const context = {
       density: "roomy",
       state: "hover"
-    };
+    } as const;
     const withoutComposition = resolveComponent(
       compositionBaselineSchema,
       tokenResolver,
       context
     );
     const withComposition = resolveComponent(
-      compositionMetadataBaselineSchema,
+      compositionMetadataWithoutRelationsSchema,
       tokenResolver,
       context
     );
 
     expect(withComposition).toEqual({
       ...withoutComposition,
-      schema: compositionMetadataBaselineSchema
+      schema: compositionMetadataWithoutRelationsSchema
     });
     expect(withComposition.bindings).toEqual(withoutComposition.bindings);
     expect(withComposition.selection).toEqual(withoutComposition.selection);
     expect(withComposition.state).toBe(withoutComposition.state);
     expect(withComposition.styles).toEqual(withoutComposition.styles);
+  });
+
+  it("inherits root color into the label slot through composition relations", () => {
+    const resolved = resolveComponent(slotInheritanceSchema, tokenResolver);
+
+    expect(resolved.styles.base.label.color).toBe("base-color");
+  });
+
+  it("inherits root color into the icon slot through composition relations", () => {
+    const resolved = resolveComponent(slotInheritanceSchema, tokenResolver);
+
+    expect(resolved.styles.base.icon.color).toBe("base-color");
+  });
+
+  it("keeps explicit child color bindings over inherited root color", () => {
+    const resolved = resolveComponent(
+      slotInheritanceOverrideSchema,
+      tokenResolver
+    );
+
+    expect(resolved.styles.base.root.color).toBe("base-color");
+    expect(resolved.styles.base.label.color).toBe("later-color");
+    expect(resolved.styles.base.icon.color).toBe("base-color");
+  });
+
+  it("does not inherit non-allowlisted slot properties", () => {
+    const resolved = resolveComponent(slotInheritanceSchema, tokenResolver);
+
+    expect(resolved.styles.base.root).toMatchObject({
+      background: "base-bg",
+      paddingInline: "12px"
+    });
+    expect(resolved.styles.base.label.background).toBeUndefined();
+    expect(resolved.styles.base.label.paddingInline).toBeUndefined();
+    expect(resolved.styles.base.icon.background).toBeUndefined();
+    expect(resolved.styles.base.icon.paddingInline).toBeUndefined();
+  });
+
+  it("applies slot inheritance to state styles", () => {
+    const resolved = resolveComponent(slotInheritanceSchema, tokenResolver);
+
+    expect(resolved.styles.states.hover?.root).toMatchObject({
+      background: "hover-bg",
+      color: "hover-color",
+      transitionDuration: "80ms"
+    });
+    expect(resolved.styles.states.hover?.label).toEqual({
+      color: "hover-color",
+      transitionDuration: "80ms"
+    });
+    expect(resolved.styles.states.hover?.icon).toEqual({
+      color: "hover-color",
+      transitionDuration: "80ms"
+    });
+    expect(resolved.styles.states.hover?.label.background).toBeUndefined();
+    expect(resolved.styles.states.hover?.icon.background).toBeUndefined();
   });
 });
