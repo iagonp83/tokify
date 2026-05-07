@@ -109,6 +109,8 @@ export function validateComponent(
     }
   });
 
+  errors.push(...validateSlotRelationTopology(schema, slotNames));
+
   findDuplicates(
     schema.composition?.slotRelations?.map((relation) => relation.slot) ?? []
   ).forEach((slot) => {
@@ -147,4 +149,98 @@ function findDuplicates(values: readonly string[]) {
   });
 
   return [...duplicates];
+}
+
+function validateSlotRelationTopology(
+  schema: ComponentSchema,
+  slotNames: ReadonlySet<string>
+) {
+  const errors: string[] = [];
+  const relationSlots = new Set<string>();
+  const relations: { parentSlot: string; slot: string }[] = [];
+
+  for (const relation of schema.composition?.slotRelations ?? []) {
+    const parentSlot = relation.parentSlot ?? "root";
+
+    if (!slotNames.has(relation.slot) || !slotNames.has(parentSlot)) {
+      continue;
+    }
+
+    if (relation.slot === parentSlot) {
+      errors.push(
+        `Composition slot relation "${relation.slot}" cannot reference itself as parent.`
+      );
+      continue;
+    }
+
+    if (relationSlots.has(relation.slot)) {
+      continue;
+    }
+
+    relationSlots.add(relation.slot);
+    relations.push({
+      parentSlot,
+      slot: relation.slot
+    });
+  }
+
+  findSlotRelationCycles(relations).forEach((cycle) => {
+    errors.push(`Composition slot relations contain a cycle: ${cycle}.`);
+  });
+
+  return errors;
+}
+
+function findSlotRelationCycles(
+  relations: readonly { parentSlot: string; slot: string }[]
+) {
+  const childrenByParentSlot = new Map<string, string[]>();
+
+  relations.forEach((relation) => {
+    childrenByParentSlot.set(relation.parentSlot, [
+      ...(childrenByParentSlot.get(relation.parentSlot) ?? []),
+      relation.slot
+    ]);
+  });
+
+  const cycles: string[] = [];
+  const reportedCycles = new Set<string>();
+
+  const visit = (slot: string, path: readonly string[]) => {
+    const cycleStartIndex = path.indexOf(slot);
+
+    if (cycleStartIndex >= 0) {
+      const cycle = [...path.slice(cycleStartIndex), slot];
+      const cycleKey = createCycleKey(cycle);
+
+      if (!reportedCycles.has(cycleKey)) {
+        reportedCycles.add(cycleKey);
+        cycles.push(cycle.join(" -> "));
+      }
+
+      return;
+    }
+
+    (childrenByParentSlot.get(slot) ?? []).forEach((childSlot) => {
+      visit(childSlot, [...path, slot]);
+    });
+  };
+
+  relations.forEach((relation) => {
+    visit(relation.parentSlot, []);
+  });
+
+  return cycles;
+}
+
+function createCycleKey(cycle: readonly string[]) {
+  const nodes = cycle.slice(0, -1);
+  const rotations = nodes.map((_, index) => [
+    ...nodes.slice(index),
+    ...nodes.slice(0, index)
+  ]);
+
+  return rotations
+    .map((rotation) => rotation.join("\u0000"))
+    .sort()[0];
 }

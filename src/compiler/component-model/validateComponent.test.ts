@@ -104,6 +104,40 @@ describe("validateComponent composition metadata", () => {
     });
   });
 
+  it("accepts valid acyclic slot relation graphs", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "content",
+            slot: "icon"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: [],
+      valid: true
+    });
+  });
+
+  it("preserves Button and Input schema compatibility", () => {
+    expect(validateComponent(buttonSchema)).toEqual({
+      errors: [],
+      valid: true
+    });
+    expect(validateComponent(inputSchema)).toEqual({
+      errors: [],
+      valid: true
+    });
+  });
+
   it("rejects composition metadata that references unknown slots", () => {
     const result = validateComponent({
       ...baseSchema,
@@ -189,6 +223,81 @@ describe("validateComponent composition metadata", () => {
         'Composition slot relation "content" is duplicated.',
         'Composition part "body" is duplicated.',
         'Composition child "adornment" is duplicated.'
+      ],
+      valid: false
+    });
+  });
+
+  it("rejects slot relation self-references", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "content",
+            slot: "content"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: [
+        'Composition slot relation "content" cannot reference itself as parent.'
+      ],
+      valid: false
+    });
+  });
+
+  it("rejects simple slot relation cycles", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "content",
+            slot: "root"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: [
+        "Composition slot relations contain a cycle: root -> content -> root."
+      ],
+      valid: false
+    });
+  });
+
+  it("rejects multi-node slot relation cycles", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "content",
+            slot: "icon"
+          },
+          {
+            parentSlot: "icon",
+            slot: "root"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: [
+        "Composition slot relations contain a cycle: root -> content -> icon -> root."
       ],
       valid: false
     });
