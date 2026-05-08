@@ -4,7 +4,7 @@ import { initialDesignState } from "../presets";
 import { PreviewCanvas } from "./PreviewCanvas";
 
 describe("PreviewCanvas runtime emission", () => {
-  it("attaches emitted Button and Input variables without replacing direct styles", () => {
+  it("attaches emitted variables while Button and Input backgrounds consume them", () => {
     const markup = renderToStaticMarkup(
       <PreviewCanvas
         onButtonVariantChange={() => undefined}
@@ -16,6 +16,8 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("--button-label-color:");
     expect(markup).toContain("--button-icon-color:");
     expect(markup).toContain("--input-background:");
+    expect(markup).toContain("background:var(--button-background)");
+    expect(markup).toContain("background:var(--input-background)");
     expect(markup).toContain("display:inline-flex");
     expect(markup).toContain("min-width:220px");
     expect(markup).not.toContain("--button-hover-background");

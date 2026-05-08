@@ -69,6 +69,7 @@ export function PreviewCanvas({
   const rootStyleWithLayout: CSSProperties = {
     ...rootStyle,
     alignItems: "center",
+    background: "var(--button-background)",
     color:
       rootStyle.color === rootStyle.background ? undefined : rootStyle.color,
     display: "inline-flex",
@@ -102,6 +103,7 @@ export function PreviewCanvas({
   );
   const inputStyle: CSSProperties = {
     ...inputRootStyle,
+    background: "var(--input-background)",
     border: 0,
     boxSizing: "border-box",
     minWidth: 220,
