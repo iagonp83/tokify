@@ -70,8 +70,7 @@ export function PreviewCanvas({
     ...rootStyle,
     alignItems: "center",
     background: "var(--button-background)",
-    color:
-      rootStyle.color === rootStyle.background ? undefined : rootStyle.color,
+    color: "var(--button-color)",
     display: "inline-flex",
     gap: rootStyle.gap ?? "8px",
     justifyContent: "center"
@@ -106,6 +105,7 @@ export function PreviewCanvas({
     background: "var(--input-background)",
     border: 0,
     boxSizing: "border-box",
+    color: "var(--input-color)",
     minWidth: 220,
     outline: 0
   };
