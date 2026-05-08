@@ -16,12 +16,14 @@ export function emitComponentRuntimeVariables(
   options: ComponentRuntimeVariableEmissionOptions = {}
 ): ComponentRuntimeVariableMap {
   const variables: ComponentRuntimeVariableMap = {};
+  const baseOrigins: RuntimeVariableOriginMap = {};
 
   resolved.runtimePlan.variables
     .filter((variable) => variable.styleLayer === "base")
     .forEach((variable) => {
       assignRuntimeVariable(
         variables,
+        baseOrigins,
         variable,
         resolved.styles.base[variable.slot]
       );
@@ -31,6 +33,8 @@ export function emitComponentRuntimeVariables(
     return variables;
   }
 
+  const stateOrigins: RuntimeVariableOriginMap = {};
+
   resolved.runtimePlan.variables
     .filter(
       (variable) =>
@@ -39,6 +43,7 @@ export function emitComponentRuntimeVariables(
     .forEach((variable) => {
       assignRuntimeVariable(
         variables,
+        stateOrigins,
         variable,
         resolved.styles.states[options.state]?.[variable.slot]
       );
@@ -47,8 +52,17 @@ export function emitComponentRuntimeVariables(
   return variables;
 }
 
+type RuntimeVariableOriginMap = Record<
+  `--${string}`,
+  {
+    property: string;
+    slot: string;
+  }
+>;
+
 function assignRuntimeVariable(
   variables: ComponentRuntimeVariableMap,
+  origins: RuntimeVariableOriginMap,
   variable: ResolvedComponentRuntimePlanVariable,
   style: ResolvedComponentStyle | undefined
 ) {
@@ -58,5 +72,27 @@ function assignRuntimeVariable(
     return;
   }
 
-  variables[variable.name as `--${string}`] = value;
+  const name = variable.name as `--${string}`;
+  const previousOrigin = origins[name];
+  const nextOrigin = {
+    property: variable.property,
+    slot: variable.slot
+  };
+
+  if (
+    previousOrigin &&
+    (previousOrigin.slot !== nextOrigin.slot ||
+      previousOrigin.property !== nextOrigin.property)
+  ) {
+    throw new Error(
+      [
+        `Runtime variable "${name}" has multiple same-layer origins.`,
+        `First origin: ${previousOrigin.slot}.${previousOrigin.property}.`,
+        `Next origin: ${nextOrigin.slot}.${nextOrigin.property}.`
+      ].join(" ")
+    );
+  }
+
+  origins[name] = nextOrigin;
+  variables[name] = value;
 }
