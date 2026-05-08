@@ -20,6 +20,8 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("--input-color:");
     expect(markup).toContain("background:var(--button-background)");
     expect(markup).toContain("color:var(--button-color)");
+    expect(markup).toContain("color:var(--button-label-color)");
+    expect(markup).toContain("color:var(--button-icon-color)");
     expect(markup).toContain("background:var(--input-background)");
     expect(markup).toContain("color:var(--input-color)");
     expect(markup).toContain("display:inline-flex");

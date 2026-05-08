@@ -78,11 +78,13 @@ export function PreviewCanvas({
   const labelStyle: CSSProperties = {
     ...(resolved.styles.base.label ?? {}),
     ...(stateStyles.label ?? {}),
+    color: "var(--button-label-color)",
     opacity: 1
   };
   const iconStyle = {
     ...(resolved.styles.base.icon ?? {}),
-    ...(stateStyles.icon ?? {})
+    ...(stateStyles.icon ?? {}),
+    color: "var(--button-icon-color)"
   };
   const hasIconSlot = resolved.schema.slots.some((slot) => slot.name === "icon");
   const buttonEnterDuration = getButtonMotionDuration(
