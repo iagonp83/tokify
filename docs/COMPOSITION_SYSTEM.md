@@ -115,8 +115,9 @@ Current provenance values are:
 - `inherited`: the value was filled through slot relation inheritance
 - `derived`: the value was computed from other resolved style properties
 
-Provenance is planning metadata only. It does not emit runtime CSS variables,
-change `DesignTokens`, alter import/export shapes, or change adapter behavior.
+Provenance is planning metadata only. The runtime emitter may consume it, but
+`runtimePlan` still does not carry values, change `DesignTokens`, alter
+import/export shapes, or change adapter behavior.
 
 ## Current Discovered Reality
 
@@ -241,8 +242,8 @@ predictable flat naming scheme and continue to resolve through the token engine.
 
 ### Slot-Level Token Naming
 
-Future slot-level CSS variables must preserve the flat runtime contract. The
-variable name should encode:
+Slot-level CSS variables preserve the flat runtime contract. The variable name
+should encode:
 
 ```txt
 component -> slot -> property
@@ -304,10 +305,10 @@ Scalability requirements:
 - Token resolver paths may stay semantic while resolving to these flat runtime
   variables.
 
-### Runtime Planning Metadata
+### Runtime Planning And Emission
 
-The resolver now creates additive runtime planning metadata for future flat CSS
-variable emission.
+The resolver creates additive runtime planning metadata for flat CSS variable
+emission.
 
 The runtime plan remains flat:
 
@@ -344,9 +345,34 @@ The existing `source` field remains layer-compatible with current planning
 behavior (`"base"` or `"state"`). State-layer entries also retain `state`
 metadata.
 
-`runtimePlan` is planning metadata only. It does not emit runtime CSS variables
-yet, mutate `DesignTokens`, change CSS export, change JSON import/export, alter
-React rendering, or invoke adapters.
+`runtimePlan` is planning metadata only. It does not carry values, mutate
+`DesignTokens`, change CSS export, change JSON import/export, or invoke
+adapters.
+
+A pure runtime emission helper consumes resolved components:
+
+```ts
+emitComponentRuntimeVariables(resolved, { state? })
+```
+
+The helper derives emitted values from `resolved.styles.base` and
+`resolved.styles.states`, using `runtimePlan.variables[]` only for flat
+variable metadata. It returns flat CSS custom properties.
+
+Emission rules:
+
+- root slot variables omit `root`
+- non-root slot variables include the slot name
+- base and state layers use the same variable names
+- the requested active state overlays base values in the returned map
+- same-layer different-origin variable collisions throw
+- missing values are skipped
+- state-suffixed variable names are not emitted
+
+`PreviewCanvas` now consumes this helper additively for Button and Input root
+preview scopes. Slots remain semantic addresses; the current preview's DOM
+mapping is downstream rendering behavior and is not part of the Component
+Model contract.
 
 ### Schema/Resolver First
 
@@ -364,12 +390,14 @@ Safe order:
 
 The current composition resolver integration must not redesign:
 
-- runtime token emission
 - CSS export
 - JSON import/export
-- preview rendering
 - React component structure
 - library adapters
+
+Runtime emission is being integrated incrementally through flat CSS variables.
+It must not introduce nested runtime token objects, adapter metadata, selector
+metadata, or DOM structure into the Component Model.
 
 ### No Adapter Or React Restructuring
 
@@ -399,7 +427,7 @@ Composition integration currently does not include:
 - React restructuring
 - visual composition editor
 - import/export changes
-- runtime variable emission changes
+- export/import of runtimePlan or emitted runtime variables
 
 ## Future Migration Order
 
@@ -423,6 +451,15 @@ Completed resolver integration and hardening work:
 7. Registry-driven inheritance and runtime planning behavior.
 8. Slot relation self-reference and cycle validation.
 9. Runtime plan provenance metadata.
+
+Completed runtime emission integration work:
+
+1. Pure runtime variable emission helper.
+2. Base/state flat variable layering.
+3. Same-layer collision hardening.
+4. Additive PreviewCanvas runtime variable wiring.
+5. Initial preview consumption of Button/Input root background and color.
+6. Initial preview consumption of Button label/icon color.
 
 Do not continue to later phases until each earlier phase has established the
 needed compatibility boundary.

@@ -17,6 +17,7 @@ Current stabilized areas:
 - Composition System Foundation
 - Composition Resolver Integration
 - Resolver Hardening
+- Runtime Emission Integration milestone
 
 Automated regression tests cover:
 
@@ -37,6 +38,9 @@ Automated regression tests cover:
 - registry-driven inheritance and runtime planning behavior
 - slot relation self-reference and cycle validation
 - runtimePlan provenance metadata
+- runtime CSS variable emission helper behavior
+- additive preview runtime variable wiring
+- initial preview consumption of selected runtime variables
 
 ## Component Model Structure
 
@@ -50,6 +54,7 @@ Current files:
 - `input.schema.ts`
 - `propertyRegistry.ts`
 - `resolveComponent.ts`
+- `runtimeEmission.ts`
 - `runtimePlan.ts`
 - `validateComponent.ts`
 - `tokenResolver.ts`
@@ -186,7 +191,9 @@ Layout and box properties do not inherit through slot relations, including:
 - `boxShadow`
 - `opacity`
 
-The runtime does not emit new slot-level variables yet.
+Slot-level runtime variables now have a pure emission helper, but slot
+relations still remain resolver metadata. They do not imply DOM hierarchy,
+selectors, wrappers, React structure, or adapter output.
 
 Slot relation validation is schema-first. Cycles and self-references are
 rejected by `validateComponent` before resolution or any future runtime
@@ -383,7 +390,7 @@ They do not store token metadata objects.
 
 ## Flat Slot Naming Contract
 
-Future slot-level variables must preserve the flat CSS variable runtime
+Slot-level variables preserve the flat CSS variable runtime
 contract.
 
 Non-root slot variables should use:
@@ -428,8 +435,8 @@ Slot names must remain semantic and schema-derived. Variable names should not be
 derived from DOM tags, CSS selectors, adapter implementation details, generated
 React component names, or wrapper hierarchy.
 
-The resolver now derives additive runtime planning metadata using this naming
-contract:
+The resolver derives additive runtime planning metadata using this naming
+contract, and the runtime emitter consumes those planned names:
 
 - root slot omits `root`: `--button-background`
 - non-root slots include the slot name: `--button-label-color`
@@ -437,7 +444,42 @@ contract:
 - planning entries include provenance and layer metadata
 - state planning entries include state metadata
 
-This metadata is not emitted into the runtime yet.
+`runtimePlan` remains metadata only. It does not carry values. Emitted values
+are derived separately from `resolved.styles.base` and
+`resolved.styles.states`.
+
+## Runtime Emission
+
+A pure runtime emission helper now exists:
+
+```ts
+emitComponentRuntimeVariables(resolved, { state? })
+```
+
+The helper consumes:
+
+- `resolved.runtimePlan.variables[]` for flat variable metadata
+- `resolved.styles.base` for base values
+- `resolved.styles.states[state]` for optional active state values
+
+It returns a flat CSS custom property map and does not mutate `runtimePlan`,
+write to `DesignTokens`, re-resolve tokens, change import/export data, or call
+adapters.
+
+Emission behavior:
+
+- root slot variables omit `root`, such as `--button-background`
+- non-root slot variables include the slot name, such as
+  `--button-label-color`
+- base and state layers use the same variable names
+- an active state overlays base values in the returned map
+- same-layer duplicate variable names from different slot/property origins
+  throw a clear error
+- missing resolved style values are skipped instead of emitted as `undefined`
+- no state-suffixed variables are emitted
+
+Runtime emission remains flat CSS variables only. There are still no nested
+runtime token objects.
 
 ## Resolver Logic
 
@@ -456,7 +498,7 @@ Validation remains in `validateComponent.ts`.
 7. Build flat slot style maps.
 8. Apply registry-driven conservative slot inheritance from composition slot
    relations.
-9. Build additive `runtimePlan` metadata for future flat variable emission.
+9. Build additive `runtimePlan` metadata for flat variable emission.
 
 Current resolver precedence is binding-order based:
 
@@ -529,8 +571,10 @@ The existing `source` field remains layer-compatible (`"base"` or `"state"`)
 for compatibility with the current runtime planning surface. State entries also
 retain the `state` field.
 
-`runtimePlan` is planning metadata only. It does not write CSS variables, mutate
-`DesignTokens`, change import/export data, or alter React rendering.
+`runtimePlan` is planning metadata only. It does not carry values, write CSS
+variables, mutate `DesignTokens`, change import/export data, or invoke
+adapters. Runtime values are derived from `resolved.styles` by
+`emitComponentRuntimeVariables(...)`.
 
 ## Token Resolver
 
@@ -608,9 +652,15 @@ Flow:
 3. `resolveComponent(buttonSchema, tokenResolver, { intent, size, state })`
    resolves the Button.
 4. `resolveComponent(inputSchema, tokenResolver, { state })` resolves the Input.
-5. Resolved bindings are grouped by slot.
-6. Each slot gets an inline style object.
-7. Slots are rendered as DOM elements by the current preview only.
+5. `emitComponentRuntimeVariables(resolved, { state })` creates flat Button
+   runtime variables.
+6. `emitComponentRuntimeVariables(resolvedInput, { state })` creates flat Input
+   runtime variables.
+7. Button and Input root preview scopes receive those CSS custom properties
+   additively.
+8. Resolved bindings are still grouped by slot.
+9. Each slot gets an inline style object.
+10. Slots are rendered as DOM elements by the current preview only.
 
 Current preview slot mapping:
 
@@ -619,6 +669,20 @@ Current preview slot mapping:
 - `icon` -> `<span>`
 
 This preview mapping is not part of the Component Model contract.
+
+Preview runtime variable consumption has started incrementally. Existing direct
+styles mostly remain as fallback and source of truth, but the preview now
+consumes:
+
+- Button root background: `var(--button-background)`
+- Button root color: `var(--button-color)`
+- Button label color: `var(--button-label-color)`
+- Button icon color: `var(--button-icon-color)`
+- Input root background: `var(--input-background)`
+- Input root color: `var(--input-color)`
+
+Other preview properties, including spacing, radius, shadow, opacity, and
+transitions, still use direct resolved styles.
 
 ## Export Architecture
 
@@ -653,13 +717,12 @@ missing, import falls back to the legacy `components` path, where resolved
 component values are treated as component overrides for backward compatibility.
 
 Composition metadata does not change import/export shapes yet.
-Runtime planning metadata is not exported or imported yet.
+Runtime planning and emitted runtime variables are not exported or imported yet.
 
 ## What Composition Is Not Yet
 
 Composition is not yet:
 
-- runtime CSS variable emission for slot-level variables
 - child component runtime resolution
 - nested runtime token objects
 - adapter integration
@@ -670,7 +733,6 @@ Composition is not yet:
 There is also no:
 
 - `compoundVariants` field
-- new slot variable emission
 - generated React component composition
 - library-specific output
 
@@ -681,8 +743,9 @@ There is also no:
 - No adapter work.
 - No React/UI redesign.
 - No nested token runtime.
-- No actual runtime emission from `runtimePlan` yet.
+- No export/import of runtimePlan or emitted runtime variables.
 
 ## Next Recommended Phase
 
-Runtime emission planning or the next explicitly scoped composition phase.
+Continue the incremental runtime emission migration or the next explicitly
+scoped composition phase.
