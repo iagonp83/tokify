@@ -33,19 +33,20 @@ export function emitComponentRuntimeVariables(
     return variables;
   }
 
+  const activeState = options.state;
   const stateOrigins: RuntimeVariableOriginMap = {};
 
   resolved.runtimePlan.variables
     .filter(
       (variable) =>
-        variable.styleLayer === "state" && variable.state === options.state
+        variable.styleLayer === "state" && variable.state === activeState
     )
     .forEach((variable) => {
       assignRuntimeVariable(
         variables,
         stateOrigins,
         variable,
-        resolved.styles.states[options.state]?.[variable.slot]
+        resolved.styles.states[activeState]?.[variable.slot]
       );
     });
 

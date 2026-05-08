@@ -7,6 +7,7 @@ import type {
   ComponentVariantAxisName,
   ComponentStateName
 } from "../../../compiler/component-model/component.types";
+import { emitComponentRuntimeVariables } from "../../../compiler/component-model/runtimeEmission";
 import { resolveComponent } from "../../../compiler/component-model/resolveComponent";
 import { createTokenResolver } from "../../../compiler/component-model/tokenResolver";
 import type { AuthoredComponentNamespace, DesignState } from "../types";
@@ -49,6 +50,12 @@ export function PreviewCanvas({
     tokenResolver,
     createPreviewResolutionContext(state, "input", uiState)
   );
+  const buttonRuntimeVariables = emitComponentRuntimeVariables(resolved, {
+    state: uiState
+  });
+  const inputRuntimeVariables = emitComponentRuntimeVariables(resolvedInput, {
+    state: uiState
+  });
   const stateStyles = resolved.styles.states[uiState] ?? {};
   const inputStateStyles = resolvedInput.styles.states[uiState] ?? {};
   const rootStyle = {
@@ -191,6 +198,7 @@ export function PreviewCanvas({
         onPointerLeave={() => setUiState("default")}
         onPointerUp={() => setUiState("default")}
         style={{
+          ...buttonRuntimeVariables,
           ...rootStyleWithLayout,
           ...buttonPulseStyle
         }}
@@ -202,7 +210,10 @@ export function PreviewCanvas({
         aria-label="Input preview"
         disabled={uiState === "disabled"}
         readOnly
-        style={inputStyle}
+        style={{
+          ...inputRuntimeVariables,
+          ...inputStyle
+        }}
         value="Input"
       />
     </div>
