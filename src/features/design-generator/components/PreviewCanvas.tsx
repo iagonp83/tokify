@@ -74,7 +74,8 @@ export function PreviewCanvas({
     color: "var(--button-color)",
     display: "inline-flex",
     gap: rootStyle.gap ?? "8px",
-    justifyContent: "center"
+    justifyContent: "center",
+    opacity: "var(--button-opacity)"
   };
   const labelStyle: CSSProperties = {
     ...(resolved.styles.base.label ?? {}),
@@ -111,6 +112,7 @@ export function PreviewCanvas({
     boxSizing: "border-box",
     color: "var(--input-color)",
     minWidth: 220,
+    opacity: "var(--input-opacity)",
     outline: 0
   };
 
