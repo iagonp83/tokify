@@ -18,6 +18,8 @@ Current stabilized areas:
 - Composition Resolver Integration
 - Resolver Hardening
 - Runtime Emission Integration milestone
+- Runtime Consumption Safety Model
+- Preview-local Runtime Consumption Policy Registry extraction
 
 Automated regression tests cover:
 
@@ -41,6 +43,7 @@ Automated regression tests cover:
 - runtime CSS variable emission helper behavior
 - additive preview runtime variable wiring
 - selective preview consumption of safe runtime variables
+- preview-local runtime consumption policy behavior
 
 ## Component Model Structure
 
@@ -448,7 +451,7 @@ contract, and the runtime emitter consumes those planned names:
 are derived separately from `resolved.styles.base` and
 `resolved.styles.states`.
 
-## Runtime Emission
+## Runtime Emission And Consumption
 
 A pure runtime emission helper now exists:
 
@@ -481,9 +484,45 @@ Emission behavior:
 Runtime emission remains flat CSS variables only. There are still no nested
 runtime token objects.
 
+Runtime emission and runtime consumption are separate concerns:
+
+```txt
+runtime emission != runtime consumption != preview rendering behavior
+```
+
+Emission remains broad. Consumption remains target-specific. A variable being
+emitted means the value is available to a runtime consumer, not that every
+consumer must use it through `var(...)`.
+
 Preview runtime consumption is intentionally selective. The emitter can produce
 runtime variables broadly, but `PreviewCanvas` only consumes `var(...)` where
 the current inline-style/runtime behavior is safe.
+
+The current PreviewCanvas consumption decisions are extracted into a
+preview-local helper:
+
+```txt
+src/features/design-generator/components/previewRuntimeConsumptionPolicy.ts
+```
+
+The policy is explicit by:
+
+- target/backend, currently `preview-react-inline`
+- component namespace, currently `button` or `input`
+- slot, currently `root`, `label`, or `icon`
+- property
+
+The policy modes are intentionally small:
+
+- `runtime-var`
+- `direct-value`
+- `direct-longhand`
+- `omit-shorthand`
+
+The policy owns only consumption decisions. It does not own resolved values,
+change resolver behavior, change `tokenResolver`, change `runtimePlan`, narrow
+runtime emission, affect import/export, affect adapters, introduce nested
+runtime token objects, or redesign React rendering.
 
 Current `PreviewCanvas` runtime variable consumption:
 
@@ -536,8 +575,9 @@ prevent visible transitions when only custom property values change. React also
 warns when transition shorthand and transition longhands are mixed in inline
 styles, so root transitions are rendered with concrete longhands only.
 
-This transition-safety fix did not require resolver, `runtimePlan`,
-`runtimeEmission`, schema, import/export, adapter, or token resolver changes.
+This transition-safety fix and policy extraction did not require resolver,
+`runtimePlan`, `runtimeEmission`, schema, import/export, adapter, or token
+resolver changes.
 
 ## Resolver Logic
 
@@ -716,9 +756,12 @@ Flow:
    runtime variables.
 7. Button and Input root preview scopes receive those CSS custom properties
    additively.
-8. Resolved bindings are still grouped by slot.
-9. Each slot gets an inline style object.
-10. Slots are rendered as DOM elements by the current preview only.
+8. `previewRuntimeConsumptionPolicy.ts` decides whether each preview style
+   property consumes a runtime variable, direct value, direct longhand, or
+   omitted shorthand.
+9. Resolved bindings are still grouped by slot.
+10. Each slot gets an inline style object.
+11. Slots are rendered as DOM elements by the current preview only.
 
 Current preview slot mapping:
 
@@ -731,6 +774,11 @@ This preview mapping is not part of the Component Model contract.
 Preview runtime variable consumption is selective. Emitted runtime variables
 remain available broadly, but the preview consumes `var(...)` only for
 properties that are currently safe in the inline-style rendering path.
+
+The PreviewCanvas consumption policy is preview-local and target-specific. Its
+current target is `preview-react-inline`; it does not define a universal runtime
+architecture layer or change how future exports/adapters may consume the same
+emitted variables.
 
 Button root currently consumes runtime variables for:
 
@@ -834,9 +882,11 @@ There is also no:
 - No React/UI redesign.
 - No nested token runtime.
 - No export/import of runtimePlan or emitted runtime variables.
+- No global runtime consumption architecture layer.
 
 ## Next Recommended Phase
 
-Continue the incremental runtime emission migration only with the current
+The Runtime Consumption integration phase is closed with behavior stable.
+Future work should keep the current emission/consumption separation and
 transition-safety boundary in mind, or move to the next explicitly scoped
 composition phase.

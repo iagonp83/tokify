@@ -97,6 +97,18 @@ The PreviewCanvas rule is:
 emit broadly, consume selectively
 ```
 
+Those current PreviewCanvas decisions are now represented by a preview-local
+policy helper:
+
+```txt
+src/features/design-generator/components/previewRuntimeConsumptionPolicy.ts
+```
+
+The helper is target-specific to `preview-react-inline`. It records only
+consumption decisions and does not own values, change resolution, change
+`runtimePlan`, narrow runtime emission, alter import/export, affect adapters,
+or introduce nested runtime token objects.
+
 ## Property Categories
 
 These categories describe consumption policy, not emission eligibility.
@@ -293,26 +305,28 @@ direct preview values. That is preview behavior, not a runtime contract change.
 | `transitionTimingFunction` | Yes, `--input-transition-timing-function` | Direct concrete longhand |
 | `transitionDelay` | Yes, `--input-transition-delay` | Direct concrete longhand |
 
-## Future Consumption Policy Registry
+## Preview-Local Consumption Policy Registry
 
-A future phase may introduce a dedicated property consumption policy registry.
-That registry should be separate from runtime planning and emission.
+The current implementation has a dedicated PreviewCanvas consumption policy
+registry/helper. It is intentionally small and preview-local, not a new runtime
+architecture layer.
 
-Conceptually, a policy entry could be keyed by:
+Each current policy entry is keyed by:
 
-- target/backend, such as `preview-react-inline`, `css-export`, or an adapter
-- component
-- slot
+- target/backend, currently `preview-react-inline`
+- component namespace, currently `button` or `input`
+- slot, currently `root`, `label`, or `icon`
 - property
-- state or interaction mode, only if needed
 
-It could record:
+State is not part of the current key because current PreviewCanvas consumption
+decisions do not require state-specific policy.
 
-- whether the target should consume a runtime variable or a direct value
-- whether transition longhands are required
-- whether a shorthand is disallowed
-- the reason for an exception
-- a test or empirical note that proves the policy
+Current modes are:
+
+- `runtime-var`: consume the emitted flat runtime variable through `var(...)`
+- `direct-value`: use the concrete resolved style value
+- `direct-longhand`: use the concrete resolved transition longhand
+- `omit-shorthand`: omit the shorthand from PreviewCanvas inline styles
 
 This registry must not:
 
@@ -323,8 +337,10 @@ This registry must not:
 - change import/export formats
 - redesign React or adapters
 
-The purpose would be to make existing target-specific consumption decisions
-explicit while preserving the flat runtime variable contract.
+The purpose is to make existing target-specific PreviewCanvas consumption
+decisions explicit while preserving the flat runtime variable contract. Future
+exports or adapters may define their own target-specific consumption behavior
+without changing this preview policy.
 
 ## Stable Rules
 
@@ -336,3 +352,5 @@ explicit while preserving the flat runtime variable contract.
 - Keep transition shorthand avoided in PreviewCanvas.
 - Keep PreviewCanvas root transitions as direct longhands.
 - Keep component/slot/target-specific exceptions possible.
+- Keep the current policy registry preview-local unless a future phase
+  explicitly scopes another target.
