@@ -76,7 +76,9 @@ export function PreviewCanvas({
     display: "inline-flex",
     gap: rootStyle.gap ?? "8px",
     justifyContent: "center",
-    opacity: "var(--button-opacity)"
+    opacity: "var(--button-opacity)",
+    paddingBlock: "var(--button-padding-block)",
+    paddingInline: "var(--button-padding-inline)"
   };
   const labelStyle: CSSProperties = {
     ...(resolved.styles.base.label ?? {}),
@@ -115,7 +117,9 @@ export function PreviewCanvas({
     color: "var(--input-color)",
     minWidth: 220,
     opacity: "var(--input-opacity)",
-    outline: 0
+    outline: 0,
+    paddingBlock: "var(--input-padding-block)",
+    paddingInline: "var(--input-padding-inline)"
   };
 
   useEffect(() => {
