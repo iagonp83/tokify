@@ -40,7 +40,7 @@ Automated regression tests cover:
 - runtimePlan provenance metadata
 - runtime CSS variable emission helper behavior
 - additive preview runtime variable wiring
-- initial preview consumption of selected runtime variables
+- selective preview consumption of safe runtime variables
 
 ## Component Model Structure
 
@@ -481,6 +481,64 @@ Emission behavior:
 Runtime emission remains flat CSS variables only. There are still no nested
 runtime token objects.
 
+Preview runtime consumption is intentionally selective. The emitter can produce
+runtime variables broadly, but `PreviewCanvas` only consumes `var(...)` where
+the current inline-style/runtime behavior is safe.
+
+Current `PreviewCanvas` runtime variable consumption:
+
+- Button root:
+  - `background`
+  - `color`
+  - `borderRadius`
+  - `boxShadow`
+  - `opacity`
+  - `paddingBlock`
+  - `paddingInline`
+- Button slots:
+  - label `color`
+  - icon `color`
+- Input root:
+  - `color`
+  - `borderRadius`
+  - `paddingBlock`
+  - `paddingInline`
+
+Input transition-sensitive state-changing properties are intentionally direct in
+`PreviewCanvas`:
+
+- `background`
+- `boxShadow`
+- `opacity`
+
+Root transitions are also intentionally rendered as direct longhands in
+`PreviewCanvas`:
+
+- `transitionProperty`
+- `transitionDuration`
+- `transitionTimingFunction`
+- `transitionDelay`
+
+The root `transition` shorthand is not consumed through `var(...)` in
+`PreviewCanvas`. Transition runtime variables are still emitted for future
+runtime strategies, including:
+
+- `--button-transition-*`
+- `--input-transition-*`
+- `--button-label-transition-*`
+- `--button-icon-transition-*`
+
+Transition safety rule: runtime variables may be emitted broadly, but preview
+consumption must stay selective. Animated state-changing properties should use
+direct concrete style values in `PreviewCanvas` until there is a safer
+CSS/runtime strategy, because stable `var(...)` property declarations can
+prevent visible transitions when only custom property values change. React also
+warns when transition shorthand and transition longhands are mixed in inline
+styles, so root transitions are rendered with concrete longhands only.
+
+This transition-safety fix did not require resolver, `runtimePlan`,
+`runtimeEmission`, schema, import/export, adapter, or token resolver changes.
+
 ## Resolver Logic
 
 `resolveComponent` is intentionally small and does not validate schemas.
@@ -670,19 +728,51 @@ Current preview slot mapping:
 
 This preview mapping is not part of the Component Model contract.
 
-Preview runtime variable consumption has started incrementally. Existing direct
-styles mostly remain as fallback and source of truth, but the preview now
-consumes:
+Preview runtime variable consumption is selective. Emitted runtime variables
+remain available broadly, but the preview consumes `var(...)` only for
+properties that are currently safe in the inline-style rendering path.
 
-- Button root background: `var(--button-background)`
-- Button root color: `var(--button-color)`
-- Button label color: `var(--button-label-color)`
-- Button icon color: `var(--button-icon-color)`
-- Input root background: `var(--input-background)`
-- Input root color: `var(--input-color)`
+Button root currently consumes runtime variables for:
 
-Other preview properties, including spacing, radius, shadow, opacity, and
-transitions, still use direct resolved styles.
+- `background`
+- `color`
+- `borderRadius`
+- `boxShadow`
+- `opacity`
+- `paddingBlock`
+- `paddingInline`
+
+Button slots currently consume runtime variables for:
+
+- label `color`
+- icon `color`
+
+Input root currently consumes runtime variables for:
+
+- `color`
+- `borderRadius`
+- `paddingBlock`
+- `paddingInline`
+
+Input root intentionally keeps transition-sensitive state-changing properties
+direct:
+
+- `background`
+- `boxShadow`
+- `opacity`
+
+Button and Input root transitions intentionally render direct longhands instead
+of the `transition` shorthand:
+
+- `transitionProperty`
+- `transitionDuration`
+- `transitionTimingFunction`
+- `transitionDelay`
+
+The preview does not consume root transition shorthand variables with
+`var(...)`. Transition runtime variables are still emitted for future use, but
+PreviewCanvas avoids mixing transition shorthand and longhands in React inline
+styles.
 
 ## Export Architecture
 
@@ -747,5 +837,6 @@ There is also no:
 
 ## Next Recommended Phase
 
-Continue the incremental runtime emission migration or the next explicitly
-scoped composition phase.
+Continue the incremental runtime emission migration only with the current
+transition-safety boundary in mind, or move to the next explicitly scoped
+composition phase.

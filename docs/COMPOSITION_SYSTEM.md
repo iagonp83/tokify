@@ -374,6 +374,55 @@ preview scopes. Slots remain semantic addresses; the current preview's DOM
 mapping is downstream rendering behavior and is not part of the Component
 Model contract.
 
+Preview consumption is intentionally selective. Runtime variables are emitted
+broadly, but `PreviewCanvas` consumes `var(...)` only where the current
+inline-style rendering path is safe.
+
+Current safe preview consumption:
+
+- Button root:
+  - `background`
+  - `color`
+  - `borderRadius`
+  - `boxShadow`
+  - `opacity`
+  - `paddingBlock`
+  - `paddingInline`
+- Button slots:
+  - label `color`
+  - icon `color`
+- Input root:
+  - `color`
+  - `borderRadius`
+  - `paddingBlock`
+  - `paddingInline`
+
+Input root keeps transition-sensitive state-changing properties direct in
+`PreviewCanvas`:
+
+- `background`
+- `boxShadow`
+- `opacity`
+
+Root transitions are rendered with concrete longhands in `PreviewCanvas`:
+
+- `transitionProperty`
+- `transitionDuration`
+- `transitionTimingFunction`
+- `transitionDelay`
+
+The root `transition` shorthand is not consumed with `var(...)` in
+`PreviewCanvas`. Transition variables still emit for future use, including
+`--button-transition-*`, `--input-transition-*`,
+`--button-label-transition-*`, and `--button-icon-transition-*`.
+
+Transition safety rule: emit runtime variables broadly, but consume them
+selectively. Animated state-changing properties in `PreviewCanvas` should use
+direct concrete values until a safer CSS/runtime strategy exists. Stable
+`var(...)` property declarations can prevent visible transitions when only the
+custom property values change, and React warns when transition shorthand and
+longhands are mixed in inline styles.
+
 ### Schema/Resolver First
 
 Composition must be introduced through portable schema concepts and resolver
@@ -458,8 +507,10 @@ Completed runtime emission integration work:
 2. Base/state flat variable layering.
 3. Same-layer collision hardening.
 4. Additive PreviewCanvas runtime variable wiring.
-5. Initial preview consumption of Button/Input root background and color.
-6. Initial preview consumption of Button label/icon color.
+5. Selective preview consumption of safe Button/Input root variables.
+6. Preview consumption of Button label/icon color.
+7. Transition-safety boundary for animated properties and root transition
+   longhands.
 
 Do not continue to later phases until each earlier phase has established the
 needed compatibility boundary.
