@@ -58,11 +58,11 @@ export function PreviewCanvas({
   });
   const stateStyles = resolved.styles.states[uiState] ?? {};
   const inputStateStyles = resolvedInput.styles.states[uiState] ?? {};
-  const rootStyle = omitTransitionLonghands({
+  const rootStyle = omitTransitionShorthand({
     ...(resolved.styles.base.root ?? {}),
     ...(stateStyles.root ?? {})
   });
-  const inputRootStyle = omitTransitionLonghands({
+  const inputRootStyle = omitTransitionShorthand({
     ...(resolvedInput.styles.base.root ?? {}),
     ...(inputStateStyles.root ?? {})
   });
@@ -79,7 +79,10 @@ export function PreviewCanvas({
     opacity: "var(--button-opacity)",
     paddingBlock: "var(--button-padding-block)",
     paddingInline: "var(--button-padding-inline)",
-    transition: "var(--button-transition)"
+    transitionDelay: rootStyle.transitionDelay,
+    transitionDuration: rootStyle.transitionDuration,
+    transitionProperty: rootStyle.transitionProperty,
+    transitionTimingFunction: rootStyle.transitionTimingFunction
   };
   const labelStyle: CSSProperties = {
     ...(resolved.styles.base.label ?? {}),
@@ -110,18 +113,21 @@ export function PreviewCanvas({
   );
   const inputStyle: CSSProperties = {
     ...inputRootStyle,
-    background: "var(--input-background)",
+    background: inputRootStyle.background,
     border: 0,
     borderRadius: "var(--input-border-radius)",
     boxSizing: "border-box",
-    boxShadow: "var(--input-box-shadow)",
+    boxShadow: inputRootStyle.boxShadow,
     color: "var(--input-color)",
     minWidth: 220,
-    opacity: "var(--input-opacity)",
+    opacity: inputRootStyle.opacity,
     outline: 0,
     paddingBlock: "var(--input-padding-block)",
     paddingInline: "var(--input-padding-inline)",
-    transition: "var(--input-transition)"
+    transitionDelay: inputRootStyle.transitionDelay,
+    transitionDuration: inputRootStyle.transitionDuration,
+    transitionProperty: inputRootStyle.transitionProperty,
+    transitionTimingFunction: inputRootStyle.transitionTimingFunction
   };
 
   useEffect(() => {
@@ -247,13 +253,10 @@ function createPreviewResolutionContext(
   };
 }
 
-function omitTransitionLonghands(style: CSSProperties): CSSProperties {
+function omitTransitionShorthand(style: CSSProperties): CSSProperties {
   const nextStyle = { ...style };
 
-  delete nextStyle.transitionDelay;
-  delete nextStyle.transitionDuration;
-  delete nextStyle.transitionProperty;
-  delete nextStyle.transitionTimingFunction;
+  delete nextStyle.transition;
 
   return nextStyle;
 }

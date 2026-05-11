@@ -19,6 +19,7 @@ describe("PreviewCanvas runtime emission", () => {
     );
     const buttonRootStyle = getStyleAttribute(markup, "--button-background:");
     const inputRootStyle = getStyleAttribute(markup, "--input-background:");
+    const { resolvedButton, resolvedInput } = resolveDefaultPreviews();
 
     expect(markup).toContain("--button-background:");
     expect(markup).toContain("--button-border-radius:");
@@ -50,27 +51,46 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("opacity:var(--button-opacity)");
     expect(markup).toContain("padding-block:var(--button-padding-block)");
     expect(markup).toContain("padding-inline:var(--button-padding-inline)");
-    expect(markup).toContain("transition:var(--button-transition)");
+    expectRootStyleNotToRenderTransitionShorthand(buttonRootStyle);
+    expect(buttonRootStyle).toContain(
+      `transition-delay:${resolvedButton.styles.base.root.transitionDelay}`
+    );
+    expect(buttonRootStyle).toContain(
+      `transition-duration:${resolvedButton.styles.base.root.transitionDuration}`
+    );
+    expect(buttonRootStyle).toContain(
+      `transition-property:${resolvedButton.styles.base.root.transitionProperty}`
+    );
+    expect(buttonRootStyle).toContain(
+      `transition-timing-function:${resolvedButton.styles.base.root.transitionTimingFunction}`
+    );
     expect(markup).toContain("color:var(--button-label-color)");
     expect(markup).toContain("color:var(--button-icon-color)");
     expect(markup).not.toContain("transition:var(--button-label-transition)");
     expect(markup).not.toContain("transition:var(--button-icon-transition)");
-    expect(markup).toContain("background:var(--input-background)");
+    expect(inputRootStyle).toContain(
+      `background:${resolvedInput.styles.base.root.background}`
+    );
+    expect(inputRootStyle).not.toContain("background:var(--input-background)");
     expect(markup).toContain("border-radius:var(--input-border-radius)");
-    expect(markup).toContain("box-shadow:var(--input-box-shadow)");
+    expect(inputRootStyle).not.toContain("box-shadow:var(--input-box-shadow)");
     expect(markup).toContain("color:var(--input-color)");
-    expect(markup).toContain("opacity:var(--input-opacity)");
+    expect(inputRootStyle).not.toContain("opacity:var(--input-opacity)");
     expect(markup).toContain("padding-block:var(--input-padding-block)");
     expect(markup).toContain("padding-inline:var(--input-padding-inline)");
-    expect(markup).toContain("transition:var(--input-transition)");
-    expect(buttonRootStyle).not.toContain(";transition-delay:");
-    expect(buttonRootStyle).not.toContain(";transition-duration:");
-    expect(buttonRootStyle).not.toContain(";transition-property:");
-    expect(buttonRootStyle).not.toContain(";transition-timing-function:");
-    expect(inputRootStyle).not.toContain(";transition-delay:");
-    expect(inputRootStyle).not.toContain(";transition-duration:");
-    expect(inputRootStyle).not.toContain(";transition-property:");
-    expect(inputRootStyle).not.toContain(";transition-timing-function:");
+    expectRootStyleNotToRenderTransitionShorthand(inputRootStyle);
+    expect(inputRootStyle).toContain(
+      `transition-delay:${resolvedInput.styles.base.root.transitionDelay}`
+    );
+    expect(inputRootStyle).toContain(
+      `transition-duration:${resolvedInput.styles.base.root.transitionDuration}`
+    );
+    expect(inputRootStyle).toContain(
+      `transition-property:${resolvedInput.styles.base.root.transitionProperty}`
+    );
+    expect(inputRootStyle).toContain(
+      `transition-timing-function:${resolvedInput.styles.base.root.transitionTimingFunction}`
+    );
     expect(markup).toContain("display:inline-flex");
     expect(markup).toContain("min-width:220px");
     expect(markup).not.toContain("var(--button-root-opacity)");
@@ -186,18 +206,7 @@ describe("PreviewCanvas runtime emission", () => {
   });
 
   it("keeps using existing emitted root transition shorthand variables", () => {
-    const tokens = useDesignTokens(initialDesignState);
-    const tokenResolver = createTokenResolver(
-      tokens,
-      initialDesignState.component.kind
-    );
-    const resolvedButton = resolveComponent(buttonSchema, tokenResolver, {
-      ...initialDesignState.variantSelections.button,
-      state: "default"
-    });
-    const resolvedInput = resolveComponent(inputSchema, tokenResolver, {
-      state: "default"
-    });
+    const { resolvedButton, resolvedInput } = resolveDefaultPreviews();
     const buttonVariables = emitComponentRuntimeVariables(resolvedButton, {
       state: "default"
     });
@@ -220,6 +229,24 @@ describe("PreviewCanvas runtime emission", () => {
   });
 });
 
+function resolveDefaultPreviews() {
+  const tokens = useDesignTokens(initialDesignState);
+  const tokenResolver = createTokenResolver(
+    tokens,
+    initialDesignState.component.kind
+  );
+
+  return {
+    resolvedButton: resolveComponent(buttonSchema, tokenResolver, {
+      ...initialDesignState.variantSelections.button,
+      state: "default"
+    }),
+    resolvedInput: resolveComponent(inputSchema, tokenResolver, {
+      state: "default"
+    })
+  };
+}
+
 function getStyleAttribute(markup: string, marker: string) {
   const styleAttribute = markup
     .match(/style="([^"]*)"/g)
@@ -228,4 +255,8 @@ function getStyleAttribute(markup: string, marker: string) {
   expect(styleAttribute).toBeDefined();
 
   return styleAttribute ?? "";
+}
+
+function expectRootStyleNotToRenderTransitionShorthand(style: string) {
+  expect(style).not.toMatch(/(^|;)transition:/);
 }
