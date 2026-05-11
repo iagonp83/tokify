@@ -58,14 +58,14 @@ export function PreviewCanvas({
   });
   const stateStyles = resolved.styles.states[uiState] ?? {};
   const inputStateStyles = resolvedInput.styles.states[uiState] ?? {};
-  const rootStyle = {
+  const rootStyle = omitTransitionLonghands({
     ...(resolved.styles.base.root ?? {}),
     ...(stateStyles.root ?? {})
-  };
-  const inputRootStyle = {
+  });
+  const inputRootStyle = omitTransitionLonghands({
     ...(resolvedInput.styles.base.root ?? {}),
     ...(inputStateStyles.root ?? {})
-  };
+  });
   const rootStyleWithLayout: CSSProperties = {
     ...rootStyle,
     alignItems: "center",
@@ -245,6 +245,17 @@ function createPreviewResolutionContext(
     ...designState.variantSelections[namespace],
     state: previewState
   };
+}
+
+function omitTransitionLonghands(style: CSSProperties): CSSProperties {
+  const nextStyle = { ...style };
+
+  delete nextStyle.transitionDelay;
+  delete nextStyle.transitionDuration;
+  delete nextStyle.transitionProperty;
+  delete nextStyle.transitionTimingFunction;
+
+  return nextStyle;
 }
 
 function getButtonMotionDuration(

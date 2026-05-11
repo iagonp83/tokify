@@ -17,6 +17,8 @@ describe("PreviewCanvas runtime emission", () => {
         state={initialDesignState}
       />
     );
+    const buttonRootStyle = getStyleAttribute(markup, "--button-background:");
+    const inputRootStyle = getStyleAttribute(markup, "--input-background:");
 
     expect(markup).toContain("--button-background:");
     expect(markup).toContain("--button-border-radius:");
@@ -25,6 +27,10 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("--button-padding-block:");
     expect(markup).toContain("--button-padding-inline:");
     expect(markup).toContain("--button-transition:");
+    expect(markup).toContain("--button-transition-delay:");
+    expect(markup).toContain("--button-transition-duration:");
+    expect(markup).toContain("--button-transition-property:");
+    expect(markup).toContain("--button-transition-timing-function:");
     expect(markup).toContain("--button-label-color:");
     expect(markup).toContain("--button-icon-color:");
     expect(markup).toContain("--input-background:");
@@ -33,6 +39,10 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("--input-padding-block:");
     expect(markup).toContain("--input-padding-inline:");
     expect(markup).toContain("--input-transition:");
+    expect(markup).toContain("--input-transition-delay:");
+    expect(markup).toContain("--input-transition-duration:");
+    expect(markup).toContain("--input-transition-property:");
+    expect(markup).toContain("--input-transition-timing-function:");
     expect(markup).toContain("background:var(--button-background)");
     expect(markup).toContain("border-radius:var(--button-border-radius)");
     expect(markup).toContain("box-shadow:var(--button-box-shadow)");
@@ -53,6 +63,14 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("padding-block:var(--input-padding-block)");
     expect(markup).toContain("padding-inline:var(--input-padding-inline)");
     expect(markup).toContain("transition:var(--input-transition)");
+    expect(buttonRootStyle).not.toContain(";transition-delay:");
+    expect(buttonRootStyle).not.toContain(";transition-duration:");
+    expect(buttonRootStyle).not.toContain(";transition-property:");
+    expect(buttonRootStyle).not.toContain(";transition-timing-function:");
+    expect(inputRootStyle).not.toContain(";transition-delay:");
+    expect(inputRootStyle).not.toContain(";transition-duration:");
+    expect(inputRootStyle).not.toContain(";transition-property:");
+    expect(inputRootStyle).not.toContain(";transition-timing-function:");
     expect(markup).toContain("display:inline-flex");
     expect(markup).toContain("min-width:220px");
     expect(markup).not.toContain("var(--button-root-opacity)");
@@ -201,3 +219,13 @@ describe("PreviewCanvas runtime emission", () => {
     );
   });
 });
+
+function getStyleAttribute(markup: string, marker: string) {
+  const styleAttribute = markup
+    .match(/style="([^"]*)"/g)
+    ?.find((style) => style.includes(marker));
+
+  expect(styleAttribute).toBeDefined();
+
+  return styleAttribute ?? "";
+}
