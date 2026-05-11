@@ -13,16 +13,20 @@ describe("PreviewCanvas runtime emission", () => {
     );
 
     expect(markup).toContain("--button-background:");
+    expect(markup).toContain("--button-border-radius:");
     expect(markup).toContain("--button-color:");
     expect(markup).toContain("--button-label-color:");
     expect(markup).toContain("--button-icon-color:");
     expect(markup).toContain("--input-background:");
+    expect(markup).toContain("--input-border-radius:");
     expect(markup).toContain("--input-color:");
     expect(markup).toContain("background:var(--button-background)");
+    expect(markup).toContain("border-radius:var(--button-border-radius)");
     expect(markup).toContain("color:var(--button-color)");
     expect(markup).toContain("color:var(--button-label-color)");
     expect(markup).toContain("color:var(--button-icon-color)");
     expect(markup).toContain("background:var(--input-background)");
+    expect(markup).toContain("border-radius:var(--input-border-radius)");
     expect(markup).toContain("color:var(--input-color)");
     expect(markup).toContain("display:inline-flex");
     expect(markup).toContain("min-width:220px");
