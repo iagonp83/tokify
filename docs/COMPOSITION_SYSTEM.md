@@ -24,6 +24,59 @@ Components are not React components, DOM nodes, CSS classes, or adapter output.
 They are compiler-owned descriptions that can later be rendered or exported by
 adapters.
 
+### Component Type
+
+A component type is the stable logical identity of a component, such as
+`Button`, `Input`, or a future `Icon`.
+
+Component type identity is what other schemas reference through child metadata.
+It is not an import path, React component name, DOM tag, CSS class, adapter
+identifier, or generated file name.
+
+### Component Schema
+
+A component schema is the versioned compiler-owned definition for one component
+type.
+
+The schema owns the component-local contract:
+
+- slots
+- states
+- variants
+- token bindings
+- edit policy
+- optional composition metadata
+
+Schemas are still library-agnostic. A schema does not own rendered hierarchy,
+adapter output, generated code structure, PreviewCanvas behavior, or runtime
+variable values.
+
+### Component Instance
+
+A component instance is a future resolved occurrence of a component schema at a
+specific position in a composition graph.
+
+Component instances do not exist as resolver behavior yet. When introduced,
+they should carry instance identity, graph position, variant/state selection,
+and runtime planning scope without changing the schema's component type
+identity.
+
+### Child Instance
+
+A child instance is a parent-declared occurrence of another component type.
+
+In current metadata, a child instance is declared by one
+`composition.children[]` entry. Its `component` field references the component
+type, while its `name` field identifies the child instance within the parent
+schema.
+
+Component type identity and child instance identity are separate. For example,
+`leadingIcon` and `trailingIcon` may both reference the same `Icon` component
+type without becoming the same instance.
+
+Child instance names are unique only within one parent schema's
+`composition.children` list. They are not globally unique across all schemas.
+
 ### Slot
 
 A slot is a flat semantic address inside a component schema.
@@ -78,6 +131,11 @@ Child component metadata is validation-only and metadata-only. It does not
 affect resolver behavior, runtime planning, runtime emission, React rendering,
 DOM structure, import/export, generated code, adapters, or preview behavior.
 
+Semantically, `composition.children` declares parent-owned child instance
+metadata. A child entry is associated with a flat parent slot; it is not inside
+a DOM slot, React slot, JSX child position, wrapper element, CSS selector, or
+adapter-specific insertion point.
+
 The current child metadata shape identifies:
 
 - `name`: the parent-owned child metadata identifier
@@ -90,6 +148,10 @@ Validation requires child metadata to use a non-empty `name`, a non-empty
 `component` reference, a known parent slot, and a unique child name within
 `composition.children`.
 
+Repeated child component types are allowed under different child names. A
+single parent schema may declare `leadingIcon` and `trailingIcon` child
+instances that both reference the same `Icon` component type.
+
 Self-reference validation is intentionally deferred until a component registry
 or cross-component lookup model exists. Part/child name collision policy is also
 deferred because parts and children are currently separate metadata lists, not a
@@ -98,6 +160,17 @@ single shared composition namespace.
 Child components should not be introduced by hard-coding React children,
 runtime JSX structure, DOM hierarchy, selector metadata, generated imports, or
 adapter-specific behavior in the Component Model.
+
+The following are explicitly non-semantic for `composition.children`:
+
+- DOM nesting
+- React children
+- JSX hierarchy
+- CSS selectors
+- wrapper elements
+- adapter imports
+- generated code hierarchy
+- PreviewCanvas runtime meaning
 
 ### Compound Variant
 
@@ -173,6 +246,51 @@ may later describe relationships between slots, parts, and child components, but
 slot identifiers themselves should stay stable and addressable.
 
 Do not require nested slot paths or DOM-shaped trees for resolver behavior.
+
+### Future Composition Graph Semantics
+
+The future composition graph should separate instance topology from component
+type dependencies.
+
+The runtime or compiler instance graph should be a strict instance tree. Each
+child instance has one parent instance and one stable path derived from child
+instance names, not from DOM structure, React structure, selectors, generated
+code, or adapter output.
+
+The component-type dependency graph should be acyclic. A component schema may
+reference other component types through `composition.children`, and the same
+component type may appear multiple times in an instance tree under different
+child instance names. However, component type references must not create direct
+or indirect recursion once a component registry exists.
+
+This model allows schema reuse while keeping instance identity stable:
+
+- component types are reusable definitions
+- component schemas define local contracts
+- child entries declare parent-owned child instances
+- instance paths identify occurrences
+- adapters may later decide how to render those occurrences
+
+### Future Instance Paths
+
+Future instance paths should be derived from child instance names and the
+composition instance tree.
+
+Conceptual examples:
+
+```txt
+Button
+Button.leadingIcon
+Button.trailingIcon
+Toolbar.primaryAction.icon
+```
+
+These paths are semantic compiler identities. They are not DOM paths, React
+component paths, CSS selectors, adapter import paths, or generated file paths.
+
+Instance paths should be stable as long as child instance names and graph
+position remain stable. They should support repeated use of the same component
+type without collisions.
 
 ### Slot Inheritance
 
@@ -375,6 +493,13 @@ metadata.
 `runtimePlan` is planning metadata only. It does not carry values, mutate
 `DesignTokens`, change CSS export, change JSON import/export, or invoke
 adapters.
+
+If future child component composition adds instance-aware runtime planning,
+`runtimePlan.variables[]` must remain flat. Any instance-aware variable naming
+must be collision-safe and derived from semantic instance paths plus flat slot
+and property names. It must not introduce nested runtime token objects or derive
+names from DOM structure, React hierarchy, CSS selectors, adapter imports, or
+generated code hierarchy.
 
 A pure runtime emission helper consumes resolved components:
 
