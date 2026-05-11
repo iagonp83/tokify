@@ -20,6 +20,7 @@ describe("PreviewCanvas runtime emission", () => {
 
     expect(markup).toContain("--button-background:");
     expect(markup).toContain("--button-border-radius:");
+    expect(markup).toContain("--button-box-shadow:");
     expect(markup).toContain("--button-color:");
     expect(markup).toContain("--button-label-color:");
     expect(markup).toContain("--button-icon-color:");
@@ -28,18 +29,22 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("--input-color:");
     expect(markup).toContain("background:var(--button-background)");
     expect(markup).toContain("border-radius:var(--button-border-radius)");
+    expect(markup).toContain("box-shadow:var(--button-box-shadow)");
     expect(markup).toContain("color:var(--button-color)");
     expect(markup).toContain("opacity:var(--button-opacity)");
     expect(markup).toContain("color:var(--button-label-color)");
     expect(markup).toContain("color:var(--button-icon-color)");
     expect(markup).toContain("background:var(--input-background)");
     expect(markup).toContain("border-radius:var(--input-border-radius)");
+    expect(markup).toContain("box-shadow:var(--input-box-shadow)");
     expect(markup).toContain("color:var(--input-color)");
     expect(markup).toContain("opacity:var(--input-opacity)");
     expect(markup).toContain("display:inline-flex");
     expect(markup).toContain("min-width:220px");
     expect(markup).not.toContain("var(--button-root-opacity)");
     expect(markup).not.toContain("var(--input-root-opacity)");
+    expect(markup).not.toContain("var(--button-root-box-shadow)");
+    expect(markup).not.toContain("var(--input-root-box-shadow)");
     expect(markup).not.toContain("--button-hover-background");
     expect(markup).not.toContain("--input-hover-background");
   });
@@ -74,5 +79,39 @@ describe("PreviewCanvas runtime emission", () => {
       "--button-root-opacity"
     );
     expect(Object.keys(inputVariables)).not.toContain("--input-root-opacity");
+  });
+
+  it("keeps using existing emitted root boxShadow variables", () => {
+    const tokens = useDesignTokens(initialDesignState);
+    const tokenResolver = createTokenResolver(
+      tokens,
+      initialDesignState.component.kind
+    );
+    const resolvedButton = resolveComponent(buttonSchema, tokenResolver, {
+      ...initialDesignState.variantSelections.button,
+      state: "default"
+    });
+    const resolvedInput = resolveComponent(inputSchema, tokenResolver, {
+      state: "focus"
+    });
+    const buttonVariables = emitComponentRuntimeVariables(resolvedButton, {
+      state: "default"
+    });
+    const inputVariables = emitComponentRuntimeVariables(resolvedInput, {
+      state: "focus"
+    });
+
+    expect(buttonVariables["--button-box-shadow"]).toBe(
+      resolvedButton.styles.base.root.boxShadow
+    );
+    expect(inputVariables["--input-box-shadow"]).toBe(
+      resolvedInput.styles.states.focus?.root.boxShadow
+    );
+    expect(Object.keys(buttonVariables)).not.toContain(
+      "--button-root-box-shadow"
+    );
+    expect(Object.keys(inputVariables)).not.toContain(
+      "--input-root-box-shadow"
+    );
   });
 });
