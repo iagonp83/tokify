@@ -310,6 +310,9 @@ Scalability requirements:
 The resolver creates additive runtime planning metadata for flat CSS variable
 emission.
 
+For the target-specific runtime consumption policy, see
+[`RUNTIME_CONSUMPTION_SAFETY.md`](./RUNTIME_CONSUMPTION_SAFETY.md).
+
 The runtime plan remains flat:
 
 ```ts
