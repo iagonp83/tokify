@@ -102,6 +102,18 @@ export function validateComponent(
   });
 
   schema.composition?.children?.forEach((child) => {
+    if (!child.name.trim()) {
+      errors.push("Composition child name is required.");
+    }
+
+    if (!child.component.trim()) {
+      errors.push(
+        child.name.trim()
+          ? `Composition child "${child.name}" requires a component reference.`
+          : "Composition child requires a component reference."
+      );
+    }
+
     if (!slotNames.has(child.slot)) {
       errors.push(
         `Composition child "${child.name}" references unknown slot "${child.slot}".`

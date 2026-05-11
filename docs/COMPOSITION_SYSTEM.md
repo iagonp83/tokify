@@ -71,9 +71,33 @@ components.
 A child component is a component used as part of another component's
 composition.
 
-Child components should be represented as schema-level composition metadata in a
-future phase. They should not be introduced by hard-coding React children,
-runtime JSX structure, or adapter-specific imports in the Component Model.
+Child components are represented as schema-level composition metadata through
+`composition.children`.
+
+Child component metadata is validation-only and metadata-only. It does not
+affect resolver behavior, runtime planning, runtime emission, React rendering,
+DOM structure, import/export, generated code, adapters, or preview behavior.
+
+The current child metadata shape identifies:
+
+- `name`: the parent-owned child metadata identifier
+- `component`: the referenced component name
+- `slot`: the parent component's flat slot associated with the child metadata
+- optional `description`
+- optional `required`
+
+Validation requires child metadata to use a non-empty `name`, a non-empty
+`component` reference, a known parent slot, and a unique child name within
+`composition.children`.
+
+Self-reference validation is intentionally deferred until a component registry
+or cross-component lookup model exists. Part/child name collision policy is also
+deferred because parts and children are currently separate metadata lists, not a
+single shared composition namespace.
+
+Child components should not be introduced by hard-coding React children,
+runtime JSX structure, DOM hierarchy, selector metadata, generated imports, or
+adapter-specific behavior in the Component Model.
 
 ### Compound Variant
 

@@ -228,6 +228,46 @@ describe("validateComponent composition metadata", () => {
     });
   });
 
+  it("rejects blank child metadata names", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      composition: {
+        children: [
+          {
+            component: "Icon",
+            name: " ",
+            slot: "icon"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: ["Composition child name is required."],
+      valid: false
+    });
+  });
+
+  it("rejects blank child component references", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      composition: {
+        children: [
+          {
+            component: " ",
+            name: "leadingIcon",
+            slot: "icon"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: ['Composition child "leadingIcon" requires a component reference.'],
+      valid: false
+    });
+  });
+
   it("rejects slot relation self-references", () => {
     const result = validateComponent({
       ...baseSchema,
