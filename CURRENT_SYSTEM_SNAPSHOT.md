@@ -7,6 +7,11 @@ The project is currently a React + TypeScript + Vite application.
 The runtime token contract remains a flat CSS variable map. The system does not
 emit nested runtime token objects.
 
+Project-level execution principles are documented in
+`docs/ENGINEERING_PRINCIPLES.md`. They are part of the project context for
+future phases and prioritize quality, scalability, architectural safety,
+maintainability, and correctness over speed.
+
 Current stabilized areas:
 
 - resolver system

@@ -68,6 +68,20 @@ React + TypeScript + Vite
 
 ---
 
+## Engineering Principles
+
+Project-level execution principles are documented in:
+
+docs/ENGINEERING_PRINCIPLES.md
+
+Tokify prioritizes quality, scalability, architectural safety,
+maintainability, and correctness over speed. Future phases should stay small,
+verify behavior changes, preserve backward compatibility, and avoid mixing
+resolver, runtimePlan, runtime emission, runtime consumption, PreviewCanvas,
+export, adapter, schema, and UI changes unless explicitly justified.
+
+---
+
 ## Architecture Layers
 
 1. Token Engine (existing)
