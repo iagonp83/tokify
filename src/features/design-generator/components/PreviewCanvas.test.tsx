@@ -8,6 +8,13 @@ import { createTokenResolver } from "../../../compiler/component-model/tokenReso
 import { initialDesignState } from "../presets";
 import { useDesignTokens } from "../useDesignTokens";
 import { PreviewCanvas } from "./PreviewCanvas";
+import {
+  getPreviewRuntimeConsumptionMode,
+  type PreviewRuntimeComponentNamespace,
+  type PreviewRuntimeConsumptionMode,
+  type PreviewRuntimeProperty,
+  type PreviewRuntimeSlot
+} from "./previewRuntimeConsumptionPolicy";
 
 describe("PreviewCanvas runtime emission", () => {
   it("attaches emitted variables while Button and Input roots consume them", () => {
@@ -52,6 +59,7 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("padding-block:var(--button-padding-block)");
     expect(markup).toContain("padding-inline:var(--button-padding-inline)");
     expectRootStyleNotToRenderTransitionShorthand(buttonRootStyle);
+    expect(markup).not.toContain("transition:var(--button-transition)");
     expect(buttonRootStyle).toContain(
       `transition-delay:${resolvedButton.styles.base.root.transitionDelay}`
     );
@@ -79,6 +87,7 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("padding-block:var(--input-padding-block)");
     expect(markup).toContain("padding-inline:var(--input-padding-inline)");
     expectRootStyleNotToRenderTransitionShorthand(inputRootStyle);
+    expect(markup).not.toContain("transition:var(--input-transition)");
     expect(inputRootStyle).toContain(
       `transition-delay:${resolvedInput.styles.base.root.transitionDelay}`
     );
@@ -228,6 +237,57 @@ describe("PreviewCanvas runtime emission", () => {
     );
   });
 });
+
+describe("PreviewCanvas runtime consumption policy", () => {
+  it("keeps the current preview-only consumption decisions explicit", () => {
+    const expectedPolicies = [
+      ["button", "root", "background", "runtime-var"],
+      ["button", "root", "color", "runtime-var"],
+      ["button", "root", "borderRadius", "runtime-var"],
+      ["button", "root", "boxShadow", "runtime-var"],
+      ["button", "root", "opacity", "runtime-var"],
+      ["button", "root", "paddingBlock", "runtime-var"],
+      ["button", "root", "paddingInline", "runtime-var"],
+      ["button", "root", "transitionDelay", "direct-longhand"],
+      ["button", "root", "transitionDuration", "direct-longhand"],
+      ["button", "root", "transitionProperty", "direct-longhand"],
+      ["button", "root", "transitionTimingFunction", "direct-longhand"],
+      ["button", "root", "transition", "omit-shorthand"],
+      ["button", "label", "color", "runtime-var"],
+      ["button", "icon", "color", "runtime-var"],
+      ["input", "root", "color", "runtime-var"],
+      ["input", "root", "borderRadius", "runtime-var"],
+      ["input", "root", "paddingBlock", "runtime-var"],
+      ["input", "root", "paddingInline", "runtime-var"],
+      ["input", "root", "background", "direct-value"],
+      ["input", "root", "boxShadow", "direct-value"],
+      ["input", "root", "opacity", "direct-value"],
+      ["input", "root", "transitionDelay", "direct-longhand"],
+      ["input", "root", "transitionDuration", "direct-longhand"],
+      ["input", "root", "transitionProperty", "direct-longhand"],
+      ["input", "root", "transitionTimingFunction", "direct-longhand"],
+      ["input", "root", "transition", "omit-shorthand"]
+    ] satisfies readonly ExpectedPreviewConsumptionPolicy[];
+
+    expectedPolicies.forEach(([componentNamespace, slot, property, mode]) => {
+      expect(
+        getPreviewRuntimeConsumptionMode({
+          componentNamespace,
+          property,
+          slot,
+          target: "preview-react-inline"
+        })
+      ).toBe(mode);
+    });
+  });
+});
+
+type ExpectedPreviewConsumptionPolicy = readonly [
+  PreviewRuntimeComponentNamespace,
+  PreviewRuntimeSlot,
+  PreviewRuntimeProperty,
+  PreviewRuntimeConsumptionMode
+];
 
 function resolveDefaultPreviews() {
   const tokens = useDesignTokens(initialDesignState);

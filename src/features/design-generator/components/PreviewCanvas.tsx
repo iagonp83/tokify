@@ -12,6 +12,11 @@ import { resolveComponent } from "../../../compiler/component-model/resolveCompo
 import { createTokenResolver } from "../../../compiler/component-model/tokenResolver";
 import type { AuthoredComponentNamespace, DesignState } from "../types";
 import { useDesignTokens } from "../useDesignTokens";
+import {
+  consumePreviewRuntimeStyleValue,
+  omitPreviewRuntimeStyleProperties,
+  type PreviewRuntimeTarget
+} from "./previewRuntimeConsumptionPolicy";
 
 type PreviewCanvasProps = {
   onButtonVariantChange: (
@@ -30,6 +35,8 @@ const previewStates: ComponentStateName[] = [
   "focus",
   "disabled"
 ];
+
+const previewRuntimeTarget: PreviewRuntimeTarget = "preview-react-inline";
 
 export function PreviewCanvas({
   onButtonVariantChange,
@@ -56,44 +63,122 @@ export function PreviewCanvas({
   const inputRuntimeVariables = emitComponentRuntimeVariables(resolvedInput, {
     state: uiState
   });
+  const buttonRootConsumptionScope = {
+    componentNamespace: "button",
+    slot: "root",
+    target: previewRuntimeTarget
+  } as const;
+  const inputRootConsumptionScope = {
+    componentNamespace: "input",
+    slot: "root",
+    target: previewRuntimeTarget
+  } as const;
   const stateStyles = resolved.styles.states[uiState] ?? {};
   const inputStateStyles = resolvedInput.styles.states[uiState] ?? {};
-  const rootStyle = omitTransitionShorthand({
-    ...(resolved.styles.base.root ?? {}),
-    ...(stateStyles.root ?? {})
+  const rootStyle = omitPreviewRuntimeStyleProperties({
+    ...buttonRootConsumptionScope,
+    style: {
+      ...(resolved.styles.base.root ?? {}),
+      ...(stateStyles.root ?? {})
+    }
   });
-  const inputRootStyle = omitTransitionShorthand({
-    ...(resolvedInput.styles.base.root ?? {}),
-    ...(inputStateStyles.root ?? {})
+  const inputRootStyle = omitPreviewRuntimeStyleProperties({
+    ...inputRootConsumptionScope,
+    style: {
+      ...(resolvedInput.styles.base.root ?? {}),
+      ...(inputStateStyles.root ?? {})
+    }
   });
   const rootStyleWithLayout: CSSProperties = {
     ...rootStyle,
     alignItems: "center",
-    background: "var(--button-background)",
-    borderRadius: "var(--button-border-radius)",
-    boxShadow: "var(--button-box-shadow)",
-    color: "var(--button-color)",
+    background: consumePreviewRuntimeStyleValue({
+      ...buttonRootConsumptionScope,
+      property: "background",
+      style: rootStyle
+    }),
+    borderRadius: consumePreviewRuntimeStyleValue({
+      ...buttonRootConsumptionScope,
+      property: "borderRadius",
+      style: rootStyle
+    }),
+    boxShadow: consumePreviewRuntimeStyleValue({
+      ...buttonRootConsumptionScope,
+      property: "boxShadow",
+      style: rootStyle
+    }),
+    color: consumePreviewRuntimeStyleValue({
+      ...buttonRootConsumptionScope,
+      property: "color",
+      style: rootStyle
+    }),
     display: "inline-flex",
     gap: rootStyle.gap ?? "8px",
     justifyContent: "center",
-    opacity: "var(--button-opacity)",
-    paddingBlock: "var(--button-padding-block)",
-    paddingInline: "var(--button-padding-inline)",
-    transitionDelay: rootStyle.transitionDelay,
-    transitionDuration: rootStyle.transitionDuration,
-    transitionProperty: rootStyle.transitionProperty,
-    transitionTimingFunction: rootStyle.transitionTimingFunction
+    opacity: consumePreviewRuntimeStyleValue({
+      ...buttonRootConsumptionScope,
+      property: "opacity",
+      style: rootStyle
+    }),
+    paddingBlock: consumePreviewRuntimeStyleValue({
+      ...buttonRootConsumptionScope,
+      property: "paddingBlock",
+      style: rootStyle
+    }),
+    paddingInline: consumePreviewRuntimeStyleValue({
+      ...buttonRootConsumptionScope,
+      property: "paddingInline",
+      style: rootStyle
+    }),
+    transitionDelay: consumePreviewRuntimeStyleValue({
+      ...buttonRootConsumptionScope,
+      property: "transitionDelay",
+      style: rootStyle
+    }),
+    transitionDuration: consumePreviewRuntimeStyleValue({
+      ...buttonRootConsumptionScope,
+      property: "transitionDuration",
+      style: rootStyle
+    }),
+    transitionProperty: consumePreviewRuntimeStyleValue({
+      ...buttonRootConsumptionScope,
+      property: "transitionProperty",
+      style: rootStyle
+    }),
+    transitionTimingFunction: consumePreviewRuntimeStyleValue({
+      ...buttonRootConsumptionScope,
+      property: "transitionTimingFunction",
+      style: rootStyle
+    })
+  };
+  const labelResolvedStyle: CSSProperties = {
+    ...(resolved.styles.base.label ?? {}),
+    ...(stateStyles.label ?? {})
   };
   const labelStyle: CSSProperties = {
-    ...(resolved.styles.base.label ?? {}),
-    ...(stateStyles.label ?? {}),
-    color: "var(--button-label-color)",
+    ...labelResolvedStyle,
+    color: consumePreviewRuntimeStyleValue({
+      componentNamespace: "button",
+      property: "color",
+      slot: "label",
+      style: labelResolvedStyle,
+      target: previewRuntimeTarget
+    }),
     opacity: 1
   };
-  const iconStyle = {
+  const iconResolvedStyle: CSSProperties = {
     ...(resolved.styles.base.icon ?? {}),
-    ...(stateStyles.icon ?? {}),
-    color: "var(--button-icon-color)"
+    ...(stateStyles.icon ?? {})
+  };
+  const iconStyle: CSSProperties = {
+    ...iconResolvedStyle,
+    color: consumePreviewRuntimeStyleValue({
+      componentNamespace: "button",
+      property: "color",
+      slot: "icon",
+      style: iconResolvedStyle,
+      target: previewRuntimeTarget
+    })
   };
   const hasIconSlot = resolved.schema.slots.some((slot) => slot.name === "icon");
   const buttonEnterDuration = getButtonMotionDuration(
@@ -113,21 +198,65 @@ export function PreviewCanvas({
   );
   const inputStyle: CSSProperties = {
     ...inputRootStyle,
-    background: inputRootStyle.background,
+    background: consumePreviewRuntimeStyleValue({
+      ...inputRootConsumptionScope,
+      property: "background",
+      style: inputRootStyle
+    }),
     border: 0,
-    borderRadius: "var(--input-border-radius)",
+    borderRadius: consumePreviewRuntimeStyleValue({
+      ...inputRootConsumptionScope,
+      property: "borderRadius",
+      style: inputRootStyle
+    }),
     boxSizing: "border-box",
-    boxShadow: inputRootStyle.boxShadow,
-    color: "var(--input-color)",
+    boxShadow: consumePreviewRuntimeStyleValue({
+      ...inputRootConsumptionScope,
+      property: "boxShadow",
+      style: inputRootStyle
+    }),
+    color: consumePreviewRuntimeStyleValue({
+      ...inputRootConsumptionScope,
+      property: "color",
+      style: inputRootStyle
+    }),
     minWidth: 220,
-    opacity: inputRootStyle.opacity,
+    opacity: consumePreviewRuntimeStyleValue({
+      ...inputRootConsumptionScope,
+      property: "opacity",
+      style: inputRootStyle
+    }),
     outline: 0,
-    paddingBlock: "var(--input-padding-block)",
-    paddingInline: "var(--input-padding-inline)",
-    transitionDelay: inputRootStyle.transitionDelay,
-    transitionDuration: inputRootStyle.transitionDuration,
-    transitionProperty: inputRootStyle.transitionProperty,
-    transitionTimingFunction: inputRootStyle.transitionTimingFunction
+    paddingBlock: consumePreviewRuntimeStyleValue({
+      ...inputRootConsumptionScope,
+      property: "paddingBlock",
+      style: inputRootStyle
+    }),
+    paddingInline: consumePreviewRuntimeStyleValue({
+      ...inputRootConsumptionScope,
+      property: "paddingInline",
+      style: inputRootStyle
+    }),
+    transitionDelay: consumePreviewRuntimeStyleValue({
+      ...inputRootConsumptionScope,
+      property: "transitionDelay",
+      style: inputRootStyle
+    }),
+    transitionDuration: consumePreviewRuntimeStyleValue({
+      ...inputRootConsumptionScope,
+      property: "transitionDuration",
+      style: inputRootStyle
+    }),
+    transitionProperty: consumePreviewRuntimeStyleValue({
+      ...inputRootConsumptionScope,
+      property: "transitionProperty",
+      style: inputRootStyle
+    }),
+    transitionTimingFunction: consumePreviewRuntimeStyleValue({
+      ...inputRootConsumptionScope,
+      property: "transitionTimingFunction",
+      style: inputRootStyle
+    })
   };
 
   useEffect(() => {
@@ -251,14 +380,6 @@ function createPreviewResolutionContext(
     ...designState.variantSelections[namespace],
     state: previewState
   };
-}
-
-function omitTransitionShorthand(style: CSSProperties): CSSProperties {
-  const nextStyle = { ...style };
-
-  delete nextStyle.transition;
-
-  return nextStyle;
 }
 
 function getButtonMotionDuration(
