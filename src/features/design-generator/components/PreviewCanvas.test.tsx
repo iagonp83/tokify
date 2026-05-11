@@ -24,6 +24,7 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("--button-color:");
     expect(markup).toContain("--button-padding-block:");
     expect(markup).toContain("--button-padding-inline:");
+    expect(markup).toContain("--button-transition:");
     expect(markup).toContain("--button-label-color:");
     expect(markup).toContain("--button-icon-color:");
     expect(markup).toContain("--input-background:");
@@ -31,6 +32,7 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("--input-color:");
     expect(markup).toContain("--input-padding-block:");
     expect(markup).toContain("--input-padding-inline:");
+    expect(markup).toContain("--input-transition:");
     expect(markup).toContain("background:var(--button-background)");
     expect(markup).toContain("border-radius:var(--button-border-radius)");
     expect(markup).toContain("box-shadow:var(--button-box-shadow)");
@@ -38,8 +40,11 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("opacity:var(--button-opacity)");
     expect(markup).toContain("padding-block:var(--button-padding-block)");
     expect(markup).toContain("padding-inline:var(--button-padding-inline)");
+    expect(markup).toContain("transition:var(--button-transition)");
     expect(markup).toContain("color:var(--button-label-color)");
     expect(markup).toContain("color:var(--button-icon-color)");
+    expect(markup).not.toContain("transition:var(--button-label-transition)");
+    expect(markup).not.toContain("transition:var(--button-icon-transition)");
     expect(markup).toContain("background:var(--input-background)");
     expect(markup).toContain("border-radius:var(--input-border-radius)");
     expect(markup).toContain("box-shadow:var(--input-box-shadow)");
@@ -47,6 +52,7 @@ describe("PreviewCanvas runtime emission", () => {
     expect(markup).toContain("opacity:var(--input-opacity)");
     expect(markup).toContain("padding-block:var(--input-padding-block)");
     expect(markup).toContain("padding-inline:var(--input-padding-inline)");
+    expect(markup).toContain("transition:var(--input-transition)");
     expect(markup).toContain("display:inline-flex");
     expect(markup).toContain("min-width:220px");
     expect(markup).not.toContain("var(--button-root-opacity)");
@@ -158,6 +164,40 @@ describe("PreviewCanvas runtime emission", () => {
     );
     expect(inputVariables["--input-padding-inline"]).toBe(
       resolvedInput.styles.base.root.paddingInline
+    );
+  });
+
+  it("keeps using existing emitted root transition shorthand variables", () => {
+    const tokens = useDesignTokens(initialDesignState);
+    const tokenResolver = createTokenResolver(
+      tokens,
+      initialDesignState.component.kind
+    );
+    const resolvedButton = resolveComponent(buttonSchema, tokenResolver, {
+      ...initialDesignState.variantSelections.button,
+      state: "default"
+    });
+    const resolvedInput = resolveComponent(inputSchema, tokenResolver, {
+      state: "default"
+    });
+    const buttonVariables = emitComponentRuntimeVariables(resolvedButton, {
+      state: "default"
+    });
+    const inputVariables = emitComponentRuntimeVariables(resolvedInput, {
+      state: "default"
+    });
+
+    expect(buttonVariables["--button-transition"]).toBe(
+      resolvedButton.styles.base.root.transition
+    );
+    expect(inputVariables["--input-transition"]).toBe(
+      resolvedInput.styles.base.root.transition
+    );
+    expect(buttonVariables["--button-label-transition"]).toBe(
+      resolvedButton.styles.base.label.transition
+    );
+    expect(buttonVariables["--button-icon-transition"]).toBe(
+      resolvedButton.styles.base.icon.transition
     );
   });
 });

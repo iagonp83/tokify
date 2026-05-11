@@ -78,7 +78,8 @@ export function PreviewCanvas({
     justifyContent: "center",
     opacity: "var(--button-opacity)",
     paddingBlock: "var(--button-padding-block)",
-    paddingInline: "var(--button-padding-inline)"
+    paddingInline: "var(--button-padding-inline)",
+    transition: "var(--button-transition)"
   };
   const labelStyle: CSSProperties = {
     ...(resolved.styles.base.label ?? {}),
@@ -119,7 +120,8 @@ export function PreviewCanvas({
     opacity: "var(--input-opacity)",
     outline: 0,
     paddingBlock: "var(--input-padding-block)",
-    paddingInline: "var(--input-padding-inline)"
+    paddingInline: "var(--input-padding-inline)",
+    transition: "var(--input-transition)"
   };
 
   useEffect(() => {
