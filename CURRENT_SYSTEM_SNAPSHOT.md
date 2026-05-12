@@ -31,6 +31,7 @@ Current stabilized areas:
 - Component Registry Foundation Commit 1
 - Registry-backed Composition Metadata Validation Commit 2
 - Graph Validator Planning documentation boundary
+- Pure Component-Type Graph Validator Commit 1
 
 Automated regression tests cover:
 
@@ -58,6 +59,11 @@ Automated regression tests cover:
 - preview-local runtime consumption policy behavior
 - metadata-only component registry lookup and duplicate authored-name validation
 - optional registry-backed composition child reference validation
+- pure component-type graph validation for unknown references, direct
+  self-reference, and indirect cycles
+- graph validator separation from duplicate authored-name registry validation
+- backward-compatible `validateComponent(schema)` behavior with graph validation
+  kept separate
 
 ## Component Model Structure
 
@@ -66,6 +72,7 @@ The Component Model lives in `src/compiler/component-model/`.
 Current files:
 
 - `component.types.ts`
+- `componentGraphValidation.ts`
 - `button.schema.ts`
 - `componentRegistry.ts`
 - `compositionSlotRelations.ts`
@@ -259,29 +266,36 @@ detection, graph traversal, recursive composition resolution, child component
 runtime resolution, style resolution, token resolution, runtime planning,
 runtime emission, or runtime consumption.
 
-## Graph Validator Planning Boundary
+## Pure Component-Type Graph Validator
 
-The next planned validation boundary is a pure component-type dependency graph,
-not a future instance tree.
+A pure authored-name-based component-type graph validator now exists in:
 
-The component-type graph should be built from registry entries and
-`composition.children[].component` references. Its nodes are authored component
-type names for now, and its edges mean "schema A references component type B."
-This graph is for metadata validation only.
+```txt
+src/compiler/component-model/componentGraphValidation.ts
+```
+
+The validator builds a component-type dependency graph from registry entries
+and `composition.children[].component` references. Its nodes are authored
+component type names, and its edges mean "schema A references component type
+B." Graph keys are still authored-name-only.
+
+The validator returns diagnostics only. It currently detects:
+
+- unknown child component references
+- direct self-reference
+- indirect component-type cycles
 
 The future instance tree remains a separate runtime/compiler concept. It should
 describe parent instance to child instance relationships, with instance paths
 derived from child instance names. It is not implemented yet.
 
-Allowed graph validator inputs are limited to:
+Current graph validator inputs are limited to:
 
 - registry entries
 - schema authored names and registry keys
 - `composition.children`
 - `composition.children[].component`
-- child instance names
-- parent slot references
-- available parent slot names from schema metadata
+- child names for diagnostics
 
 Forbidden graph validator inputs:
 
@@ -310,21 +324,31 @@ Graph keys remain authored-name-only for now:
 The `.` character remains reserved for the future semantic instance-path
 delimiter, but no new canonical naming rules should be enforced yet.
 
-A future pure validator may detect indirect component-type cycles, such as:
+The graph validator reports indirect component-type cycles with cycle paths,
+such as:
 
 ```txt
 Button -> Input -> Button
 ```
 
-Those diagnostics should not introduce resolver recursion, child runtime
-resolution, graph-derived `runtimePlan` entries, runtime emission changes,
-runtime consumption changes, `PreviewCanvas` changes, import/export changes, or
-adapter behavior.
+Those diagnostics have no runtime, `runtimePlan`, or rendering implications.
+They do not introduce resolver recursion, child runtime resolution,
+graph-derived `runtimePlan` entries, runtime emission changes, runtime
+consumption changes, `PreviewCanvas` changes, import/export changes, or adapter
+behavior.
 
-Explicit non-goals for the graph validator planning boundary:
+Duplicate authored-name validation remains registry-local in
+`componentRegistry.ts`. It is not merged into graph traversal.
+
+The graph validator remains separate from single-schema validation flows.
+Existing `validateComponent(schema)` behavior remains backward-compatible, and
+graph validation is not mandatory for existing schema validation calls.
+
+Explicit non-goals for the graph validator boundary:
 
 - canonical IDs
 - canonical collision enforcement
+- canonical name normalization
 - resolver recursion
 - child runtime resolution
 - nested runtime token objects
@@ -335,12 +359,6 @@ Explicit non-goals for the graph validator planning boundary:
 - CSS variable naming changes
 - DOM/render semantics
 - instance-path runtime naming
-
-The recommended next implementation phase is a pure authored-name-based
-component-type graph validator isolated from resolver/runtime behavior. It
-should include focused tests for no children, acyclic graphs, direct
-self-reference, simple indirect cycles, longer indirect cycles, unknown
-references, and duplicate authored names remaining registry-local.
 
 Button declares resolver-level slot relations:
 
@@ -1056,7 +1074,6 @@ Runtime planning and emitted runtime variables are not exported or imported yet.
 Composition is not yet:
 
 - child component runtime resolution
-- cross-component graph validation
 - nested runtime token objects
 - adapter integration
 - React restructuring
@@ -1077,8 +1094,9 @@ planning or architecture audits before implementation:
 - canonicalization rules
 - escaping rules
 - future component registry expansion contract
-- cross-component graph validation
-- recursive composition and cycle diagnostics
+- canonical-aware graph validation
+- recursive composition behavior beyond metadata-only component-type
+  diagnostics
 - child variant/state selection
 - `runtimePlan` instance naming
 - adapter/export consumption of future composition graphs
@@ -1093,6 +1111,7 @@ planning or architecture audits before implementation:
 - No export/import of runtimePlan or emitted runtime variables.
 - No global runtime consumption architecture layer.
 - No canonical IDs or canonical collision enforcement.
+- No canonical name normalization.
 - No resolver recursion or child runtime resolution.
 - No instance-path runtime naming.
 
@@ -1103,9 +1122,7 @@ registry foundation checkpoints are closed. Future work should continue through
 small, metadata-only infrastructure phases before any resolver, runtime,
 PreviewCanvas, export, or adapter behavior changes.
 
-The next recommended implementation phase is a pure authored-name-based
-component-type graph validator. It should remain isolated from resolver,
-runtime, `PreviewCanvas`, import/export, and adapters, and it should test no
-children, acyclic graphs, direct self-reference, simple indirect cycles, longer
-indirect cycles, unknown references, and duplicate authored names remaining
-registry-local.
+The pure authored-name-based component-type graph validator checkpoint is
+closed. Future work should continue with small metadata-only phases or dedicated
+architecture audits before any canonical identity, instance tree, resolver,
+runtime, `PreviewCanvas`, import/export, or adapter behavior changes.

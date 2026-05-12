@@ -62,8 +62,12 @@ authored name, and validating duplicate authored names.
 
 The registry does not own style resolution, token resolution, runtime planning,
 runtime emission, runtime consumption, PreviewCanvas behavior, import/export
-behavior, adapters, canonical IDs, graph traversal, or child component runtime
-resolution.
+behavior, adapters, canonical IDs, canonical name normalization, or child
+component runtime resolution.
+
+A separate pure component-type graph validator may consume registry entries as
+metadata input. Duplicate authored-name validation remains registry-local and
+is not merged into graph traversal.
 
 The registry may be provided to schema validation as optional metadata context:
 
@@ -180,10 +184,10 @@ Repeated child component types are allowed under different child names. A
 single parent schema may declare `leadingIcon` and `trailingIcon` child
 instances that both reference the same `Icon` component type.
 
-Indirect self-reference and recursive component-type cycle validation are still
-deferred until a dedicated graph validation phase. Part/child name collision
-policy is also deferred because parts and children are currently separate
-metadata lists, not a single shared composition namespace.
+Indirect component-type cycle validation is handled only by the separate pure
+component-type graph validator. Part/child name collision policy is still
+deferred because parts and children are currently separate metadata lists, not
+a single shared composition namespace.
 
 Child components should not be introduced by hard-coding React children,
 runtime JSX structure, DOM hierarchy, selector metadata, generated imports, or
@@ -301,30 +305,34 @@ This model allows schema reuse while keeping instance identity stable:
 - instance paths identify occurrences
 - adapters may later decide how to render those occurrences
 
-### Component-Type Dependency Graph Boundary
+### Component-Type Dependency Graph Validator
 
-The next planned graph validation boundary is a component-type dependency
-graph, not an instance tree.
+A pure authored-name-based component-type dependency graph validator now
+exists. It is a metadata validator, not an instance tree.
 
-The component-type graph should be built only from registry entries and
-`composition.children[].component` references. For now, graph nodes are
-authored component type names and graph edges mean "schema A references
-component type B." This graph is for metadata validation only.
+The component-type graph is built only from registry entries and
+`composition.children[].component` references. Graph nodes are authored
+component type names, and graph edges mean "schema A references component type
+B." This graph is for metadata validation only.
+
+The validator returns diagnostics only. It currently detects:
+
+- unknown child component references
+- direct self-reference
+- indirect component-type cycles
 
 The future instance tree is a separate runtime/compiler concept. It should
 describe parent instance to child instance relationships, with instance paths
 derived from child instance names. It is not implemented yet and should not be
 created implicitly by component-type graph validation.
 
-Allowed graph validator inputs are limited to:
+Current graph validator inputs are limited to:
 
 - registry entries
 - schema authored names and registry keys
 - `composition.children`
 - `composition.children[].component`
-- child instance names
-- parent slot references
-- available parent slot names from schema metadata
+- child names for diagnostics
 
 Forbidden graph validator inputs:
 
@@ -351,18 +359,34 @@ The `.` character remains reserved for the future semantic instance-path
 delimiter, but new canonical naming rules should not be enforced during the
 authored-name graph validator phase.
 
-### Future Indirect Cycle Detection Boundary
+The graph validator is isolated from:
 
-A future pure validator may detect indirect component-type cycles such as:
+- resolver behavior
+- `runtimePlan`
+- runtime emission
+- `PreviewCanvas`
+- import/export
+- adapters
+
+It has no runtime, `runtimePlan`, or rendering implications.
+
+The graph validator remains separate from single-schema validation flows.
+Existing `validateComponent(schema)` behavior remains backward-compatible, and
+graph validation is not mandatory for existing schema validation calls.
+
+### Indirect Cycle Detection Boundary
+
+The pure graph validator detects indirect component-type cycles such as:
 
 ```txt
 Button -> Input -> Button
 ```
 
-Those diagnostics should remain metadata-only. Indirect cycle detection must
-not introduce resolver recursion, child runtime resolution, graph-derived
-`runtimePlan` entries, runtime emission changes, runtime consumption changes,
-PreviewCanvas changes, import/export changes, or adapter behavior.
+Those diagnostics remain metadata-only and include the cycle path. Indirect
+cycle detection does not introduce resolver recursion, child runtime
+resolution, graph-derived `runtimePlan` entries, runtime emission changes,
+runtime consumption changes, PreviewCanvas changes, import/export changes, or
+adapter behavior.
 
 ### Future Instance Paths
 
@@ -409,7 +433,7 @@ the same canonical child ID should not coexist in one parent schema's
 
 The exact canonicalization and escaping rules remain volatile. They should be
 defined in a dedicated phase before canonical-aware registry behavior,
-cross-component graph validation, or instance-aware `runtimePlan` naming.
+canonical-aware graph validation, or instance-aware `runtimePlan` naming.
 
 The current component registry foundation does not introduce canonical IDs,
 canonical name normalization, or canonical persisted identifiers. Authored
@@ -508,7 +532,8 @@ Registry-backed validation does not perform graph traversal, indirect cycle
 detection, recursive composition resolution, child runtime resolution, style
 resolution, token resolution, runtime planning, runtime emission, runtime
 consumption, PreviewCanvas behavior, import/export behavior, or adapter
-behavior.
+behavior. Whole-registry component-type graph validation remains a separate
+helper so single-schema validation flows stay backward-compatible.
 
 ### Flat CSS Variable Contract Is Mandatory
 
@@ -781,7 +806,8 @@ Composition integration currently does not include:
 - export/import of runtimePlan or emitted runtime variables
 - canonical IDs
 - canonical collision enforcement
-- indirect component graph traversal
+- canonical name normalization
+- graph-derived runtime or rendering behavior
 - child component runtime resolution
 - resolver recursion
 - PreviewCanvas changes
@@ -836,14 +862,17 @@ Completed component registry foundation work:
 7. Backward-compatible `validateComponent(schema)` behavior without registry
    input.
 
-Recommended next graph validation phase:
+Completed pure component-type graph validator work:
 
-1. Add a pure authored-name-based component-type graph validator.
-2. Keep the validator isolated from resolver, runtime, `PreviewCanvas`,
-   import/export, and adapters.
-3. Add focused tests for no children, acyclic graphs, direct self-reference,
-   simple indirect cycles, longer indirect cycles, unknown references, and
-   duplicate authored names remaining registry-local.
+1. Pure authored-name-based component-type graph validator.
+2. Metadata-only diagnostics for unknown references, direct self-reference, and
+   indirect component-type cycles.
+3. Cycle diagnostics include authored-name cycle paths.
+4. Validator isolation from resolver, `runtimePlan`, runtime emission,
+   `PreviewCanvas`, import/export, and adapters.
+5. Duplicate authored-name validation remains registry-local.
+6. Backward-compatible `validateComponent(schema)` behavior with graph
+   validation kept separate from single-schema validation flows.
 
 Do not continue to later phases until each earlier phase has established the
 needed compatibility boundary.
