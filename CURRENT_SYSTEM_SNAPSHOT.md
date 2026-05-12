@@ -30,6 +30,7 @@ Current stabilized areas:
 - Canonical identity and naming semantics planning
 - Component Registry Foundation Commit 1
 - Registry-backed Composition Metadata Validation Commit 2
+- Graph Validator Planning documentation boundary
 
 Automated regression tests cover:
 
@@ -257,6 +258,89 @@ This validation is still metadata-only. It does not perform indirect cycle
 detection, graph traversal, recursive composition resolution, child component
 runtime resolution, style resolution, token resolution, runtime planning,
 runtime emission, or runtime consumption.
+
+## Graph Validator Planning Boundary
+
+The next planned validation boundary is a pure component-type dependency graph,
+not a future instance tree.
+
+The component-type graph should be built from registry entries and
+`composition.children[].component` references. Its nodes are authored component
+type names for now, and its edges mean "schema A references component type B."
+This graph is for metadata validation only.
+
+The future instance tree remains a separate runtime/compiler concept. It should
+describe parent instance to child instance relationships, with instance paths
+derived from child instance names. It is not implemented yet.
+
+Allowed graph validator inputs are limited to:
+
+- registry entries
+- schema authored names and registry keys
+- `composition.children`
+- `composition.children[].component`
+- child instance names
+- parent slot references
+- available parent slot names from schema metadata
+
+Forbidden graph validator inputs:
+
+- resolver output
+- `runtimePlan`
+- emitted CSS variables
+- `PreviewCanvas`
+- adapters
+- import/export payloads
+- React components
+- DOM structure
+- rendered children
+- CSS selectors
+- token resolution
+- runtime variable consumption
+- platform-specific metadata
+
+Graph keys remain authored-name-only for now:
+
+- no canonical IDs
+- no canonical name normalization
+- no persisted canonical identity
+- duplicate authored-name validation remains the current collision guard
+- canonical identity remains future planning only
+
+The `.` character remains reserved for the future semantic instance-path
+delimiter, but no new canonical naming rules should be enforced yet.
+
+A future pure validator may detect indirect component-type cycles, such as:
+
+```txt
+Button -> Input -> Button
+```
+
+Those diagnostics should not introduce resolver recursion, child runtime
+resolution, graph-derived `runtimePlan` entries, runtime emission changes,
+runtime consumption changes, `PreviewCanvas` changes, import/export changes, or
+adapter behavior.
+
+Explicit non-goals for the graph validator planning boundary:
+
+- canonical IDs
+- canonical collision enforcement
+- resolver recursion
+- child runtime resolution
+- nested runtime token objects
+- import/export changes
+- `PreviewCanvas` changes
+- adapter changes
+- `runtimePlan` changes
+- CSS variable naming changes
+- DOM/render semantics
+- instance-path runtime naming
+
+The recommended next implementation phase is a pure authored-name-based
+component-type graph validator isolated from resolver/runtime behavior. It
+should include focused tests for no children, acyclic graphs, direct
+self-reference, simple indirect cycles, longer indirect cycles, unknown
+references, and duplicate authored names remaining registry-local.
 
 Button declares resolver-level slot relations:
 
@@ -1008,6 +1092,9 @@ planning or architecture audits before implementation:
 - No nested token runtime.
 - No export/import of runtimePlan or emitted runtime variables.
 - No global runtime consumption architecture layer.
+- No canonical IDs or canonical collision enforcement.
+- No resolver recursion or child runtime resolution.
+- No instance-path runtime naming.
 
 ## Next Recommended Phase
 
@@ -1015,3 +1102,10 @@ The current composition semantics, canonical identity planning, and component
 registry foundation checkpoints are closed. Future work should continue through
 small, metadata-only infrastructure phases before any resolver, runtime,
 PreviewCanvas, export, or adapter behavior changes.
+
+The next recommended implementation phase is a pure authored-name-based
+component-type graph validator. It should remain isolated from resolver,
+runtime, `PreviewCanvas`, import/export, and adapters, and it should test no
+children, acyclic graphs, direct self-reference, simple indirect cycles, longer
+indirect cycles, unknown references, and duplicate authored names remaining
+registry-local.
