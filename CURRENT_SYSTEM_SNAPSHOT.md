@@ -28,6 +28,8 @@ Current stabilized areas:
 - Composition Phase 2A child metadata validation
 - Composition graph semantics and instance identity planning
 - Canonical identity and naming semantics planning
+- Component Registry Foundation Commit 1
+- Registry-backed Composition Metadata Validation Commit 2
 
 Automated regression tests cover:
 
@@ -53,6 +55,8 @@ Automated regression tests cover:
 - additive preview runtime variable wiring
 - selective preview consumption of safe runtime variables
 - preview-local runtime consumption policy behavior
+- metadata-only component registry lookup and duplicate authored-name validation
+- optional registry-backed composition child reference validation
 
 ## Component Model Structure
 
@@ -62,6 +66,7 @@ Current files:
 
 - `component.types.ts`
 - `button.schema.ts`
+- `componentRegistry.ts`
 - `compositionSlotRelations.ts`
 - `input.schema.ts`
 - `propertyRegistry.ts`
@@ -158,6 +163,10 @@ Composition metadata validation currently checks:
 - duplicate slot relation identifiers are rejected
 - duplicate part identifiers are rejected
 - duplicate child component identifiers are rejected
+- when registry validation is explicitly enabled, child component references
+  must point to known registry component authored names
+- when registry validation is explicitly enabled, a component must not directly
+  reference itself as a child component
 
 Child component metadata exists as `composition.children` and is still
 validation-only and metadata-only. It does not affect resolver behavior,
@@ -197,8 +206,57 @@ The canonical identity direction is planned but not implemented:
 - future runtime variable naming must remain flat, collision-safe, and derived
   from semantic instance paths, slots, and properties
 
-There is still no component registry. The architecture is ready for future
-registry planning only, not registry implementation.
+## Component Registry Foundation
+
+The Component Registry Foundation Commit 1 is completed.
+
+A metadata-only component registry now exists in:
+
+```txt
+src/compiler/component-model/componentRegistry.ts
+```
+
+The registry currently contains entries for the existing reference schemas:
+
+- `Button`
+- `Input`
+
+The registry provides pure helpers for:
+
+- creating a registry from component schemas
+- listing registry entries
+- listing authored component names
+- finding a registry entry by authored name
+- getting a component schema by authored name
+- validating duplicate authored component names
+
+Duplicate authored-name validation is registry-local and produces stable
+diagnostics. The registry does not introduce canonical IDs, canonical name
+normalization, graph traversal, child runtime resolution, resolver behavior,
+runtime emission, runtime consumption, `PreviewCanvas` behavior, import/export
+behavior, or adapter behavior.
+
+The Registry-backed Composition Metadata Validation Commit 2 is completed.
+
+`validateComponent` now supports an optional registry-backed validation form:
+
+```ts
+validateComponent(schema, { registry })
+```
+
+Registry-backed validation is opt-in and additive. Existing
+`validateComponent(schema)` behavior remains backward-compatible.
+
+When a registry is provided, composition child metadata additionally validates:
+
+- unknown `composition.children[].component` references
+- direct self-reference where a schema references its own authored component
+  name as a child component
+
+This validation is still metadata-only. It does not perform indirect cycle
+detection, graph traversal, recursive composition resolution, child component
+runtime resolution, style resolution, token resolution, runtime planning,
+runtime emission, or runtime consumption.
 
 Button declares resolver-level slot relations:
 
@@ -914,7 +972,6 @@ Runtime planning and emitted runtime variables are not exported or imported yet.
 Composition is not yet:
 
 - child component runtime resolution
-- component registry lookup
 - cross-component graph validation
 - nested runtime token objects
 - adapter integration
@@ -935,7 +992,7 @@ planning or architecture audits before implementation:
 
 - canonicalization rules
 - escaping rules
-- component registry contract
+- future component registry expansion contract
 - cross-component graph validation
 - recursive composition and cycle diagnostics
 - child variant/state selection
@@ -954,8 +1011,7 @@ planning or architecture audits before implementation:
 
 ## Next Recommended Phase
 
-The current composition semantics and canonical identity planning cycle is
-closed as an architectural checkpoint. Future work should update documentation
-for canonical naming semantics first, then proceed through small, metadata-only
-infrastructure phases before any resolver, runtime, PreviewCanvas, export, or
-adapter behavior changes.
+The current composition semantics, canonical identity planning, and component
+registry foundation checkpoints are closed. Future work should continue through
+small, metadata-only infrastructure phases before any resolver, runtime,
+PreviewCanvas, export, or adapter behavior changes.

@@ -51,6 +51,29 @@ Schemas are still library-agnostic. A schema does not own rendered hierarchy,
 adapter output, generated code structure, PreviewCanvas behavior, or runtime
 variable values.
 
+### Component Registry
+
+The component registry is a metadata-only catalog of known component schemas.
+
+The current registry foundation contains entries for the existing `Button` and
+`Input` schemas and provides pure helpers for listing entries, listing authored
+component names, looking up entries by authored name, getting schemas by
+authored name, and validating duplicate authored names.
+
+The registry does not own style resolution, token resolution, runtime planning,
+runtime emission, runtime consumption, PreviewCanvas behavior, import/export
+behavior, adapters, canonical IDs, graph traversal, or child component runtime
+resolution.
+
+The registry may be provided to schema validation as optional metadata context:
+
+```ts
+validateComponent(schema, { registry })
+```
+
+Without registry input, `validateComponent(schema)` preserves its existing
+schema-local behavior for backward compatibility.
+
 ### Component Instance
 
 A component instance is a future resolved occurrence of a component schema at a
@@ -148,14 +171,19 @@ Validation requires child metadata to use a non-empty `name`, a non-empty
 `component` reference, a known parent slot, and a unique child name within
 `composition.children`.
 
+When registry-backed validation is explicitly enabled, child metadata also
+requires the `component` reference to match a known registry authored component
+name. Registry-backed validation also rejects direct self-reference where a
+schema references its own authored component name as a child component.
+
 Repeated child component types are allowed under different child names. A
 single parent schema may declare `leadingIcon` and `trailingIcon` child
 instances that both reference the same `Icon` component type.
 
-Self-reference validation is intentionally deferred until a component registry
-or cross-component lookup model exists. Part/child name collision policy is also
-deferred because parts and children are currently separate metadata lists, not a
-single shared composition namespace.
+Indirect self-reference and recursive component-type cycle validation are still
+deferred until a dedicated graph validation phase. Part/child name collision
+policy is also deferred because parts and children are currently separate
+metadata lists, not a single shared composition namespace.
 
 Child components should not be introduced by hard-coding React children,
 runtime JSX structure, DOM hierarchy, selector metadata, generated imports, or
@@ -261,7 +289,9 @@ The component-type dependency graph should be acyclic. A component schema may
 reference other component types through `composition.children`, and the same
 component type may appear multiple times in an instance tree under different
 child instance names. However, component type references must not create direct
-or indirect recursion once a component registry exists.
+or indirect recursion once graph validation exists. The current registry-backed
+validation only checks unknown direct child component references and direct
+self-reference when a registry is provided.
 
 This model allows schema reuse while keeping instance identity stable:
 
@@ -315,8 +345,12 @@ the same canonical child ID should not coexist in one parent schema's
 `composition.children` list.
 
 The exact canonicalization and escaping rules remain volatile. They should be
-defined in a dedicated phase before component registry implementation,
+defined in a dedicated phase before canonical-aware registry behavior,
 cross-component graph validation, or instance-aware `runtimePlan` naming.
+
+The current component registry foundation does not introduce canonical IDs,
+canonical name normalization, or canonical persisted identifiers. Authored
+component names remain the active lookup surface.
 
 ### Slot Inheritance
 
@@ -387,6 +421,31 @@ Validation rejects:
 
 The resolver assumes validated acyclic relations. It does not implement
 runtime-based cycle handling.
+
+### Registry-Backed Child Reference Validation
+
+Registry-backed child reference validation is opt-in and metadata-only.
+
+When `validateComponent(schema, { registry })` is used, validation rejects:
+
+- child component references that do not match a known registry authored name
+- direct self-reference where a schema references its own authored component
+  name as a child component
+
+When validation is called as `validateComponent(schema)`, child component
+reference lookup remains disabled for backward compatibility. Existing
+schema-local checks remain preserved in both modes:
+
+- known parent slot
+- non-empty child name
+- non-empty component reference
+- duplicate child names within one parent schema
+
+Registry-backed validation does not perform graph traversal, indirect cycle
+detection, recursive composition resolution, child runtime resolution, style
+resolution, token resolution, runtime planning, runtime emission, runtime
+consumption, PreviewCanvas behavior, import/export behavior, or adapter
+behavior.
 
 ### Flat CSS Variable Contract Is Mandatory
 
@@ -643,6 +702,8 @@ redesigned during this phase.
 - Preserve the distinction between authored overrides and inherited values.
 - Preserve the flat `DesignTokens` runtime shape.
 - Preserve `runtimePlan.variables[]` as a flat planning structure.
+- Keep registry-backed validation opt-in unless a later migration explicitly
+  changes the validation contract.
 
 ## Current Non-Goals
 
@@ -655,6 +716,9 @@ Composition integration currently does not include:
 - visual composition editor
 - import/export changes
 - export/import of runtimePlan or emitted runtime variables
+- canonical IDs
+- indirect component graph traversal
+- child component runtime resolution
 
 ## Future Migration Order
 
@@ -689,6 +753,17 @@ Completed runtime emission integration work:
 6. Preview consumption of Button label/icon color.
 7. Transition-safety boundary for animated properties and root transition
    longhands.
+
+Completed component registry foundation work:
+
+1. Metadata-only component registry module.
+2. Registry entries for existing Button/Input schemas.
+3. Pure lookup/list/schema helpers.
+4. Duplicate authored-name validation.
+5. Optional registry-backed composition child component reference validation.
+6. Direct self-reference validation when registry validation is enabled.
+7. Backward-compatible `validateComponent(schema)` behavior without registry
+   input.
 
 Do not continue to later phases until each earlier phase has established the
 needed compatibility boundary.
