@@ -6,7 +6,7 @@ import { emitComponentRuntimeVariables } from "../../../compiler/component-model
 import { resolveComponent } from "../../../compiler/component-model/resolveComponent";
 import { createTokenResolver } from "../../../compiler/component-model/tokenResolver";
 import { initialDesignState } from "../presets";
-import { useDesignTokens } from "../useDesignTokens";
+import { useDesignTokens as createDesignTokensForTest } from "../useDesignTokens";
 import { PreviewCanvas } from "./PreviewCanvas";
 import {
   getPreviewRuntimeConsumptionMode,
@@ -115,7 +115,7 @@ describe("PreviewCanvas runtime emission", () => {
   });
 
   it("keeps using existing emitted root opacity variables", () => {
-    const tokens = useDesignTokens(initialDesignState);
+    const tokens = createDesignTokensForTest(initialDesignState);
     const tokenResolver = createTokenResolver(
       tokens,
       initialDesignState.component.kind
@@ -147,7 +147,7 @@ describe("PreviewCanvas runtime emission", () => {
   });
 
   it("keeps using existing emitted root boxShadow variables", () => {
-    const tokens = useDesignTokens(initialDesignState);
+    const tokens = createDesignTokensForTest(initialDesignState);
     const tokenResolver = createTokenResolver(
       tokens,
       initialDesignState.component.kind
@@ -181,7 +181,7 @@ describe("PreviewCanvas runtime emission", () => {
   });
 
   it("keeps using existing emitted root padding variables", () => {
-    const tokens = useDesignTokens(initialDesignState);
+    const tokens = createDesignTokensForTest(initialDesignState);
     const tokenResolver = createTokenResolver(
       tokens,
       initialDesignState.component.kind
@@ -290,7 +290,7 @@ type ExpectedPreviewConsumptionPolicy = readonly [
 ];
 
 function resolveDefaultPreviews() {
-  const tokens = useDesignTokens(initialDesignState);
+  const tokens = createDesignTokensForTest(initialDesignState);
   const tokenResolver = createTokenResolver(
     tokens,
     initialDesignState.component.kind
