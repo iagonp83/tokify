@@ -292,6 +292,32 @@ Instance paths should be stable as long as child instance names and graph
 position remain stable. They should support repeated use of the same component
 type without collisions.
 
+### Canonical Identity Direction
+
+Canonical identity rules are planned but not implemented yet.
+
+Future registry and graph work should separate authored names from canonical
+IDs:
+
+- authored names remain readable schema data
+- canonical IDs are derived from authored names for identity checks
+- component type identity should eventually compare canonical component IDs
+- child instance identity should eventually compare canonical child IDs
+- runtime variable names should eventually derive from canonical IDs only
+
+The `.` character is reserved as the future semantic instance-path delimiter.
+Child instance names should not rely on `.` being available as ordinary name
+content once canonical validation exists.
+
+Future canonical collision diagnostics should reject ambiguous names before
+registry or resolver behavior runs. For example, names that would normalize to
+the same canonical child ID should not coexist in one parent schema's
+`composition.children` list.
+
+The exact canonicalization and escaping rules remain volatile. They should be
+defined in a dedicated phase before component registry implementation,
+cross-component graph validation, or instance-aware `runtimePlan` naming.
+
 ### Slot Inheritance
 
 The resolver currently consumes `composition.slotRelations` for conservative

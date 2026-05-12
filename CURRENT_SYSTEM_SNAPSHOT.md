@@ -25,6 +25,9 @@ Current stabilized areas:
 - Runtime Emission Integration milestone
 - Runtime Consumption Safety Model
 - Preview-local Runtime Consumption Policy Registry extraction
+- Composition Phase 2A child metadata validation
+- Composition graph semantics and instance identity planning
+- Canonical identity and naming semantics planning
 
 Automated regression tests cover:
 
@@ -37,6 +40,7 @@ Automated regression tests cover:
 - namespace inheritance
 - flat runtime output
 - composition metadata validation
+- child metadata blank-name and blank-component-reference validation
 - baseline composition resolver behavior
 - slot relation graph normalization
 - conservative slot inheritance
@@ -149,9 +153,52 @@ Composition metadata validation currently checks:
 - slot relations do not form simple or multi-node cycles
 - part metadata references existing slots
 - child component metadata references existing slots
+- child component metadata uses a non-empty child name
+- child component metadata uses a non-empty component reference
 - duplicate slot relation identifiers are rejected
 - duplicate part identifiers are rejected
 - duplicate child component identifiers are rejected
+
+Child component metadata exists as `composition.children` and is still
+validation-only and metadata-only. It does not affect resolver behavior,
+`runtimePlan`, runtime emission, `PreviewCanvas`, import/export, adapters, UI,
+or rendering.
+
+Semantically, `composition.children` declares parent-owned child instance
+metadata. A child entry is associated with a flat parent slot; it is not inside
+a DOM slot, React slot, JSX child position, wrapper element, CSS selector, or
+adapter-specific insertion point.
+
+Component type identity and child instance identity are separate:
+
+- `component` references the child component type
+- `name` identifies the child instance within the parent schema
+
+Child instance names are unique only within one parent schema's
+`composition.children` list. The same child component type may be repeated under
+different child names.
+
+Future composition graph semantics are planned as:
+
+- a strict instance tree for future component instances
+- an acyclic component-type dependency graph for schema references
+
+Future instance paths should be semantic and derived from child instance names,
+not DOM structure, React structure, selectors, generated code, or adapter
+output.
+
+The canonical identity direction is planned but not implemented:
+
+- authored names remain readable schema data
+- canonical IDs should eventually be derived from authored names
+- the `.` character is reserved as the future semantic instance-path delimiter
+- canonical collision checks should eventually reject ambiguous names such as
+  names that normalize to the same ID
+- future runtime variable naming must remain flat, collision-safe, and derived
+  from semantic instance paths, slots, and properties
+
+There is still no component registry. The architecture is ready for future
+registry planning only, not registry implementation.
 
 Button declares resolver-level slot relations:
 
@@ -867,6 +914,8 @@ Runtime planning and emitted runtime variables are not exported or imported yet.
 Composition is not yet:
 
 - child component runtime resolution
+- component registry lookup
+- cross-component graph validation
 - nested runtime token objects
 - adapter integration
 - React restructuring
@@ -878,6 +927,20 @@ There is also no:
 - `compoundVariants` field
 - generated React component composition
 - library-specific output
+
+## Remaining Volatile Areas
+
+The following areas are intentionally unresolved and should receive dedicated
+planning or architecture audits before implementation:
+
+- canonicalization rules
+- escaping rules
+- component registry contract
+- cross-component graph validation
+- recursive composition and cycle diagnostics
+- child variant/state selection
+- `runtimePlan` instance naming
+- adapter/export consumption of future composition graphs
 
 ## Current Non-Goals
 
@@ -891,7 +954,8 @@ There is also no:
 
 ## Next Recommended Phase
 
-The Runtime Consumption integration phase is closed with behavior stable.
-Future work should keep the current emission/consumption separation and
-transition-safety boundary in mind, or move to the next explicitly scoped
-composition phase.
+The current composition semantics and canonical identity planning cycle is
+closed as an architectural checkpoint. Future work should update documentation
+for canonical naming semantics first, then proceed through small, metadata-only
+infrastructure phases before any resolver, runtime, PreviewCanvas, export, or
+adapter behavior changes.
