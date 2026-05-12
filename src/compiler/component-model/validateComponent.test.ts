@@ -139,6 +139,60 @@ describe("validateComponent composition metadata", () => {
     });
   });
 
+  it("reports multiple schema and token binding errors in stable order", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      name: " ",
+      slots: [
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        }
+      ],
+      states: [{ name: "hover" }],
+      tokenBindings: [
+        {
+          conditions: {
+            tone: "primary",
+            size: "xl",
+            emphasis: "strong"
+          },
+          slot: "missingSlot",
+          target: "background",
+          token: "semantic.color.accent"
+        }
+      ],
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: []
+        },
+        {
+          default: "lg",
+          name: "size",
+          options: ["sm", "md"]
+        }
+      ]
+    });
+
+    expect(result).toEqual({
+      errors: [
+        "Component name is required.",
+        'Component requires a "root" slot.',
+        'Component requires a "default" state.',
+        'Variant axis "tone" requires at least one option.',
+        'Variant axis "size" default "lg" must be one of its options.',
+        'Token binding "background" references unknown slot "missingSlot".',
+        'Token binding "background" references unknown tone option "primary".',
+        'Token binding "background" references unknown size option "xl".',
+        'Token binding "background" references unknown variant axis "emphasis".'
+      ],
+      valid: false
+    });
+  });
+
   it("accepts known child component references when registry validation is enabled", () => {
     const registry = createComponentRegistry([baseSchema, inputSchema]);
     const result = validateComponent(
@@ -435,6 +489,57 @@ describe("validateComponent composition metadata", () => {
     expect(result).toEqual({
       errors: [
         "Composition slot relations contain a cycle: root -> content -> icon -> root."
+      ],
+      valid: false
+    });
+  });
+
+  it("keeps slot relation topology diagnostics ordered by discovered cycle path", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      slots: [
+        ...baseSchema.slots,
+        {
+          name: "footer",
+          required: false,
+          role: "content"
+        },
+        {
+          name: "label",
+          required: false,
+          role: "label"
+        }
+      ],
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "content",
+            slot: "icon"
+          },
+          {
+            parentSlot: "icon",
+            slot: "root"
+          },
+          {
+            parentSlot: "footer",
+            slot: "label"
+          },
+          {
+            parentSlot: "label",
+            slot: "footer"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: [
+        "Composition slot relations contain a cycle: root -> content -> icon -> root.",
+        "Composition slot relations contain a cycle: footer -> label -> footer."
       ],
       valid: false
     });

@@ -49,4 +49,40 @@ describe("componentRegistry", () => {
       valid: false
     });
   });
+
+  it("reports multiple duplicate authored names once in deterministic order", () => {
+    const registry = createComponentRegistry([
+      buttonSchema,
+      inputSchema,
+      {
+        ...inputSchema,
+        name: "Button"
+      },
+      {
+        ...buttonSchema,
+        name: "Badge"
+      },
+      {
+        ...buttonSchema,
+        name: "Input"
+      },
+      {
+        ...inputSchema,
+        name: "Button"
+      },
+      {
+        ...inputSchema,
+        name: "Badge"
+      }
+    ]);
+
+    expect(validateComponentRegistry(registry)).toEqual({
+      errors: [
+        'Component registry authored name "Button" is duplicated.',
+        'Component registry authored name "Input" is duplicated.',
+        'Component registry authored name "Badge" is duplicated.'
+      ],
+      valid: false
+    });
+  });
 });

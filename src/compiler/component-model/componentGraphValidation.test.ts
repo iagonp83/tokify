@@ -108,6 +108,57 @@ describe("validateComponentTypeGraph", () => {
     });
   });
 
+  it("reports multiple unknown child component references in traversal order", () => {
+    const registry = createComponentRegistry([
+      createTestSchema("Button", [
+        {
+          component: "Badge",
+          name: "badge"
+        },
+        {
+          component: "Tooltip",
+          name: "tooltip"
+        }
+      ]),
+      createTestSchema("Input", [
+        {
+          component: "Menu",
+          name: "menu"
+        }
+      ])
+    ]);
+
+    expect(validateComponentTypeGraph(registry)).toEqual({
+      diagnostics: [
+        {
+          childName: "badge",
+          componentName: "Button",
+          message:
+            'Component type "Button" child "badge" references unknown component "Badge".',
+          referencedComponent: "Badge",
+          type: "unknown-child-component"
+        },
+        {
+          childName: "tooltip",
+          componentName: "Button",
+          message:
+            'Component type "Button" child "tooltip" references unknown component "Tooltip".',
+          referencedComponent: "Tooltip",
+          type: "unknown-child-component"
+        },
+        {
+          childName: "menu",
+          componentName: "Input",
+          message:
+            'Component type "Input" child "menu" references unknown component "Menu".',
+          referencedComponent: "Menu",
+          type: "unknown-child-component"
+        }
+      ],
+      valid: false
+    });
+  });
+
   it("reports direct self-reference with stable diagnostics", () => {
     const registry = createComponentRegistry([
       createTestSchema("Button", [
@@ -127,6 +178,43 @@ describe("validateComponentTypeGraph", () => {
           message: 'Component type "Button" child "self" cannot reference itself.',
           referencedComponent: "Button",
           type: "direct-self-reference"
+        }
+      ],
+      valid: false
+    });
+  });
+
+  it("reports direct self-reference before later sibling diagnostics", () => {
+    const registry = createComponentRegistry([
+      createTestSchema("Button", [
+        {
+          component: "Button",
+          name: "self"
+        },
+        {
+          component: "Badge",
+          name: "badge"
+        }
+      ])
+    ]);
+
+    expect(validateComponentTypeGraph(registry)).toEqual({
+      diagnostics: [
+        {
+          childName: "self",
+          componentName: "Button",
+          cyclePath: ["Button", "Button"],
+          message: 'Component type "Button" child "self" cannot reference itself.',
+          referencedComponent: "Button",
+          type: "direct-self-reference"
+        },
+        {
+          childName: "badge",
+          componentName: "Button",
+          message:
+            'Component type "Button" child "badge" references unknown component "Badge".',
+          referencedComponent: "Badge",
+          type: "unknown-child-component"
         }
       ],
       valid: false
@@ -165,6 +253,39 @@ describe("validateComponentTypeGraph", () => {
           cyclePath: ["Button", "Input", "Icon", "Button"],
           message:
             "Component type dependency graph contains a cycle: Button -> Input -> Icon -> Button.",
+          type: "component-type-cycle"
+        }
+      ],
+      valid: false
+    });
+  });
+
+  it("reports unknown references before indirect cycles with stable cycle paths", () => {
+    const registry = createComponentRegistry([
+      createTestSchema("Button", [
+        {
+          component: "Badge",
+          name: "badge"
+        }
+      ]),
+      createTestSchema("Input", ["Icon"]),
+      createTestSchema("Icon", ["Input"])
+    ]);
+
+    expect(validateComponentTypeGraph(registry)).toEqual({
+      diagnostics: [
+        {
+          childName: "badge",
+          componentName: "Button",
+          message:
+            'Component type "Button" child "badge" references unknown component "Badge".',
+          referencedComponent: "Badge",
+          type: "unknown-child-component"
+        },
+        {
+          cyclePath: ["Input", "Icon", "Input"],
+          message:
+            "Component type dependency graph contains a cycle: Input -> Icon -> Input.",
           type: "component-type-cycle"
         }
       ],
