@@ -1,12 +1,18 @@
 import type { ComponentSchema } from "./component.types";
+import type { ComponentRegistry } from "./componentRegistry";
 
 export type ComponentValidationResult = {
   errors: string[];
   valid: boolean;
 };
 
+export type ComponentValidationOptions = {
+  registry?: ComponentRegistry;
+};
+
 export function validateComponent(
-  schema: ComponentSchema
+  schema: ComponentSchema,
+  options: ComponentValidationOptions = {}
 ): ComponentValidationResult {
   const errors: string[] = [];
   const slotNames = new Set(schema.slots.map((slot) => slot.name));
@@ -114,6 +120,18 @@ export function validateComponent(
       );
     }
 
+    if (options.registry && child.component.trim()) {
+      if (child.component === schema.name) {
+        errors.push(
+          `Composition child "${child.name}" cannot reference parent component "${schema.name}".`
+        );
+      } else if (!hasRegistryComponent(options.registry, child.component)) {
+        errors.push(
+          `Composition child "${child.name}" references unknown component "${child.component}".`
+        );
+      }
+    }
+
     if (!slotNames.has(child.slot)) {
       errors.push(
         `Composition child "${child.name}" references unknown slot "${child.slot}".`
@@ -161,6 +179,13 @@ function findDuplicates(values: readonly string[]) {
   });
 
   return [...duplicates];
+}
+
+function hasRegistryComponent(
+  registry: ComponentRegistry,
+  authoredName: string
+): boolean {
+  return registry.entries.some((entry) => entry.authoredName === authoredName);
 }
 
 function validateSlotRelationTopology(

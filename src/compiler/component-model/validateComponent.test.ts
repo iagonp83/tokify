@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buttonSchema } from "./button.schema";
 import type { ComponentSchema } from "./component.types";
+import { createComponentRegistry } from "./componentRegistry";
 import { inputSchema } from "./input.schema";
 import { validateComponent } from "./validateComponent";
 
@@ -133,6 +134,102 @@ describe("validateComponent composition metadata", () => {
       valid: true
     });
     expect(validateComponent(inputSchema)).toEqual({
+      errors: [],
+      valid: true
+    });
+  });
+
+  it("accepts known child component references when registry validation is enabled", () => {
+    const registry = createComponentRegistry([baseSchema, inputSchema]);
+    const result = validateComponent(
+      {
+        ...baseSchema,
+        composition: {
+          children: [
+            {
+              component: "Input",
+              name: "field",
+              slot: "content"
+            }
+          ]
+        }
+      },
+      { registry }
+    );
+
+    expect(result).toEqual({
+      errors: [],
+      valid: true
+    });
+  });
+
+  it("rejects unknown child component references when registry validation is enabled", () => {
+    const registry = createComponentRegistry([baseSchema, inputSchema]);
+    const result = validateComponent(
+      {
+        ...baseSchema,
+        composition: {
+          children: [
+            {
+              component: "Badge",
+              name: "badge",
+              slot: "content"
+            }
+          ]
+        }
+      },
+      { registry }
+    );
+
+    expect(result).toEqual({
+      errors: [
+        'Composition child "badge" references unknown component "Badge".'
+      ],
+      valid: false
+    });
+  });
+
+  it("rejects direct child component self-reference when registry validation is enabled", () => {
+    const registry = createComponentRegistry([baseSchema, inputSchema]);
+    const result = validateComponent(
+      {
+        ...baseSchema,
+        composition: {
+          children: [
+            {
+              component: "ComposedComponent",
+              name: "self",
+              slot: "content"
+            }
+          ]
+        }
+      },
+      { registry }
+    );
+
+    expect(result).toEqual({
+      errors: [
+        'Composition child "self" cannot reference parent component "ComposedComponent".'
+      ],
+      valid: false
+    });
+  });
+
+  it("keeps child component reference validation disabled without registry input", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      composition: {
+        children: [
+          {
+            component: "Badge",
+            name: "badge",
+            slot: "content"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
       errors: [],
       valid: true
     });
