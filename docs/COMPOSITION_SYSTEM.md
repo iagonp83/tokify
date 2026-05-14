@@ -552,8 +552,8 @@ helper so single-schema validation flows stay backward-compatible.
 Warning-only metadata diagnostics are a future planning direction, not active
 behavior.
 
-The future diagnostic envelope and aggregate diagnostics boundary are
-documented in [`DIAGNOSTIC_CONTRACT.md`](./DIAGNOSTIC_CONTRACT.md).
+The diagnostic envelope and aggregate diagnostics boundary are documented in
+[`DIAGNOSTIC_CONTRACT.md`](./DIAGNOSTIC_CONTRACT.md).
 
 Future diagnostics should remain separated into conceptual layers:
 
@@ -561,7 +561,7 @@ Future diagnostics should remain separated into conceptual layers:
 - graph validation
 - metadata hygiene diagnostics
 - future canonical/path diagnostics
-- future aggregate diagnostics coordination
+- aggregate diagnostics coordination
 
 Validators own rules. Aggregate diagnostics may coordinate output from multiple
 sources, but it must not become monolithic validation logic.
@@ -591,11 +591,11 @@ they must not activate canonical IDs, create shadow identity, or turn names
 into identity. Names remain human-authored labels. Paths remain future
 addresses, not identity.
 
-Future aggregate diagnostics coordination may provide a shared diagnostic
-envelope, a severity taxonomy such as `error` and `warning`, deterministic
-ordering, stable diagnostic codes, layer/source metadata, and optional
-aggregate reporting. Shared formatting does not imply merged validator
-responsibilities.
+The current diagnostics foundation provides a shared diagnostic envelope,
+severity taxonomy, deterministic ordering, stable diagnostic codes,
+layer/source metadata, and a pure aggregate coordinator for already-created
+diagnostics. Optional aggregate reporting remains future work. Shared
+formatting does not imply merged validator responsibilities.
 
 Conceptual aggregate ordering should keep blocking correctness checks separate
 from advisory warnings:
@@ -959,7 +959,7 @@ Composition integration currently does not include:
 - canonical name normalization
 - child instance IDs
 - warning-only metadata diagnostics implementation
-- aggregate diagnostics implementation
+- aggregate diagnostics behavior beyond pure coordination
 - strict mode
 - child naming validation warnings or errors
 - schema-breaking naming rules
@@ -1041,7 +1041,8 @@ Completed planning documentation checkpoints:
 2. Instance path and child instance semantics remain docs-only.
 3. Future-safe child naming warning policy remains docs-only.
 4. Warning-only metadata diagnostics architecture remains docs-only.
-5. Diagnostic contract planning remains docs-only.
+5. Diagnostic contract planning is superseded by isolated diagnostic contract
+   and aggregate coordinator foundations.
 
 Future child naming work should start with warning-only metadata diagnostics.
 Optional strict mode may be considered only after a migration policy exists,
@@ -1049,13 +1050,12 @@ and migration tooling should exist before hard errors.
 
 Recommended future diagnostics phases:
 
-1. Add diagnostic contract tests or helpers.
-2. Define the warning catalog.
-3. Add structured diagnostics internally while preserving legacy string output.
-4. Add opt-in warning collection.
-5. Add aggregate diagnostics coordination.
-6. Add migration tooling.
-7. Consider optional strict mode only after migration tooling exists.
+1. Define the warning catalog.
+2. Add structured diagnostics internally while preserving legacy string output.
+3. Add opt-in warning collection.
+4. Add aggregate reporting beyond pure coordination if needed.
+5. Add migration tooling.
+6. Consider optional strict mode only after migration tooling exists.
 
 Do not continue to later phases until each earlier phase has established the
 needed compatibility boundary.

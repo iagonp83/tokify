@@ -33,6 +33,8 @@ Current stabilized areas:
 - Future-safe Child Naming Warnings Planning Documentation Checkpoint
 - Warning-only Metadata Diagnostics Architecture Documentation Checkpoint
 - Diagnostic Contract Planning Documentation Checkpoint
+- Diagnostic Contract Foundation
+- Diagnostic Aggregate Coordinator Foundation
 - Component Registry Foundation Commit 1
 - Registry-backed Composition Metadata Validation Commit 2
 - Graph Validator Planning documentation boundary
@@ -69,6 +71,8 @@ Automated regression tests cover:
 - graph validator separation from duplicate authored-name registry validation
 - backward-compatible `validateComponent(schema)` behavior with graph validation
   kept separate
+- stable diagnostic envelope creation and deterministic diagnostic sorting
+- pure diagnostic aggregate coordination for already-created diagnostics
 
 ## Component Model Structure
 
@@ -369,27 +373,58 @@ Strict mode remains future-only. If ever added, it must be opt-in,
 backward-compatible, require migration tooling first, and promote warnings only
 selectively. Default mode remains permissive.
 
-The future diagnostic contract is documented in:
+The diagnostic contract is documented in:
 
 ```txt
 docs/DIAGNOSTIC_CONTRACT.md
 ```
 
-That checkpoint is documentation-only. Current validators remain unchanged,
-`validateComponent` remains schema correctness validation, the component graph
-validator remains component-type-only, warnings remain planned but inactive, no
-structured diagnostics are active yet, no aggregate diagnostics API exists yet,
-and current string diagnostics remain backward-compatible.
+The isolated diagnostic contract foundation now exists in:
 
-Future structured diagnostics may use a shared envelope with severity, stable
-machine-facing code, human-facing message, authored-data path, layer, source,
-deterministic ordering metadata, and optional suggestions. Diagnostic paths
-point to authored schema or metadata locations, not instance paths, runtime
-variable names, resolver paths, DOM paths, adapter paths, import paths, or
-generated file paths.
+```txt
+src/compiler/diagnostics/diagnosticContract.ts
+src/compiler/diagnostics/diagnosticContract.test.ts
+```
 
-Future severity values are `error`, `warning`, and optional future `info`.
-Severity does not imply runtime behavior. Warnings are non-blocking by default.
+`diagnosticContract.ts` defines the stable diagnostic envelope and helper
+contract. The envelope includes severity, stable machine-facing code,
+human-facing message, authored-data path, layer, source, deterministic ordering
+metadata, and optional suggestions. Diagnostic paths point to authored schema
+or metadata locations, not instance paths, runtime variable names, resolver
+paths, DOM paths, adapter paths, import paths, or generated file paths.
+
+The contract currently provides `createDiagnosticPath`, `createDiagnostic`,
+`compareDiagnostics`, and `sortDiagnostics`. Deterministic ordering is owned by
+the contract and sorts by explicit ordering metadata before severity, layer,
+source, code, authored-data path, and message tie-breakers.
+
+The isolated Diagnostic Aggregate Coordinator Foundation now exists in:
+
+```txt
+src/compiler/diagnostics/aggregateDiagnostics.ts
+src/compiler/diagnostics/aggregateDiagnostics.test.ts
+```
+
+`aggregateDiagnostics.ts` is a pure coordinator. It accepts already-created
+diagnostic envelopes, flattens multiple diagnostic groups, delegates
+deterministic ordering to `sortDiagnostics`, preserves diagnostic object
+references, and does not mutate input arrays or diagnostic objects.
+
+Aggregate groups may include group-level `layer` and `source` metadata for
+future-safe provenance grouping. That metadata is accepted as metadata only and
+is not behaviorally interpreted, does not rewrite diagnostics, and does not
+couple aggregation to validators, runtime, resolver, registry, import/export,
+canonical IDs, child instance IDs, or instance paths.
+
+Current validators remain unchanged. `validateComponent` remains schema
+correctness validation, the component graph validator remains
+component-type-only, warning-only metadata diagnostics remain planned but
+inactive, aggregate diagnostics remain coordinator-only, current string
+diagnostics remain backward-compatible, and no public behavior changed.
+
+Current severity values are `error`, `warning`, and `info`. Severity does not
+imply runtime behavior. Warnings are non-blocking by default and remain inactive
+until a later explicit warning producer is introduced.
 
 Future diagnostic codes should be stable, namespaced, and machine-facing. Codes
 must not contain dynamic values, must not be reused for different meanings, and
@@ -397,17 +432,17 @@ should describe the domain rule rather than the implementation function.
 Suggested future families include `SCHEMA_*`, `REGISTRY_*`, `GRAPH_*`,
 `METADATA_*`, `CANONICAL_*`, `PATH_*`, and `COMPAT_*`.
 
-Future aggregate diagnostics may coordinate collection, normalization, sorting,
-rendering, and optional combined reporting. Aggregate diagnostics must not
-become monolithic validation logic. Validators own rules, aggregate diagnostics
-preserve provenance, and any future aggregate API must be additive so existing
+Aggregate diagnostics currently coordinate only already-created diagnostic
+envelopes. They do not collect by invoking validators, normalize validator
+output, render messages, adapt to legacy strings, or produce public combined
+validation reports. Validators own rules, aggregate diagnostics preserve
+provenance, and any future aggregate expansion must remain additive so existing
 validation APIs remain valid.
 
-Future deterministic ordering should avoid incidental traversal dependencies
-and may sort by layer rank, severity rank, source or rule rank, path key,
-subject key, code, and message as a final tie-breaker. Numeric path indexes
-should sort numerically. Graph cycle diagnostics should eventually normalize
-cycle paths deterministically.
+Future diagnostic producers should avoid incidental traversal dependencies and
+provide explicit ordering metadata for `sortDiagnostics`. Numeric path indexes
+sort numerically in the current diagnostic contract. Graph cycle diagnostics
+should eventually normalize cycle paths deterministically.
 
 Structured diagnostics should be additive when introduced. Current string
 diagnostics must remain backward-compatible, existing tests should not break
@@ -1299,13 +1334,11 @@ planning or architecture audits before implementation:
 - escaping rules
 - safe-name and diagnostic helper boundaries
 - future-safe child naming warning diagnostics
-- diagnostic contract planning
-- diagnostic envelope planning
 - diagnostic code taxonomy
-- diagnostic path semantics
 - warning catalog planning
 - opt-in warning collection
-- aggregate diagnostics coordination
+- diagnostic migration from legacy strings
+- aggregate diagnostics reporting beyond pure coordination
 - optional strict mode policy for child naming
 - migration tooling before hard child naming errors
 - persisted opaque canonical ID migration strategy
@@ -1336,8 +1369,8 @@ planning or architecture audits before implementation:
 - No child naming warning diagnostics yet.
 - No child naming validation errors.
 - No warning-only metadata diagnostics implementation.
-- No structured diagnostic API implementation.
-- No aggregate diagnostics implementation.
+- No diagnostic wiring into validators or public validation APIs.
+- No aggregate diagnostics behavior beyond pure coordination.
 - No diagnostic migration from strings.
 - No strict mode.
 - No schema-breaking naming rules.
@@ -1376,11 +1409,11 @@ documentation-only. Future work should proceed through diagnostic contract
 planning, warning catalog definition, opt-in warning collection, aggregate
 diagnostics coordination, migration tooling, and only then optional strict mode.
 
-The diagnostic contract checkpoint is documentation-only. Future work should
-proceed through diagnostic contract tests or helpers, structured diagnostics
-internally while preserving legacy string output, opt-in warning collection,
-aggregate diagnostics facade, migration reporting, and optional strict mode
-only after migration tooling exists.
+The diagnostic contract and aggregate coordinator foundations are closed as
+isolated infrastructure. Future work should proceed through structured
+diagnostics internally while preserving legacy string output, opt-in warning
+collection, migration reporting, and optional strict mode only after migration
+tooling exists.
 
 The pure authored-name-based component-type graph validator checkpoint is
 closed. Future work should continue with small metadata-only phases or dedicated

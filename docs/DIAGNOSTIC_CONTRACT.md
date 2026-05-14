@@ -1,28 +1,37 @@
 # Diagnostic Contract
 
-This document defines the future diagnostic contract and aggregate diagnostics
-boundary for Tokify.
+This document defines the diagnostic contract and aggregate diagnostics boundary
+for Tokify.
 
-This is a documentation checkpoint only. It does not implement a diagnostic
-API, activate structured diagnostics, activate warning collection, rewrite
-validators, change current string diagnostics, change import/export, change
-resolver/runtime behavior, activate canonical IDs, activate child instance IDs,
-introduce instance paths, or introduce adapter diagnostics.
+The isolated diagnostic contract and aggregate coordinator foundations now
+exist. They do not activate structured diagnostics in validators, activate
+warning collection, rewrite validators, change current string diagnostics,
+change import/export, change resolver/runtime behavior, activate canonical IDs,
+activate child instance IDs, introduce instance paths, or introduce adapter
+diagnostics.
 
 ## Current Active Model
 
 Current validators remain unchanged.
+
+Current diagnostics infrastructure:
+
+- `src/compiler/diagnostics/diagnosticContract.ts` defines the stable
+  diagnostic envelope, helper constructors, comparison, and deterministic sort
+- `src/compiler/diagnostics/aggregateDiagnostics.ts` defines a pure aggregate
+  coordinator for already-created diagnostic envelopes
 
 Active behavior:
 
 - `validateComponent` remains schema correctness validation
 - the component graph validator remains component-type-only
 - warnings remain planned but inactive
-- no structured diagnostics are active yet
-- no aggregate diagnostics API exists yet
+- structured diagnostics infrastructure exists but is not wired into validators
+  or public validation APIs
+- aggregate diagnostics exists as a pure coordinator only
 - current string diagnostics remain backward-compatible
 - existing validation APIs remain valid
-- current tests should not be affected by this documentation checkpoint
+- no public behavior changes because of the diagnostics infrastructure
 
 `validateComponent` currently owns schema-local correctness checks and optional
 registry-backed child reference checks when explicit registry context is
@@ -34,11 +43,11 @@ for unknown references, direct self-reference, and indirect component-type
 cycles. It remains separate from schema validation and from future metadata
 hygiene warnings.
 
-## Future Diagnostic Envelope
+## Diagnostic Envelope
 
-Future structured diagnostics may use a shared envelope.
+Structured diagnostics use a shared envelope in `diagnosticContract.ts`.
 
-Conceptual fields:
+Implemented fields:
 
 - `severity`
 - `code`
@@ -46,10 +55,8 @@ Conceptual fields:
 - `path`
 - `layer`
 - `source`
-- deterministic ordering metadata
+- deterministic `order` metadata
 - optional `suggestions`
-
-This envelope is future architecture only. There is no implementation yet.
 
 Field semantics:
 
@@ -71,13 +78,11 @@ path, DOM path, adapter path, import path, or generated file path.
 
 ## Severity Taxonomy
 
-Future severity values:
+Current severity values:
 
 - `error`
 - `warning`
 - `info`
-
-`info` is optional and future-only.
 
 Severity does not imply runtime behavior. In particular, `warning` diagnostics
 are non-blocking by default. A warning should not fail import, build,
@@ -158,15 +163,17 @@ context, the path may be omitted or point to the closest authored owner.
 
 `layer` and `source` should remain distinct.
 
-`layer` describes the architectural domain. Conceptual examples:
+`layer` describes the architectural domain. Current layer values are:
 
 - `schema`
 - `registry`
 - `graph`
-- `metadata`
-- `canonical`
-- `path`
-- `compat`
+- `resolver`
+- `runtime`
+- `import`
+- `export`
+- `preview`
+- `adapter`
 
 `source` describes the producing validator, checker, or helper. Conceptual
 examples:
@@ -186,17 +193,18 @@ the rule owners.
 
 ## Deterministic Ordering
 
-Diagnostics should be ordered deterministically.
+Diagnostics are ordered deterministically by `sortDiagnostics`.
 
-Conceptual sort order:
+Implemented sort order:
 
-1. layer rank
-2. severity rank
-3. source or rule rank
-4. path key
-5. subject key
-6. code
-7. message as the final tie-breaker
+1. `order.bucket`
+2. `order.sequence`
+3. severity rank
+4. layer rank
+5. `source.name`
+6. `code`
+7. authored-data `path`
+8. `message` as the final tie-breaker
 
 Ordering rules:
 
@@ -216,13 +224,22 @@ validator ownership or validation behavior.
 
 ## Aggregate Diagnostics Boundary
 
-Future aggregate diagnostics may coordinate:
+`aggregateDiagnostics.ts` coordinates already-created diagnostic envelopes.
 
-- collection
-- normalization
-- sorting
-- rendering
-- optional combined reporting
+The current API accepts multiple diagnostic groups. A group may be either:
+
+- a readonly diagnostic array
+- an object with `diagnostics` plus optional group-level `layer` and `source`
+  metadata
+
+The coordinator currently:
+
+- flattens multiple diagnostic groups
+- delegates deterministic ordering to `sortDiagnostics`
+- preserves diagnostic object references
+- does not mutate input arrays or diagnostic objects
+- accepts group-level `layer` and `source` metadata only as future-safe
+  metadata, without behavioral interpretation
 
 Aggregate diagnostics must not become monolithic validation logic.
 
@@ -230,15 +247,17 @@ Boundary rules:
 
 - validators own rules
 - aggregate diagnostics preserve validator provenance
-- aggregate diagnostics may format and sort
-- aggregate diagnostics may adapt structured diagnostics to legacy strings
+- aggregate diagnostics may sort
+- aggregate diagnostics do not currently format diagnostics
+- aggregate diagnostics do not currently adapt structured diagnostics to legacy
+  strings
 - aggregate diagnostics must not mutate schema, registry, graph, runtime, or
   export data
 - aggregate diagnostics must not inspect resolved styles or runtime output
 - aggregate diagnostics must not activate warnings by default
 - aggregate diagnostics must not change existing validation APIs
 
-Any future aggregate API must be additive. Existing calls such as
+Any future aggregate API expansion must be additive. Existing calls such as
 `validateComponent(schema)`, `validateComponent(schema, { registry })`, and the
 current component graph validator API must remain valid unless a later explicit
 migration changes that contract.
@@ -320,16 +339,15 @@ Shared diagnostic formatting does not imply shared rule ownership.
 
 Recommended order:
 
-1. Keep this docs-only diagnostic contract checkpoint as the current boundary.
-2. Later, add diagnostic contract tests or helpers without changing validator
-   behavior.
-3. Later, introduce structured diagnostics internally for one narrow validator
+1. Keep the implemented diagnostic contract and aggregate coordinator isolated
+   from validator/runtime/resolver/import-export behavior.
+2. Later, introduce structured diagnostics internally for one narrow validator
    while preserving legacy string output.
-4. Later, add opt-in warning collection for metadata hygiene.
-5. Later, add an aggregate diagnostics facade for collection, normalization,
-   sorting, and rendering.
-6. Later, add migration reporting for canonical/path readiness.
-7. Later, consider optional strict mode only after migration tooling exists.
+3. Later, add opt-in warning collection for metadata hygiene.
+4. Later, add aggregate reporting for collection, normalization, rendering, or
+   legacy string adaptation if a caller needs one combined result.
+5. Later, add migration reporting for canonical/path readiness.
+6. Later, consider optional strict mode only after migration tooling exists.
 
 Each phase should be additive and should avoid changing validator rules while
 changing diagnostic representation.
@@ -338,11 +356,11 @@ changing diagnostic representation.
 
 This checkpoint does not introduce:
 
-- implementation
-- diagnostic API implementation
 - validator rewrites
 - graph validator rewrites
 - warning activation
+- diagnostic wiring into validators or public validation APIs
+- aggregate diagnostics behavior beyond pure coordination
 - import/export changes
 - resolver changes
 - runtime changes

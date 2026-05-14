@@ -210,8 +210,8 @@ Compatibility rules:
 Warning-only metadata diagnostics are future planning only. They do not exist
 as active behavior yet.
 
-The future diagnostic envelope and aggregate diagnostics boundary are
-documented in [`DIAGNOSTIC_CONTRACT.md`](./DIAGNOSTIC_CONTRACT.md).
+The diagnostic envelope and aggregate diagnostics boundary are documented in
+[`DIAGNOSTIC_CONTRACT.md`](./DIAGNOSTIC_CONTRACT.md).
 
 Future diagnostics should keep these conceptual layers separate:
 
@@ -219,7 +219,7 @@ Future diagnostics should keep these conceptual layers separate:
 - graph validation
 - metadata hygiene diagnostics
 - future canonical/path diagnostics
-- future aggregate diagnostics coordination
+- aggregate diagnostics coordination
 
 Validators own rules. An aggregate diagnostics layer may coordinate output, but
 it must not become monolithic validation logic.
@@ -296,8 +296,9 @@ durable identity by accident.
 
 ### Aggregate Diagnostics Coordination
 
-A future aggregate diagnostics layer may collect diagnostics from independent
-validators and warning helpers.
+The current aggregate diagnostics coordinator accepts already-created
+diagnostics from independent producers and keeps coordination separate from
+validator and warning-helper rule ownership.
 
 Future aggregate reporting should prefer:
 
@@ -608,7 +609,7 @@ This checkpoint does not introduce:
 - instance runtime behavior
 - instance-specific runtime styling
 - graph validator rewrites
-- aggregate diagnostics implementation
+- aggregate diagnostics behavior beyond pure coordination
 - schema breaking changes
 - schema-breaking naming rules
 - resolver changes
@@ -639,25 +640,24 @@ Recommended sequence:
 2. Keep future-safe child naming policy documentation-only in this phase.
 3. Later, add warning-only metadata diagnostics for future-safe child naming
    risks.
-4. Treat the diagnostic contract as docs-only until a later implementation
-   phase.
-5. Later, add diagnostic contract tests or helpers.
-6. Later, define the warning catalog for metadata hygiene and future
+4. Keep the diagnostic contract and aggregate coordinator isolated from
+   validators, runtime, resolver, and import/export behavior.
+5. Later, define the warning catalog for metadata hygiene and future
    canonical/path readiness.
-7. Later, add structured diagnostics internally while preserving legacy string
+6. Later, add structured diagnostics internally while preserving legacy string
    output.
-8. Later, add opt-in warning collection without changing schema validity,
+7. Later, add opt-in warning collection without changing schema validity,
    graph validation, runtime behavior, import/export, or adapters.
-9. Later, add optional aggregate diagnostics coordination that formats and
-   orders diagnostics without owning validator rules.
-10. Later, add migration tooling before hard errors.
-11. Later, consider optional strict mode only after a migration policy exists,
+8. Later, add optional aggregate reporting beyond pure coordination without
+   owning validator rules.
+9. Later, add migration tooling before hard errors.
+10. Later, consider optional strict mode only after a migration policy exists,
    and keep strict mode opt-in and backward-compatible.
-12. Later, optionally add inactive child instance ID fields only behind an
+11. Later, optionally add inactive child instance ID fields only behind an
    explicit migration and compatibility plan.
-13. Much later, add instance-tree tooling that stays separate from
+12. Much later, add instance-tree tooling that stays separate from
    component-type graph validation.
-14. Treat runtime composition as separate future work, after identity,
+13. Treat runtime composition as separate future work, after identity,
    migration, graph, import/export, and adapter boundaries are deliberately
    designed.
 
