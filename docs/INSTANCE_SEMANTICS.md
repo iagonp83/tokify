@@ -213,6 +213,9 @@ as active behavior yet.
 The diagnostic envelope and aggregate diagnostics boundary are documented in
 [`DIAGNOSTIC_CONTRACT.md`](./DIAGNOSTIC_CONTRACT.md).
 
+The planned warning catalog is documented in
+[`WARNING_CATALOG.md`](./WARNING_CATALOG.md).
+
 Future diagnostics should keep these conceptual layers separate:
 
 - schema validation
@@ -642,22 +645,21 @@ Recommended sequence:
    risks.
 4. Keep the diagnostic contract and aggregate coordinator isolated from
    validators, runtime, resolver, and import/export behavior.
-5. Later, define the warning catalog for metadata hygiene and future
-   canonical/path readiness.
-6. Later, add structured diagnostics internally while preserving legacy string
+5. Later, add structured diagnostics internally while preserving legacy string
    output.
-7. Later, add opt-in warning collection without changing schema validity,
+6. Later, add opt-in warning collection based on the planned warning catalog
+   without changing schema validity,
    graph validation, runtime behavior, import/export, or adapters.
-8. Later, add optional aggregate reporting beyond pure coordination without
+7. Later, add optional aggregate reporting beyond pure coordination without
    owning validator rules.
-9. Later, add migration tooling before hard errors.
-10. Later, consider optional strict mode only after a migration policy exists,
+8. Later, add migration tooling before hard errors.
+9. Later, consider optional strict mode only after a migration policy exists,
    and keep strict mode opt-in and backward-compatible.
-11. Later, optionally add inactive child instance ID fields only behind an
+10. Later, optionally add inactive child instance ID fields only behind an
    explicit migration and compatibility plan.
-12. Much later, add instance-tree tooling that stays separate from
+11. Much later, add instance-tree tooling that stays separate from
    component-type graph validation.
-13. Treat runtime composition as separate future work, after identity,
+12. Treat runtime composition as separate future work, after identity,
    migration, graph, import/export, and adapter boundaries are deliberately
    designed.
 

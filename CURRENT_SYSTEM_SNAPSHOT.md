@@ -32,6 +32,7 @@ Current stabilized areas:
 - Instance Path & Child Instance Semantics Documentation Checkpoint
 - Future-safe Child Naming Warnings Planning Documentation Checkpoint
 - Warning-only Metadata Diagnostics Architecture Documentation Checkpoint
+- Warning Catalog Planning Documentation Checkpoint
 - Diagnostic Contract Planning Documentation Checkpoint
 - Diagnostic Contract Foundation
 - Diagnostic Aggregate Coordinator Foundation
@@ -296,6 +297,7 @@ Future-safe child naming warning policy is documented in:
 ```txt
 docs/INSTANCE_SEMANTICS.md
 docs/COMPOSITION_SYSTEM.md
+docs/WARNING_CATALOG.md
 ```
 
 That checkpoint is documentation-only and does not change validation behavior.
@@ -307,6 +309,20 @@ Future warning-only diagnostics may eventually flag child naming risks such as
 reserved `.`, leading or trailing whitespace, repeated whitespace, tabs,
 newlines, duplicate normalized sibling names, case-only sibling collisions,
 punctuation or path-unsafe names, and empty or ambiguous display names.
+
+The planned warning catalog is documented in:
+
+```txt
+docs/WARNING_CATALOG.md
+```
+
+That checkpoint is documentation-only. It defines future warning families for
+metadata hygiene and canonical/path readiness, likely diagnostic code families,
+likely authored-data path targets, warning severity expectations,
+non-blocking rationale, and explicit non-goals. It does not add warning
+helpers, warning producers, validator wiring, graph validation wiring, strict
+mode, canonical IDs, child instance IDs, instance paths, path-derived runtime
+variables, or public behavior changes.
 
 Warnings must not fail import, build, schema validation, graph validation,
 resolution, runtime emission, preview rendering, or adapter output. Hard errors
@@ -330,6 +346,7 @@ Warning-only metadata diagnostics architecture is documented in:
 ```txt
 docs/INSTANCE_SEMANTICS.md
 docs/COMPOSITION_SYSTEM.md
+docs/WARNING_CATALOG.md
 ```
 
 That checkpoint is documentation-only. It defines separate future conceptual
@@ -1335,7 +1352,6 @@ planning or architecture audits before implementation:
 - safe-name and diagnostic helper boundaries
 - future-safe child naming warning diagnostics
 - diagnostic code taxonomy
-- warning catalog planning
 - opt-in warning collection
 - diagnostic migration from legacy strings
 - aggregate diagnostics reporting beyond pure coordination
@@ -1405,9 +1421,10 @@ work should start with warning-only metadata diagnostics, then optional strict
 mode only after a migration policy, with migration tooling before hard errors.
 
 The warning-only metadata diagnostics architecture checkpoint is
-documentation-only. Future work should proceed through diagnostic contract
-planning, warning catalog definition, opt-in warning collection, aggregate
-diagnostics coordination, migration tooling, and only then optional strict mode.
+documentation-only. The warning catalog planning checkpoint is also
+documentation-only. Future work should proceed through opt-in warning
+collection, migration reporting and tooling, aggregate reporting beyond pure
+coordination if needed, and only then optional strict mode.
 
 The diagnostic contract and aggregate coordinator foundations are closed as
 isolated infrastructure. Future work should proceed through structured

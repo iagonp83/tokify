@@ -555,6 +555,9 @@ behavior.
 The diagnostic envelope and aggregate diagnostics boundary are documented in
 [`DIAGNOSTIC_CONTRACT.md`](./DIAGNOSTIC_CONTRACT.md).
 
+The planned warning catalog is documented in
+[`WARNING_CATALOG.md`](./WARNING_CATALOG.md).
+
 Future diagnostics should remain separated into conceptual layers:
 
 - schema validation
@@ -1041,7 +1044,8 @@ Completed planning documentation checkpoints:
 2. Instance path and child instance semantics remain docs-only.
 3. Future-safe child naming warning policy remains docs-only.
 4. Warning-only metadata diagnostics architecture remains docs-only.
-5. Diagnostic contract planning is superseded by isolated diagnostic contract
+5. Warning catalog planning remains docs-only.
+6. Diagnostic contract planning is superseded by isolated diagnostic contract
    and aggregate coordinator foundations.
 
 Future child naming work should start with warning-only metadata diagnostics.
@@ -1050,12 +1054,11 @@ and migration tooling should exist before hard errors.
 
 Recommended future diagnostics phases:
 
-1. Define the warning catalog.
-2. Add structured diagnostics internally while preserving legacy string output.
-3. Add opt-in warning collection.
-4. Add aggregate reporting beyond pure coordination if needed.
-5. Add migration tooling.
-6. Consider optional strict mode only after migration tooling exists.
+1. Add structured diagnostics internally while preserving legacy string output.
+2. Add opt-in warning collection based on the planned warning catalog.
+3. Add aggregate reporting beyond pure coordination if needed.
+4. Add migration tooling.
+5. Consider optional strict mode only after migration tooling exists.
 
 Do not continue to later phases until each earlier phase has established the
 needed compatibility boundary.
