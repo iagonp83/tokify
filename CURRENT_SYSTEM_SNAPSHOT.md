@@ -32,6 +32,7 @@ Current stabilized areas:
 - Instance Path & Child Instance Semantics Documentation Checkpoint
 - Future-safe Child Naming Warnings Planning Documentation Checkpoint
 - Warning-only Metadata Diagnostics Architecture Documentation Checkpoint
+- Diagnostic Contract Planning Documentation Checkpoint
 - Component Registry Foundation Commit 1
 - Registry-backed Composition Metadata Validation Commit 2
 - Graph Validator Planning documentation boundary
@@ -367,6 +368,55 @@ adapter-specific validation in core.
 Strict mode remains future-only. If ever added, it must be opt-in,
 backward-compatible, require migration tooling first, and promote warnings only
 selectively. Default mode remains permissive.
+
+The future diagnostic contract is documented in:
+
+```txt
+docs/DIAGNOSTIC_CONTRACT.md
+```
+
+That checkpoint is documentation-only. Current validators remain unchanged,
+`validateComponent` remains schema correctness validation, the component graph
+validator remains component-type-only, warnings remain planned but inactive, no
+structured diagnostics are active yet, no aggregate diagnostics API exists yet,
+and current string diagnostics remain backward-compatible.
+
+Future structured diagnostics may use a shared envelope with severity, stable
+machine-facing code, human-facing message, authored-data path, layer, source,
+deterministic ordering metadata, and optional suggestions. Diagnostic paths
+point to authored schema or metadata locations, not instance paths, runtime
+variable names, resolver paths, DOM paths, adapter paths, import paths, or
+generated file paths.
+
+Future severity values are `error`, `warning`, and optional future `info`.
+Severity does not imply runtime behavior. Warnings are non-blocking by default.
+
+Future diagnostic codes should be stable, namespaced, and machine-facing. Codes
+must not contain dynamic values, must not be reused for different meanings, and
+should describe the domain rule rather than the implementation function.
+Suggested future families include `SCHEMA_*`, `REGISTRY_*`, `GRAPH_*`,
+`METADATA_*`, `CANONICAL_*`, `PATH_*`, and `COMPAT_*`.
+
+Future aggregate diagnostics may coordinate collection, normalization, sorting,
+rendering, and optional combined reporting. Aggregate diagnostics must not
+become monolithic validation logic. Validators own rules, aggregate diagnostics
+preserve provenance, and any future aggregate API must be additive so existing
+validation APIs remain valid.
+
+Future deterministic ordering should avoid incidental traversal dependencies
+and may sort by layer rank, severity rank, source or rule rank, path key,
+subject key, code, and message as a final tie-breaker. Numeric path indexes
+should sort numerically. Graph cycle diagnostics should eventually normalize
+cycle paths deterministically.
+
+Structured diagnostics should be additive when introduced. Current string
+diagnostics must remain backward-compatible, existing tests should not break
+because of diagnostic migration, and legacy string rendering may later be
+produced from structured diagnostics.
+
+Suggestions, if added later, are advisory only. They are not operations, must
+not mutate data, and must not become codemods or design operations without a
+separate explicit layer.
 
 ## Component Registry Foundation
 
@@ -1250,6 +1300,9 @@ planning or architecture audits before implementation:
 - safe-name and diagnostic helper boundaries
 - future-safe child naming warning diagnostics
 - diagnostic contract planning
+- diagnostic envelope planning
+- diagnostic code taxonomy
+- diagnostic path semantics
 - warning catalog planning
 - opt-in warning collection
 - aggregate diagnostics coordination
@@ -1283,7 +1336,9 @@ planning or architecture audits before implementation:
 - No child naming warning diagnostics yet.
 - No child naming validation errors.
 - No warning-only metadata diagnostics implementation.
+- No structured diagnostic API implementation.
 - No aggregate diagnostics implementation.
+- No diagnostic migration from strings.
 - No strict mode.
 - No schema-breaking naming rules.
 - No resolver recursion or child runtime resolution.
@@ -1320,6 +1375,12 @@ The warning-only metadata diagnostics architecture checkpoint is
 documentation-only. Future work should proceed through diagnostic contract
 planning, warning catalog definition, opt-in warning collection, aggregate
 diagnostics coordination, migration tooling, and only then optional strict mode.
+
+The diagnostic contract checkpoint is documentation-only. Future work should
+proceed through diagnostic contract tests or helpers, structured diagnostics
+internally while preserving legacy string output, opt-in warning collection,
+aggregate diagnostics facade, migration reporting, and optional strict mode
+only after migration tooling exists.
 
 The pure authored-name-based component-type graph validator checkpoint is
 closed. Future work should continue with small metadata-only phases or dedicated

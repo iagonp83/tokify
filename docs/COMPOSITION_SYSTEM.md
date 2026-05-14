@@ -552,6 +552,9 @@ helper so single-schema validation flows stay backward-compatible.
 Warning-only metadata diagnostics are a future planning direction, not active
 behavior.
 
+The future diagnostic envelope and aggregate diagnostics boundary are
+documented in [`DIAGNOSTIC_CONTRACT.md`](./DIAGNOSTIC_CONTRACT.md).
+
 Future diagnostics should remain separated into conceptual layers:
 
 - schema validation
@@ -1038,6 +1041,7 @@ Completed planning documentation checkpoints:
 2. Instance path and child instance semantics remain docs-only.
 3. Future-safe child naming warning policy remains docs-only.
 4. Warning-only metadata diagnostics architecture remains docs-only.
+5. Diagnostic contract planning remains docs-only.
 
 Future child naming work should start with warning-only metadata diagnostics.
 Optional strict mode may be considered only after a migration policy exists,
@@ -1045,12 +1049,13 @@ and migration tooling should exist before hard errors.
 
 Recommended future diagnostics phases:
 
-1. Plan the shared diagnostic contract.
+1. Add diagnostic contract tests or helpers.
 2. Define the warning catalog.
-3. Add opt-in warning collection.
-4. Add aggregate diagnostics coordination.
-5. Add migration tooling.
-6. Consider optional strict mode only after migration tooling exists.
+3. Add structured diagnostics internally while preserving legacy string output.
+4. Add opt-in warning collection.
+5. Add aggregate diagnostics coordination.
+6. Add migration tooling.
+7. Consider optional strict mode only after migration tooling exists.
 
 Do not continue to later phases until each earlier phase has established the
 needed compatibility boundary.

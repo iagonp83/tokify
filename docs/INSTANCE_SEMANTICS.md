@@ -210,6 +210,9 @@ Compatibility rules:
 Warning-only metadata diagnostics are future planning only. They do not exist
 as active behavior yet.
 
+The future diagnostic envelope and aggregate diagnostics boundary are
+documented in [`DIAGNOSTIC_CONTRACT.md`](./DIAGNOSTIC_CONTRACT.md).
+
 Future diagnostics should keep these conceptual layers separate:
 
 - schema validation
@@ -636,22 +639,25 @@ Recommended sequence:
 2. Keep future-safe child naming policy documentation-only in this phase.
 3. Later, add warning-only metadata diagnostics for future-safe child naming
    risks.
-4. Later, define the diagnostic contract, including shared envelopes, stable
-   codes, severity taxonomy, deterministic ordering, and layer/source metadata.
-5. Later, define the warning catalog for metadata hygiene and future
+4. Treat the diagnostic contract as docs-only until a later implementation
+   phase.
+5. Later, add diagnostic contract tests or helpers.
+6. Later, define the warning catalog for metadata hygiene and future
    canonical/path readiness.
-6. Later, add opt-in warning collection without changing schema validity,
+7. Later, add structured diagnostics internally while preserving legacy string
+   output.
+8. Later, add opt-in warning collection without changing schema validity,
    graph validation, runtime behavior, import/export, or adapters.
-7. Later, add optional aggregate diagnostics coordination that formats and
+9. Later, add optional aggregate diagnostics coordination that formats and
    orders diagnostics without owning validator rules.
-8. Later, add migration tooling before hard errors.
-9. Later, consider optional strict mode only after a migration policy exists,
+10. Later, add migration tooling before hard errors.
+11. Later, consider optional strict mode only after a migration policy exists,
    and keep strict mode opt-in and backward-compatible.
-10. Later, optionally add inactive child instance ID fields only behind an
+12. Later, optionally add inactive child instance ID fields only behind an
    explicit migration and compatibility plan.
-11. Much later, add instance-tree tooling that stays separate from
+13. Much later, add instance-tree tooling that stays separate from
    component-type graph validation.
-12. Treat runtime composition as separate future work, after identity,
+14. Treat runtime composition as separate future work, after identity,
    migration, graph, import/export, and adapter boundaries are deliberately
    designed.
 
