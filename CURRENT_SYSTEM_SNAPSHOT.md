@@ -28,6 +28,7 @@ Current stabilized areas:
 - Composition Phase 2A child metadata validation
 - Composition graph semantics and instance identity planning
 - Canonical identity and naming semantics planning
+- Canonical Identity Planning Documentation Checkpoint
 - Component Registry Foundation Commit 1
 - Registry-backed Composition Metadata Validation Commit 2
 - Graph Validator Planning documentation boundary
@@ -204,15 +205,45 @@ Future instance paths should be semantic and derived from child instance names,
 not DOM structure, React structure, selectors, generated code, or adapter
 output.
 
-The canonical identity direction is planned but not implemented:
+The canonical identity planning boundary is documented in:
 
-- authored names remain readable schema data
-- canonical IDs should eventually be derived from authored names
-- the `.` character is reserved as the future semantic instance-path delimiter
-- canonical collision checks should eventually reject ambiguous names such as
-  names that normalize to the same ID
-- future runtime variable naming must remain flat, collision-safe, and derived
-  from semantic instance paths, slots, and properties
+```txt
+docs/CANONICAL_IDENTITY.md
+```
+
+That checkpoint supersedes earlier planning shorthand that described canonical
+IDs as derived from authored names.
+
+Canonical identity is not implemented. The active system remains
+authored-name-based:
+
+- schema names remain authored names
+- registry lookup remains authored-name-based
+- graph validator keys remain authored-name-only
+- duplicate authored-name validation remains registry-local
+- import/export remains unchanged
+- runtime variable names remain unchanged
+- no canonical IDs exist yet
+
+Future canonical component IDs should be opaque, persisted, durable machine
+identities for component types. They should be stable across authored-name
+renames, should not be derived from authored names or slugs, and must not leak
+into runtime CSS variable names.
+
+Future canonical child instance IDs should be opaque, persisted, durable
+identities for parent-owned child occurrences. They are separate from component
+type identity, and repeated child component types must remain allowed under
+different child instances.
+
+Future instance paths are an addressing model, not identity. Paths may change
+when structure changes, while child instance IDs should remain stable across a
+rename or move when the semantic child occurrence is the same. The `.`
+character remains reserved as the future semantic instance-path delimiter, but
+no enforcement exists yet.
+
+Runtime variable names remain flat CSS custom properties and are not identity.
+Canonical IDs must not leak into runtime CSS variables, and this checkpoint
+does not change runtime naming.
 
 ## Component Registry Foundation
 
@@ -1093,6 +1124,8 @@ planning or architecture audits before implementation:
 
 - canonicalization rules
 - escaping rules
+- safe-name and diagnostic helper boundaries
+- persisted opaque canonical ID migration strategy
 - future component registry expansion contract
 - canonical-aware graph validation
 - recursive composition behavior beyond metadata-only component-type
@@ -1111,16 +1144,23 @@ planning or architecture audits before implementation:
 - No export/import of runtimePlan or emitted runtime variables.
 - No global runtime consumption architecture layer.
 - No canonical IDs or canonical collision enforcement.
+- No persisted canonical component IDs or child instance IDs.
 - No canonical name normalization.
+- No canonical validation warnings or errors.
 - No resolver recursion or child runtime resolution.
 - No instance-path runtime naming.
 
 ## Next Recommended Phase
 
-The current composition semantics, canonical identity planning, and component
-registry foundation checkpoints are closed. Future work should continue through
-small, metadata-only infrastructure phases before any resolver, runtime,
-PreviewCanvas, export, or adapter behavior changes.
+The current composition semantics, canonical identity planning documentation,
+and component registry foundation checkpoints are closed. Future work should
+continue through small, metadata-only infrastructure phases before any resolver,
+runtime, PreviewCanvas, export, or adapter behavior changes.
+
+The canonical identity checkpoint is documentation-only. Future work should
+start with optional safe-name or diagnostic helpers, warning-only collision and
+future-safe naming risk detection, and an explicit migration strategy before
+persisted opaque canonical IDs are introduced.
 
 The pure authored-name-based component-type graph validator checkpoint is
 closed. Future work should continue with small metadata-only phases or dedicated
