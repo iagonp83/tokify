@@ -30,6 +30,8 @@ Current stabilized areas:
 - Canonical identity and naming semantics planning
 - Canonical Identity Planning Documentation Checkpoint
 - Instance Path & Child Instance Semantics Documentation Checkpoint
+- Future-safe Child Naming Warnings Planning Documentation Checkpoint
+- Warning-only Metadata Diagnostics Architecture Documentation Checkpoint
 - Component Registry Foundation Commit 1
 - Registry-backed Composition Metadata Validation Commit 2
 - Graph Validator Planning documentation boundary
@@ -283,6 +285,88 @@ Runtime variable naming remains flat and path-independent. No path-derived or
 path-expanded CSS variables should be introduced; future instance-aware styling,
 if ever added, should prefer scoped reassignment of the existing flat variable
 contract instead of encoding full instance paths into global variable names.
+
+Future-safe child naming warning policy is documented in:
+
+```txt
+docs/INSTANCE_SEMANTICS.md
+docs/COMPOSITION_SYSTEM.md
+```
+
+That checkpoint is documentation-only and does not change validation behavior.
+Child names remain authored metadata, not canonical IDs, runtime variable
+names, or active instance paths. Child names remain parent-scoped, repeated
+child component types remain valid, and import/export preserves authored names.
+
+Future warning-only diagnostics may eventually flag child naming risks such as
+reserved `.`, leading or trailing whitespace, repeated whitespace, tabs,
+newlines, duplicate normalized sibling names, case-only sibling collisions,
+punctuation or path-unsafe names, and empty or ambiguous display names.
+
+Warnings must not fail import, build, schema validation, graph validation,
+resolution, runtime emission, preview rendering, or adapter output. Hard errors
+should exist only after a canonical identity and path migration strategy exists.
+Strict mode, if ever added, must be opt-in and backward-compatible.
+
+Future-safe names are not canonical IDs. Naming warning helpers must not be
+called canonical ID helpers, names must not become identity, and future child
+instance IDs remain separate from authored names and safe-name diagnostics.
+
+Child naming warnings are child metadata hygiene. They should not be merged
+into component-type graph traversal, and the graph validator remains
+component-type-only.
+
+Future-safe naming policy has no runtime effect. It must not introduce
+path-derived CSS variables, path-expanded runtime variable names, nested
+runtime token objects, or adapter-specific naming rules.
+
+Warning-only metadata diagnostics architecture is documented in:
+
+```txt
+docs/INSTANCE_SEMANTICS.md
+docs/COMPOSITION_SYSTEM.md
+```
+
+That checkpoint is documentation-only. It defines separate future conceptual
+layers for schema validation, graph validation, metadata hygiene diagnostics,
+future canonical/path diagnostics, and optional aggregate diagnostics
+coordination.
+
+Validators own rules. Aggregate diagnostics may coordinate output, but must not
+become monolithic validation logic.
+
+`validateComponent` remains schema correctness validation. It should not become
+future-path, canonical identity, or future-safe naming warning logic. Future
+warnings should remain separate and opt-in initially.
+
+The graph validator remains component-type-only. It validates unknown component
+references, direct self-reference, and indirect component-type cycles. It does
+not validate child naming hygiene, instance paths, canonical IDs, runtime
+semantics, or runtime variable naming.
+
+Metadata warning diagnostics are future child metadata hygiene only. Future
+warning categories may include child name whitespace risks, reserved `.`,
+normalized sibling collisions, case-only collisions, path-unsafe punctuation,
+and empty or ambiguous names. Warnings are non-blocking, non-mutating, do not
+change runtime behavior, and do not affect schema validity.
+
+Future canonical/path warnings must not activate canonical IDs, create shadow
+identity, or make names identity. Names remain human-authored labels, and paths
+remain future addresses rather than identity.
+
+Future shared diagnostic architecture may use a shared diagnostic envelope,
+`error` and `warning` severities, deterministic ordering, stable diagnostic
+codes, layer/source metadata, layer ordering, and optional aggregate reporting.
+Shared formatting must not merge validator responsibilities.
+
+Warnings must not inspect resolved styles, inspect `runtimePlan` emission,
+affect CSS variable naming, affect resolver fallback chains, mutate
+import/export data, fail builds/runtime/imports by default, or introduce
+adapter-specific validation in core.
+
+Strict mode remains future-only. If ever added, it must be opt-in,
+backward-compatible, require migration tooling first, and promote warnings only
+selectively. Default mode remains permissive.
 
 ## Component Registry Foundation
 
@@ -1164,6 +1248,13 @@ planning or architecture audits before implementation:
 - canonicalization rules
 - escaping rules
 - safe-name and diagnostic helper boundaries
+- future-safe child naming warning diagnostics
+- diagnostic contract planning
+- warning catalog planning
+- opt-in warning collection
+- aggregate diagnostics coordination
+- optional strict mode policy for child naming
+- migration tooling before hard child naming errors
 - persisted opaque canonical ID migration strategy
 - future component registry expansion contract
 - canonical-aware graph validation
@@ -1189,12 +1280,20 @@ planning or architecture audits before implementation:
 - No persisted canonical component IDs or child instance IDs.
 - No canonical name normalization.
 - No canonical validation warnings or errors.
+- No child naming warning diagnostics yet.
+- No child naming validation errors.
+- No warning-only metadata diagnostics implementation.
+- No aggregate diagnostics implementation.
+- No strict mode.
+- No schema-breaking naming rules.
 - No resolver recursion or child runtime resolution.
 - No child instance ID activation.
 - No instance path serialization.
 - No instance-specific runtime styling.
 - No path-derived CSS variables.
 - No instance-path runtime naming.
+- No adapter-specific naming rules.
+- No adapter-specific validation in core.
 
 ## Next Recommended Phase
 
@@ -1212,6 +1311,15 @@ The instance semantics checkpoint is documentation-only. Future work should
 start with metadata-only validation for future-safe child naming risks, then
 optional inactive child instance IDs behind an explicit migration plan. Instance
 tree tooling and runtime composition remain separate later phases.
+
+The future-safe child naming warning checkpoint is documentation-only. Future
+work should start with warning-only metadata diagnostics, then optional strict
+mode only after a migration policy, with migration tooling before hard errors.
+
+The warning-only metadata diagnostics architecture checkpoint is
+documentation-only. Future work should proceed through diagnostic contract
+planning, warning catalog definition, opt-in warning collection, aggregate
+diagnostics coordination, migration tooling, and only then optional strict mode.
 
 The pure authored-name-based component-type graph validator checkpoint is
 closed. Future work should continue with small metadata-only phases or dedicated
