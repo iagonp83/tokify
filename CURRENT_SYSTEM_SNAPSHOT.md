@@ -29,6 +29,7 @@ Current stabilized areas:
 - Composition graph semantics and instance identity planning
 - Canonical identity and naming semantics planning
 - Canonical Identity Planning Documentation Checkpoint
+- Instance Path & Child Instance Semantics Documentation Checkpoint
 - Component Registry Foundation Commit 1
 - Registry-backed Composition Metadata Validation Commit 2
 - Graph Validator Planning documentation boundary
@@ -244,6 +245,44 @@ no enforcement exists yet.
 Runtime variable names remain flat CSS custom properties and are not identity.
 Canonical IDs must not leak into runtime CSS variables, and this checkpoint
 does not change runtime naming.
+
+Future instance-path and child-instance semantics are documented in:
+
+```txt
+docs/INSTANCE_SEMANTICS.md
+```
+
+That checkpoint is documentation-only and follows the rule:
+
+```txt
+ID = who it is
+Path = where it is
+```
+
+Composition children remain metadata-only. Child entries are parent-owned child
+instance metadata, reference component types by authored name, and do not
+trigger child runtime resolution, instance runtime behavior, runtime recursion,
+import/export changes, `PreviewCanvas` changes, or adapter behavior.
+
+Future child instance IDs should be stable, opaque identities for parent-owned
+child occurrences. They are separate from component type identity, are not
+active yet, and must allow repeated child component types under different child
+instances.
+
+Future instance paths are addresses, not identity. Paths may change after
+rename, move, reparent, or structure edits. Display paths and future machine
+paths must remain separate from durable identity, graph validation keys, and
+runtime variable names. The `.` character remains reserved as the future
+semantic instance-path delimiter, but no enforcement exists yet.
+
+Ordering is structural sequence only. It may eventually affect render,
+authoring, or adapter sequence, but array order and indexes must not become
+child instance identity or durable path identity.
+
+Runtime variable naming remains flat and path-independent. No path-derived or
+path-expanded CSS variables should be introduced; future instance-aware styling,
+if ever added, should prefer scoped reassignment of the existing flat variable
+contract instead of encoding full instance paths into global variable names.
 
 ## Component Registry Foundation
 
@@ -1128,6 +1167,9 @@ planning or architecture audits before implementation:
 - persisted opaque canonical ID migration strategy
 - future component registry expansion contract
 - canonical-aware graph validation
+- future child instance identity migration strategy
+- instance path display and machine path semantics
+- ordering semantics for future render/adaptation sequence
 - recursive composition behavior beyond metadata-only component-type
   diagnostics
 - child variant/state selection
@@ -1148,6 +1190,10 @@ planning or architecture audits before implementation:
 - No canonical name normalization.
 - No canonical validation warnings or errors.
 - No resolver recursion or child runtime resolution.
+- No child instance ID activation.
+- No instance path serialization.
+- No instance-specific runtime styling.
+- No path-derived CSS variables.
 - No instance-path runtime naming.
 
 ## Next Recommended Phase
@@ -1161,6 +1207,11 @@ The canonical identity checkpoint is documentation-only. Future work should
 start with optional safe-name or diagnostic helpers, warning-only collision and
 future-safe naming risk detection, and an explicit migration strategy before
 persisted opaque canonical IDs are introduced.
+
+The instance semantics checkpoint is documentation-only. Future work should
+start with metadata-only validation for future-safe child naming risks, then
+optional inactive child instance IDs behind an explicit migration plan. Instance
+tree tooling and runtime composition remain separate later phases.
 
 The pure authored-name-based component-type graph validator checkpoint is
 closed. Future work should continue with small metadata-only phases or dedicated
