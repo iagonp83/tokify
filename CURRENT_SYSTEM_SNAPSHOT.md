@@ -40,6 +40,9 @@ Current stabilized areas:
 - Diagnostic Contract Foundation
 - Diagnostic Aggregate Coordinator Foundation
 - Legacy Diagnostic Formatter Foundation
+- ValidateComponent Variant Diagnostic Formatter Parity Checkpoint
+- First Internal Structured Validator Migration: validateComponent variant-axis
+  diagnostics
 - Component Registry Foundation Commit 1
 - Registry-backed Composition Metadata Validation Commit 2
 - Graph Validator Planning documentation boundary
@@ -82,6 +85,9 @@ Automated regression tests cover:
   warning envelopes
 - isolated legacy diagnostic formatting from structured envelopes to legacy
   strings
+- formatter parity coverage for validateComponent variant-axis diagnostics
+- validator-local structured migration coverage for validateComponent
+  variant-axis diagnostics while preserving public legacy strings
 
 ## Component Model Structure
 
@@ -505,16 +511,33 @@ Batch formatting preserves input order, does not sort diagnostics, does not
 mutate input diagnostics or the input array, returns a new string array, and
 returns `[]` for empty input.
 
-The formatter is compatibility infrastructure only. It is not wired into
-validators, public validation APIs, warning collection, aggregate diagnostics,
-runtime, resolver, import/export, `PreviewCanvas`, schemas, component model
-behavior, or adapters.
+The formatter is compatibility infrastructure only. It is now used by one
+validator-local compatibility bridge inside `validateComponent` for the
+variant-axis rule family. It is not globally wired into validators, public
+validation APIs, warning collection, aggregate diagnostics, runtime, resolver,
+import/export, `PreviewCanvas`, schemas, UI, generated files, or adapters.
 
-Current validators remain unchanged. `validateComponent` remains schema
-correctness validation, the component graph validator remains
-component-type-only, warning collection remains opt-in and inactive in
-validation flows, aggregate diagnostics remain coordinator-only, current
-string diagnostics remain backward-compatible, and no public behavior changed.
+The first internal structured validator migration is closed for only
+`validateComponent` variant-axis diagnostics. The migrated codes are:
+
+- `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS`
+- `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
+
+The helper is module-private and validator-local. It creates
+`DiagnosticEnvelope` objects for those two rules, immediately formats them
+through `legacyDiagnosticFormatter`, and returns legacy `string[]` diagnostics
+to the existing `validateComponent` error flow. No top-level structured
+diagnostics array was introduced in `validateComponent`, no global formatter
+wiring was added, and `aggregateDiagnostics` is not used by the validator.
+
+`validateComponent` still publicly returns legacy `string[]` diagnostics.
+Existing variant-axis legacy message text, ordering, and empty-options
+short-circuit behavior are preserved. The component graph validator remains
+component-type-only and backward-compatible, warning collection remains opt-in
+and inactive in validation flows, aggregate diagnostics remain
+coordinator-only, public validation APIs remain unchanged, and no runtime,
+resolver, import/export, `PreviewCanvas`, UI, generated-file, or adapter
+behavior changed.
 
 Current severity values are `error`, `warning`, and `info`. Severity does not
 imply runtime behavior. Warnings are non-blocking by default and are emitted
@@ -576,22 +599,22 @@ public API boundaries:
 - renderers live outside validators
 - public validator APIs remain legacy-compatible until explicitly migrated
 
-Parity tests are required before any existing validator swaps internals to
-structured diagnostics. Stable codes, authored-data paths, source names,
-layers, severities, and deterministic `order` metadata must be preserved during
-migration.
+Parity tests are required before any existing validator rule family swaps
+internals to structured diagnostics. Stable codes, authored-data paths, source
+names, layers, severities, and deterministic `order` metadata must be
+preserved during migration.
 
-Planned future phases are:
+The first formatter parity test checkpoint is closed for
+`validateComponent` variant-axis diagnostics. The first validator-local
+internal structured migration is also closed for that same rule family only.
+Broader `validateComponent` migration, graph validator migration, warning
+activation, aggregate reporting, and structured public APIs remain future work.
 
-1. formatter parity tests
-2. validator-local internal structured migration
-3. optional structured public APIs later
-
-The migration plan does not wire diagnostics or the formatter into validators,
-migrate validators, change public validation APIs, activate warnings by
-default, touch runtime/resolver/import-export/PreviewCanvas/adapters, activate
-canonical IDs, introduce child instance IDs, introduce instance paths, or
-create path-derived runtime variables.
+The migration plan does not introduce global diagnostic or formatter wiring
+into validators, public validation API changes, warning activation by default,
+aggregate diagnostics inside validators, runtime changes, resolver changes,
+import/export changes, `PreviewCanvas` changes, adapter changes, canonical
+IDs, child instance IDs, instance paths, or path-derived runtime variables.
 
 Suggestions, if added later, are advisory only. They are not operations, must
 not mutate data, and must not become codemods or design operations without a
@@ -1480,8 +1503,10 @@ planning or architecture audits before implementation:
 - validator-integrated child naming warning diagnostics
 - diagnostic code taxonomy
 - opt-in warning collection
-- formatter parity testing
-- validator-local structured diagnostic migration
+- broader formatter parity testing beyond the closed validateComponent
+  variant-axis checkpoint
+- validator-local structured diagnostic migration beyond the closed
+  validateComponent variant-axis rule family
 - aggregate diagnostics reporting beyond pure coordination
 - optional strict mode policy for child naming
 - migration tooling before hard child naming errors
@@ -1514,10 +1539,11 @@ planning or architecture audits before implementation:
 - No child naming validation errors.
 - No warning collection or public validation warning API.
 - No warning producers beyond the isolated opt-in child-name hygiene helper.
-- No diagnostic wiring into validators or public validation APIs.
+- No diagnostic wiring into validators beyond the closed validateComponent
+  variant-axis local helper.
 - No aggregate diagnostics behavior beyond pure coordination.
-- No diagnostic migration implementation from strings.
-- No formatter wiring into validators or public validation APIs.
+- No string-to-envelope diagnostic migration.
+- No global formatter wiring into validators or public validation APIs.
 - No structured public validation API.
 - No strict mode.
 - No schema-breaking naming rules.
@@ -1556,16 +1582,19 @@ documentation-only. The warning catalog planning checkpoint is also
 documentation-only, and the child-name hygiene API and codes planning
 checkpoint is documentation-only. The isolated child-name hygiene diagnostics
 foundation is implemented but remains opt-in and unwired. Future work should
-proceed through formatter parity testing before any broader structured
-diagnostics migration, aggregate reporting beyond pure coordination if needed,
-and only then optional strict mode.
+proceed through additional scoped formatter parity testing before any broader
+structured diagnostics migration, aggregate reporting beyond pure coordination
+if needed, and only then optional strict mode.
 
 The diagnostic contract, aggregate coordinator, and legacy formatter
-foundations are closed as isolated infrastructure. Future work should proceed
-through formatter parity tests, validator-local internal structured migration,
-and only later optional structured public APIs. Opt-in warning collection,
-migration reporting, and optional strict mode remain later phases after
-compatibility boundaries are proven.
+foundations are closed as isolated infrastructure. The validateComponent
+variant-axis formatter parity and first internal structured migration
+checkpoints are closed. Future work should proceed through additional
+rule-family parity and validator-local migration slices, with broader
+`validateComponent` migration and optional structured public APIs kept for
+later explicit phases. Opt-in warning collection, migration reporting, and
+optional strict mode remain later phases after compatibility boundaries are
+proven.
 
 The pure authored-name-based component-type graph validator checkpoint is
 closed. Future work should continue with small metadata-only phases or dedicated

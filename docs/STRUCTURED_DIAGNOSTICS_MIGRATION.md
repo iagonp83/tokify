@@ -4,22 +4,29 @@ This document defines the migration plan from legacy string diagnostics to
 internal structured `DiagnosticEnvelope` diagnostics.
 
 The isolated legacy formatter foundation now exists as compatibility
-infrastructure. This plan still does not introduce validator migrations,
-validator wiring, public validation APIs, runtime behavior, resolver behavior,
-`runtimePlan` behavior, runtime emission, import/export behavior,
-`PreviewCanvas` behavior, canonical IDs, child instance IDs, instance paths,
-path-derived runtime variables, strict mode, or blocking warnings.
+infrastructure, and the first validator-local internal structured migration is
+closed for `validateComponent` variant-axis diagnostics only. This plan still
+does not introduce broad validator migration, global validator wiring, public
+validation APIs, runtime behavior, resolver behavior, `runtimePlan` behavior,
+runtime emission, import/export behavior, `PreviewCanvas` behavior, canonical
+IDs, child instance IDs, instance paths, path-derived runtime variables, strict
+mode, or blocking warnings.
 
 ## Current Boundary
 
 Current public validator behavior remains legacy-compatible:
 
 - `validateComponent` returns its current legacy string diagnostics
+- `validateComponent` internally migrates only its variant-axis diagnostics
+  through a validator-local helper
+- the migrated variant-axis codes are
+  `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS` and
+  `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
 - the component graph validator returns its current legacy string diagnostics
 - warning diagnostics remain opt-in and non-blocking
 - aggregate diagnostics remains coordinator-only
-- the legacy formatter exists, but is not wired into validators or public
-  validation APIs
+- the legacy formatter is used only by the local variant-axis compatibility
+  helper and is not globally wired into validators or public validation APIs
 
 Structured diagnostics are an internal migration layer first. They should make
 diagnostics easier to sort, format, test, and aggregate without changing public
@@ -38,7 +45,9 @@ Structured diagnostics migration should keep these layers separate:
 - **public API layer**: preserves existing return shapes until explicitly
   migrated
 
-Rule producers must not format public strings directly once migrated.
+Rule producers should not own broad rendering or public API formatting. A
+validator-local compatibility bridge may immediately format its own envelopes
+back to legacy strings while public validator APIs remain legacy-compatible.
 Formatters must not own validation rules. Renderers must not infer validation
 meaning. Aggregate diagnostics must not invoke validators or mutate envelopes.
 
@@ -85,13 +94,21 @@ and returns `[]` for empty input.
 
 Validators own rule production for their domains.
 
-`validateComponent` owns schema-local correctness rules only. Its structured
-diagnostics may eventually cover local slot references, part metadata, child
-metadata shape, slot relation correctness, duplicate local metadata, and
-already-supported optional registry-backed child reference checks. It must not
-own graph traversal, child-name hygiene warnings, canonical readiness,
-resolver behavior, runtime behavior, import/export behavior, or adapter
-behavior.
+`validateComponent` owns schema-local correctness rules only. Its first
+internally structured rule family is variant-axis validation. The local helper
+creates structured envelopes for only:
+
+- `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS`
+- `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
+
+It immediately formats those envelopes back to legacy strings and returns
+`string[]` to the existing validator flow. Broader `validateComponent`
+structured diagnostics may eventually cover local slot references, part
+metadata, child metadata shape, slot relation correctness, duplicate local
+metadata, and already-supported optional registry-backed child reference
+checks. It must not own graph traversal, child-name hygiene warnings,
+canonical readiness, resolver behavior, runtime behavior, import/export
+behavior, or adapter behavior.
 
 The component graph validator owns component-type graph rules only. Its
 structured diagnostics may eventually cover unknown component references,
@@ -171,15 +188,24 @@ over already-created envelopes.
 Closed phase:
 
 - **Formatter foundation**: a small formatter layer now renders
-  `DiagnosticEnvelope` values to legacy strings without changing validators.
+  `DiagnosticEnvelope` values to legacy strings without changing public
+  validator APIs.
+- **Formatter parity tests for validateComponent variant axes**:
+  byte-for-byte parity is proven for empty variant options, invalid variant
+  defaults, ordering, formatter non-sorting, and empty-options short-circuit
+  behavior.
+- **First validator-local internal structured migration**:
+  `validateComponent` variant-axis diagnostics now create
+  `DiagnosticEnvelope` values internally and immediately format them back to
+  legacy strings through `legacyDiagnosticFormatter`.
 
 Recommended future phases:
 
-1. **Formatter parity tests**: prove envelope-to-string rendering matches
-   current legacy strings exactly for one target rule family.
-2. **Validator-local internal structured migration**: migrate one validator or
-   one rule family internally while preserving the validator's public return
-   shape and legacy strings.
+1. **Additional formatter parity tests**: prove envelope-to-string rendering
+   matches current legacy strings exactly for the next target rule family.
+2. **Additional validator-local internal structured migrations**: migrate one
+   rule family at a time while preserving each validator's public return shape
+   and legacy strings.
 3. **Optional structured public APIs later**: after validator-local parity and
    compatibility are proven, consider additive structured diagnostic access
    without removing legacy behavior.
@@ -225,10 +251,11 @@ migration decides otherwise.
 Avoid:
 
 - aggregate diagnostics invoking validators
-- validators importing formatter/rendering/UI code
+- validators importing formatter/rendering/UI code outside an explicit
+  validator-local legacy compatibility bridge
 - validators importing resolver/runtime/import/export/PreviewCanvas/adapters
 - formatters owning validation rules
-- producers returning strings as their internal migration output
+- producers returning only strings as their structured migration output
 - reconstructing envelopes from legacy strings
 - changing diagnostic messages while changing representation
 - activating warnings inside schema or graph validation by default
@@ -240,11 +267,12 @@ Avoid:
 
 ## Explicit Non-Goals
 
-Beyond the isolated formatter foundation, this migration plan does not
-introduce:
+Beyond the isolated formatter foundation and the closed
+`validateComponent` variant-axis validator-local migration, this migration plan
+does not introduce:
 
-- validator migration
-- validator wiring
+- broad validator migration
+- global validator wiring
 - public validation API changes
 - runtime changes
 - resolver changes

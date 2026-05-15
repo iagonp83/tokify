@@ -4,15 +4,17 @@ This document defines the diagnostic contract and aggregate diagnostics boundary
 for Tokify.
 
 The isolated diagnostic contract, aggregate coordinator, child-name hygiene
-diagnostics, and legacy formatter foundations now exist. They do not activate
-structured diagnostics in validators, activate warning collection, rewrite
-validators, change current string diagnostics, change import/export, change
-resolver/runtime behavior, activate canonical IDs, activate child instance IDs,
-introduce instance paths, or introduce adapter diagnostics.
+diagnostics, and legacy formatter foundations now exist. The first
+validator-local structured migration is closed for `validateComponent`
+variant-axis diagnostics only. These foundations and the first migration do
+not activate warning collection, change public validation APIs, change current
+legacy string diagnostics, change import/export, change resolver/runtime
+behavior, activate canonical IDs, activate child instance IDs, introduce
+instance paths, or introduce adapter diagnostics.
 
 ## Current Active Model
 
-Current validators remain unchanged.
+Public validator APIs remain unchanged and legacy-compatible.
 
 Current diagnostics infrastructure:
 
@@ -27,23 +29,32 @@ Current diagnostics infrastructure:
 
 Active behavior:
 
-- `validateComponent` remains schema correctness validation
+- `validateComponent` remains schema correctness validation and still returns
+  legacy `string[]` diagnostics publicly
+- only `validateComponent` variant-axis diagnostics are internally structured
+  today
+- the migrated codes are `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS` and
+  `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
+- the variant-axis helper is validator-local, creates `DiagnosticEnvelope`
+  objects internally, and immediately formats them back to legacy strings
 - the component graph validator remains component-type-only
 - warning collection remains planned but inactive in validation flows
 - `collectChildNameHygieneDiagnostics(schema)` emits structured warnings only
   when called directly
-- structured diagnostics infrastructure exists but is not wired into validators
+- structured diagnostics infrastructure is not globally wired into validators
   or public validation APIs
 - aggregate diagnostics exists as a pure coordinator only
-- the legacy formatter exists as compatibility infrastructure only
+- the legacy formatter exists as compatibility infrastructure and is used only
+  by the validator-local variant-axis helper
 - current string diagnostics remain backward-compatible
 - existing validation APIs remain valid
 - no public behavior changes because of the diagnostics infrastructure
 
 `validateComponent` currently owns schema-local correctness checks and optional
 registry-backed child reference checks when explicit registry context is
-provided. It should not become future-path, canonical identity, or warning
-collection logic.
+provided. Its structured migration currently covers only the variant-axis
+rules. Broader rule-family migration remains future work. It should not become
+future-path, canonical identity, or warning collection logic.
 
 The component graph validator currently owns component-type graph diagnostics
 for unknown references, direct self-reference, and indirect component-type
@@ -134,6 +145,16 @@ Examples of code intent, not active codes:
 
 These examples are illustrative only. They do not create an active diagnostic
 catalog.
+
+Active validator-local structured diagnostic codes currently implemented:
+
+- `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS`
+- `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
+
+Both are owned by `validateComponent`, use `severity: error`, `layer: schema`,
+`source.name: validateComponent`, authored-data paths under `["variants", ...]`,
+and are formatted back to the existing legacy strings before leaving the
+validator.
 
 ## Diagnostic Path Semantics
 
@@ -303,7 +324,10 @@ returns a new array, and returns `[]` for empty input.
 
 A safe migration path may introduce internal structured diagnostics first, then
 render current string diagnostics from that structure. That migration should be
-tested carefully and kept separate from rule changes.
+tested carefully and kept separate from rule changes. The first completed
+instance of this path is the validator-local `validateComponent` variant-axis
+helper, which immediately formats internally-created envelopes back to legacy
+strings.
 
 ## Isolation Guarantees
 
@@ -368,10 +392,11 @@ Shared diagnostic formatting does not imply shared rule ownership.
 Recommended order:
 
 1. Keep the implemented diagnostic contract, aggregate coordinator, and legacy
-   formatter isolated from validator/runtime/resolver/import-export behavior.
-2. Later, add formatter parity tests for existing legacy strings.
-3. Later, migrate one validator or rule family internally while preserving
-   public return shape and legacy string output.
+   formatter isolated from runtime/resolver/import-export behavior.
+2. Keep closed formatter parity tests for existing legacy strings as the gate
+   before each rule-family migration.
+3. Continue with additional validator-local migrations one rule family at a
+   time while preserving public return shape and legacy string output.
 4. Later, add opt-in warning collection for metadata hygiene.
 5. Later, add aggregate reporting for collection, normalization, rendering, or
    legacy string adaptation if a caller needs one combined result.
@@ -386,11 +411,12 @@ changing diagnostic representation.
 
 This checkpoint does not introduce:
 
-- validator rewrites
+- broad validator rewrites
 - graph validator rewrites
 - warning activation
-- diagnostic wiring into validators or public validation APIs
-- formatter wiring into validators or public validation APIs
+- diagnostic wiring into validators beyond the closed `validateComponent`
+  variant-axis helper
+- global formatter wiring into validators or public validation APIs
 - aggregate diagnostics behavior beyond pure coordination
 - import/export changes
 - resolver changes
