@@ -193,6 +193,131 @@ describe("validateComponent composition metadata", () => {
     });
   });
 
+  it("reports empty variant options with unchanged legacy string output", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: []
+        }
+      ]
+    });
+
+    expect(result).toEqual({
+      errors: ['Variant axis "tone" requires at least one option.'],
+      valid: false
+    });
+  });
+
+  it("reports invalid variant defaults with unchanged legacy string output", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      variants: [
+        {
+          default: "lg",
+          name: "size",
+          options: ["sm", "md"]
+        }
+      ]
+    });
+
+    expect(result).toEqual({
+      errors: [
+        'Variant axis "size" default "lg" must be one of its options.'
+      ],
+      valid: false
+    });
+  });
+
+  it("preserves ordered legacy output for combined invalid variant axes", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: []
+        },
+        {
+          default: "lg",
+          name: "size",
+          options: ["sm", "md"]
+        }
+      ]
+    });
+
+    expect(result).toEqual({
+      errors: [
+        'Variant axis "tone" requires at least one option.',
+        'Variant axis "size" default "lg" must be one of its options.'
+      ],
+      valid: false
+    });
+  });
+
+  it("keeps empty variant options short-circuit behavior unchanged", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: []
+        }
+      ]
+    });
+
+    expect(result).toEqual({
+      errors: ['Variant axis "tone" requires at least one option.'],
+      valid: false
+    });
+  });
+
+  it("accepts valid variant axes without diagnostics", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: ["primary", "secondary"]
+        },
+        {
+          default: "md",
+          name: "size",
+          options: ["sm", "md", "lg"]
+        }
+      ]
+    });
+
+    expect(result).toEqual({
+      errors: [],
+      valid: true
+    });
+  });
+
+  it("continues returning public legacy string arrays", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: []
+        }
+      ]
+    });
+
+    expect(result).toEqual({
+      errors: ['Variant axis "tone" requires at least one option.'],
+      valid: false
+    });
+    expect(result.errors.every((error) => typeof error === "string")).toBe(true);
+    expect(result).not.toHaveProperty("diagnostics");
+  });
+
   it("accepts known child component references when registry validation is enabled", () => {
     const registry = createComponentRegistry([baseSchema, inputSchema]);
     const result = validateComponent(

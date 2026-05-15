@@ -1,4 +1,12 @@
-import type { ComponentSchema } from "./component.types";
+import {
+  createDiagnostic,
+  createDiagnosticPath,
+  diagnosticLayers,
+  diagnosticSeverities,
+  type DiagnosticEnvelope
+} from "../diagnostics/diagnosticContract";
+import { formatDiagnosticsAsLegacyStrings } from "../diagnostics/legacyDiagnosticFormatter";
+import type { ComponentSchema, ComponentVariantAxis } from "./component.types";
 import type { ComponentRegistry } from "./componentRegistry";
 
 export type ComponentValidationResult = {
@@ -33,17 +41,8 @@ export function validateComponent(
     errors.push('Component requires a "default" state.');
   }
 
-  schema.variants.forEach((axis) => {
-    if (axis.options.length === 0) {
-      errors.push(`Variant axis "${axis.name}" requires at least one option.`);
-      return;
-    }
-
-    if (!axis.options.includes(axis.default)) {
-      errors.push(
-        `Variant axis "${axis.name}" default "${axis.default}" must be one of its options.`
-      );
-    }
+  schema.variants.forEach((axis, variantIndex) => {
+    errors.push(...validateVariantAxis(axis, variantIndex));
   });
 
   schema.tokenBindings.forEach((binding) => {
@@ -163,6 +162,70 @@ export function validateComponent(
     errors,
     valid: errors.length === 0
   };
+}
+
+type VariantAxisDiagnosticCode =
+  | "SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS"
+  | "SCHEMA_VARIANT_AXIS_INVALID_DEFAULT";
+
+function validateVariantAxis(
+  axis: ComponentVariantAxis,
+  variantIndex: number
+): string[] {
+  const diagnostics: DiagnosticEnvelope<VariantAxisDiagnosticCode>[] = [];
+
+  if (axis.options.length === 0) {
+    diagnostics.push(
+      createVariantAxisDiagnostic({
+        code: "SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS",
+        message: `Variant axis "${axis.name}" requires at least one option.`,
+        path: createDiagnosticPath("variants", variantIndex, "options"),
+        sequence: variantIndex * 2
+      })
+    );
+
+    return formatDiagnosticsAsLegacyStrings(diagnostics);
+  }
+
+  if (!axis.options.includes(axis.default)) {
+    diagnostics.push(
+      createVariantAxisDiagnostic({
+        code: "SCHEMA_VARIANT_AXIS_INVALID_DEFAULT",
+        message: `Variant axis "${axis.name}" default "${axis.default}" must be one of its options.`,
+        path: createDiagnosticPath("variants", variantIndex, "default"),
+        sequence: variantIndex * 2 + 1
+      })
+    );
+  }
+
+  return formatDiagnosticsAsLegacyStrings(diagnostics);
+}
+
+function createVariantAxisDiagnostic({
+  code,
+  message,
+  path,
+  sequence
+}: {
+  readonly code: VariantAxisDiagnosticCode;
+  readonly message: string;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+  readonly sequence: number;
+}): DiagnosticEnvelope<VariantAxisDiagnosticCode> {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order: {
+      bucket: 0,
+      sequence
+    },
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
 }
 
 function findDuplicates(values: readonly string[]) {
