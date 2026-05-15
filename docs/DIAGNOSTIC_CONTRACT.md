@@ -270,6 +270,9 @@ migration changes that contract.
 
 Current string diagnostics must remain backward-compatible.
 
+Structured diagnostics migration planning is documented in
+[`STRUCTURED_DIAGNOSTICS_MIGRATION.md`](./STRUCTURED_DIAGNOSTICS_MIGRATION.md).
+
 Migration principles:
 
 - structured diagnostics should be additive when introduced
@@ -279,6 +282,8 @@ Migration principles:
 - existing callers that consume strings should keep working during migration
 - new structured diagnostics should preserve enough information to render the
   legacy string shape where needed
+- envelope-to-string formatting is the intended compatibility path
+- string-to-envelope reconstruction is intentionally rejected
 
 A safe migration path may introduce internal structured diagnostics first, then
 render current string diagnostics from that structure. That migration should be
@@ -348,13 +353,16 @@ Recommended order:
 
 1. Keep the implemented diagnostic contract and aggregate coordinator isolated
    from validator/runtime/resolver/import-export behavior.
-2. Later, introduce structured diagnostics internally for one narrow validator
-   while preserving legacy string output.
-3. Later, add opt-in warning collection for metadata hygiene.
-4. Later, add aggregate reporting for collection, normalization, rendering, or
+2. Later, add formatter foundation for `DiagnosticEnvelope` to legacy strings.
+3. Later, add formatter parity tests for existing legacy strings.
+4. Later, migrate one validator or rule family internally while preserving
+   public return shape and legacy string output.
+5. Later, add opt-in warning collection for metadata hygiene.
+6. Later, add aggregate reporting for collection, normalization, rendering, or
    legacy string adaptation if a caller needs one combined result.
-5. Later, add migration reporting for canonical/path readiness.
-6. Later, consider optional strict mode only after migration tooling exists.
+7. Later, add optional structured public APIs.
+8. Later, add migration reporting for canonical/path readiness.
+9. Later, consider optional strict mode only after migration tooling exists.
 
 Each phase should be additive and should avoid changing validator rules while
 changing diagnostic representation.

@@ -35,6 +35,7 @@ Current stabilized areas:
 - Warning Catalog Planning Documentation Checkpoint
 - Child Name Hygiene Diagnostics API & Codes Planning Checkpoint
 - Child Name Hygiene Diagnostics Foundation
+- Structured Diagnostics Migration Planning Documentation Checkpoint
 - Diagnostic Contract Planning Documentation Checkpoint
 - Diagnostic Contract Foundation
 - Diagnostic Aggregate Coordinator Foundation
@@ -511,6 +512,55 @@ Structured diagnostics should be additive when introduced. Current string
 diagnostics must remain backward-compatible, existing tests should not break
 because of diagnostic migration, and legacy string rendering may later be
 produced from structured diagnostics.
+
+Structured diagnostics migration planning is documented in:
+
+```txt
+docs/STRUCTURED_DIAGNOSTICS_MIGRATION.md
+```
+
+That checkpoint is documentation-only. It defines structured diagnostics as an
+internal migration layer first. Legacy string diagnostics remain the public
+compatibility contract for current validators. Validators migrate
+independently, own their own rule production, and must preserve their public
+return shapes until a later explicit public API phase.
+
+The intended compatibility path is envelope-to-string formatting:
+
+```txt
+DiagnosticEnvelope -> legacy string
+```
+
+String-to-envelope reconstruction is intentionally rejected because legacy
+strings cannot safely recover stable codes, layers, sources, authored-data
+paths, order metadata, or suggestions.
+
+The migration plan separates producer, formatter, aggregate, renderer, and
+public API boundaries:
+
+- producers create `DiagnosticEnvelope` objects for rules they own
+- formatters convert envelopes to legacy strings for compatibility
+- aggregate diagnostics sorts and combines already-created envelopes only
+- renderers live outside validators
+- public validator APIs remain legacy-compatible until explicitly migrated
+
+Parity tests are required before any existing validator swaps internals to
+structured diagnostics. Stable codes, authored-data paths, source names,
+layers, severities, and deterministic `order` metadata must be preserved during
+migration.
+
+Planned future phases are:
+
+1. formatter foundation
+2. formatter parity tests
+3. validator-local internal structured migration
+4. optional structured public APIs later
+
+The migration plan does not wire diagnostics into validators, add formatters,
+migrate validators, change public validation APIs, activate warnings by
+default, touch runtime/resolver/import-export/PreviewCanvas/adapters, activate
+canonical IDs, introduce child instance IDs, introduce instance paths, or
+create path-derived runtime variables.
 
 Suggestions, if added later, are advisory only. They are not operations, must
 not mutate data, and must not become codemods or design operations without a
@@ -1399,7 +1449,9 @@ planning or architecture audits before implementation:
 - validator-integrated child naming warning diagnostics
 - diagnostic code taxonomy
 - opt-in warning collection
-- diagnostic migration from legacy strings
+- diagnostic formatter foundation
+- formatter parity testing
+- validator-local structured diagnostic migration
 - aggregate diagnostics reporting beyond pure coordination
 - optional strict mode policy for child naming
 - migration tooling before hard child naming errors
@@ -1434,7 +1486,9 @@ planning or architecture audits before implementation:
 - No warning producers beyond the isolated opt-in child-name hygiene helper.
 - No diagnostic wiring into validators or public validation APIs.
 - No aggregate diagnostics behavior beyond pure coordination.
-- No diagnostic migration from strings.
+- No diagnostic migration implementation from strings.
+- No formatter implementation.
+- No structured public validation API.
 - No strict mode.
 - No schema-breaking naming rules.
 - No resolver recursion or child runtime resolution.
@@ -1472,15 +1526,17 @@ documentation-only. The warning catalog planning checkpoint is also
 documentation-only, and the child-name hygiene API and codes planning
 checkpoint is documentation-only. The isolated child-name hygiene diagnostics
 foundation is implemented but remains opt-in and unwired. Future work should
-proceed through broader structured diagnostics internally while preserving
-legacy string output, migration reporting and tooling, aggregate reporting
-beyond pure coordination if needed, and only then optional strict mode.
+proceed through formatter foundation and parity testing before any broader
+structured diagnostics migration, aggregate reporting beyond pure coordination
+if needed, and only then optional strict mode.
 
 The diagnostic contract and aggregate coordinator foundations are closed as
-isolated infrastructure. Future work should proceed through structured
-diagnostics internally while preserving legacy string output, opt-in warning
-collection, migration reporting, and optional strict mode only after migration
-tooling exists.
+isolated infrastructure. The structured diagnostics migration planning
+checkpoint is documentation-only. Future work should proceed through formatter
+foundation, formatter parity tests, validator-local internal structured
+migration, and only later optional structured public APIs. Opt-in warning
+collection, migration reporting, and optional strict mode remain later phases
+after compatibility boundaries are proven.
 
 The pure authored-name-based component-type graph validator checkpoint is
 closed. Future work should continue with small metadata-only phases or dedicated

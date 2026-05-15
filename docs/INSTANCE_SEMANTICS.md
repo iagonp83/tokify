@@ -655,18 +655,20 @@ Recommended sequence:
 5. The isolated opt-in child-name hygiene diagnostics helper is implemented
    with tests and remains unwired from schema validity, graph validation,
    runtime behavior, import/export, and adapters.
-6. Later, add broader structured diagnostics internally while preserving legacy
-   string output.
-7. Later, add optional aggregate reporting beyond pure coordination without
+6. Later, add formatter foundation and formatter parity tests for structured
+   diagnostics migration.
+7. Later, add validator-local internal structured diagnostics while preserving
+   legacy string output.
+8. Later, add optional aggregate reporting beyond pure coordination without
    owning validator rules.
-8. Later, add migration tooling before hard errors.
-9. Later, consider optional strict mode only after a migration policy exists,
+9. Later, add migration tooling before hard errors.
+10. Later, consider optional strict mode only after a migration policy exists,
    and keep strict mode opt-in and backward-compatible.
-10. Later, optionally add inactive child instance ID fields only behind an
+11. Later, optionally add inactive child instance ID fields only behind an
    explicit migration and compatibility plan.
-11. Much later, add instance-tree tooling that stays separate from
+12. Much later, add instance-tree tooling that stays separate from
    component-type graph validation.
-12. Treat runtime composition as separate future work, after identity,
+13. Treat runtime composition as separate future work, after identity,
    migration, graph, import/export, and adapter boundaries are deliberately
    designed.
 

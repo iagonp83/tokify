@@ -1063,11 +1063,13 @@ and migration tooling should exist before hard errors.
 
 Recommended future diagnostics phases:
 
-1. Add broader structured diagnostics internally while preserving legacy string
-   output.
-2. Add aggregate reporting beyond pure coordination if needed.
-3. Add migration tooling.
-4. Consider optional strict mode only after migration tooling exists.
+1. Add formatter foundation for `DiagnosticEnvelope` to legacy strings.
+2. Add formatter parity tests for existing legacy strings.
+3. Add validator-local internal structured diagnostics while preserving legacy
+   string output.
+4. Add aggregate reporting beyond pure coordination if needed.
+5. Add migration tooling.
+6. Consider optional strict mode only after migration tooling exists.
 
 Do not continue to later phases until each earlier phase has established the
 needed compatibility boundary.
