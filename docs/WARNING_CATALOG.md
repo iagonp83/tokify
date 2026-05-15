@@ -3,16 +3,25 @@
 This document defines the planned warning catalog for metadata hygiene and
 canonical/path readiness.
 
-This is a documentation-only checkpoint. It does not add source code, tests,
-warning helpers, warning producers, validator wiring, graph validation wiring,
-runtime behavior, resolver behavior, `runtimePlan` behavior, runtime emission,
+This catalog records warning planning and the current isolated warning helper.
+It does not activate validator wiring, graph validation wiring, runtime
+behavior, resolver behavior, `runtimePlan` behavior, runtime emission,
 import/export behavior, `PreviewCanvas` behavior, canonical IDs, child instance
 IDs, instance paths, path-derived runtime variables, strict mode, or blocking
 warnings.
 
 ## Current Status
 
-Warnings are planned but inactive.
+Warning collection remains planned but inactive in validation flows.
+
+The isolated child-name hygiene diagnostics helper now exists:
+
+```ts
+collectChildNameHygieneDiagnostics(schema: ComponentSchema): DiagnosticEnvelope[]
+```
+
+It is pure and opt-in. It emits structured `DiagnosticEnvelope` warnings only
+when called directly.
 
 The current diagnostics infrastructure provides:
 
@@ -20,11 +29,12 @@ The current diagnostics infrastructure provides:
 - deterministic ordering through `sortDiagnostics`
 - a pure aggregate coordinator in
   `src/compiler/diagnostics/aggregateDiagnostics.ts`
+- an isolated child-name hygiene producer in
+  `src/compiler/diagnostics/childNameHygieneDiagnostics.ts`
 
-The warning catalog does not activate that infrastructure in validators.
-`validateComponent` remains schema correctness validation. The component graph
-validator remains component-type-only. Current string diagnostics remain
-backward-compatible.
+The helper is not wired into validators. `validateComponent` remains schema
+correctness validation. The component graph validator remains
+component-type-only. Current string diagnostics remain backward-compatible.
 
 ## Catalog Principles
 
@@ -39,9 +49,9 @@ Future warnings must preserve:
 - separation from runtime, resolver, import/export, and adapters
 - aggregate diagnostics as coordinator-only
 
-Future warning producers, if introduced, should emit already-created diagnostic
-envelopes. Aggregate diagnostics may order and combine those envelopes, but it
-must not own warning rules or invoke validators.
+Warning producers emit already-created diagnostic envelopes. Aggregate
+diagnostics may order and combine those envelopes when a caller passes them in,
+but it must not own warning rules or invoke validators.
 
 Warnings are advisory migration and readability signals. They must not:
 
@@ -57,7 +67,7 @@ Warnings are advisory migration and readability signals. They must not:
 
 ## Code Family Conventions
 
-Exact first-phase child-name hygiene diagnostic codes are planned below.
+Exact first-phase child-name hygiene diagnostic codes are implemented below.
 Additional future codes remain future work. Code families should be stable,
 machine-facing, and namespaced by domain:
 
@@ -67,42 +77,41 @@ machine-facing, and namespaced by domain:
 - `COMPAT_CHILD_NAME_*` for compatibility or migration-readiness warnings
 
 These families are planning labels except where exact first-phase codes are
-listed in this document. They do not create active warning producers.
+listed in this document. They do not create validator-active warnings.
 
-## First Implementable Producer: Child Name Hygiene
+## Implemented Producer: Child Name Hygiene
 
-This section defines the first planned warning producer boundary before any
-implementation exists.
+The first child-name hygiene producer is implemented as isolated diagnostics
+infrastructure.
 
-Likely future file:
+Current file:
 
 ```txt
 src/compiler/diagnostics/childNameHygieneDiagnostics.ts
 ```
 
-Likely future test file:
+Current test file:
 
 ```txt
 src/compiler/diagnostics/childNameHygieneDiagnostics.test.ts
 ```
 
-Likely future API:
+Current API:
 
 ```ts
 collectChildNameHygieneDiagnostics(schema: ComponentSchema): DiagnosticEnvelope[]
 ```
 
-The first implementation should be pure and opt-in. It should accept a
-`ComponentSchema`; a later refactor may accept a smaller schema-like child
-metadata input only if that keeps the helper independent from validators,
-runtime, resolver, import/export, and adapters.
+The helper is pure and opt-in. It accepts a `ComponentSchema`; a later refactor
+may accept a smaller schema-like child metadata input only if that keeps the
+helper independent from validators, runtime, resolver, import/export, and
+adapters.
 
-The helper should return already-created `DiagnosticEnvelope` objects. It
-should not mutate input, return strings, call `validateComponent`, call the
-component graph validator, or call `aggregateDiagnostics` internally unless a
-later checkpoint explicitly justifies that dependency.
+The helper returns already-created `DiagnosticEnvelope` objects. It does not
+mutate input, return strings, call `validateComponent`, call the component
+graph validator, or call `aggregateDiagnostics` internally.
 
-It should not inspect resolver output, token resolver output, `runtimePlan`,
+It does not inspect resolver output, token resolver output, `runtimePlan`,
 runtime emission, preview runtime consumption, `PreviewCanvas`, import/export
 payloads, adapters, DOM, React output, CSS selectors, generated files, or
 runtime variable names.
@@ -110,7 +119,7 @@ runtime variable names.
 ### First-Phase Layer And Source
 
 Current `DiagnosticLayer` values do not include a dedicated `metadata` layer.
-The first child-name hygiene producer should therefore use:
+The child-name hygiene producer uses:
 
 - `layer`: `schema`
 - `source.name`: `childNameHygiene`
@@ -123,17 +132,17 @@ separate rule owner.
 
 ### First-Phase Ordering Strategy
 
-Ordering should be deterministic and should use `sortDiagnostics` after the
-helper returns envelopes to any caller.
+Ordering is deterministic. The helper returns sorted envelopes using
+`sortDiagnostics` over diagnostics it created.
 
-Suggested first-phase `order` strategy:
+Current first-phase `order` strategy:
 
 - `bucket`: use one stable child-name hygiene warning bucket, separate from
   blocking schema and graph errors
-- `sequence`: derive from `composition.children` order first, then by stable
-  rule rank within each child
+- `sequence`: derive from stable rule rank first, then
+  `composition.children` order for diagnostics in the same rule
 
-Suggested rule rank within each child:
+Rule rank:
 
 1. `METADATA_CHILD_NAME_LEADING_WHITESPACE`
 2. `METADATA_CHILD_NAME_TRAILING_WHITESPACE`
@@ -208,9 +217,9 @@ Why non-blocking:
 Leading whitespace is valid authored metadata today. The warning is about
 readability and future migration readiness, not schema correctness.
 
-Suggested ordering:
+Current ordering:
 
-- child-name hygiene bucket, child index order, rule rank 1
+- child-name hygiene bucket, rule rank 1, then child index order
 
 Explicit non-goals:
 
@@ -256,9 +265,9 @@ Trailing whitespace is valid authored metadata today. The warning is advisory
 and does not affect current validation, runtime, graph, or serialization
 behavior.
 
-Suggested ordering:
+Current ordering:
 
-- child-name hygiene bucket, child index order, rule rank 2
+- child-name hygiene bucket, rule rank 2, then child index order
 
 Explicit non-goals:
 
@@ -306,9 +315,9 @@ Repeated whitespace is a readability concern. It does not make the schema
 invalid and must not change resolver, runtime, graph, import/export, or adapter
 behavior.
 
-Suggested ordering:
+Current ordering:
 
-- child-name hygiene bucket, child index order, rule rank 3
+- child-name hygiene bucket, rule rank 3, then child index order
 
 Explicit non-goals:
 
@@ -355,9 +364,9 @@ Tabs and newlines are authoring hygiene risks, not current correctness
 failures. Existing imports, exports, and validation behavior must remain
 compatible.
 
-Suggested ordering:
+Current ordering:
 
-- child-name hygiene bucket, child index order, rule rank 4
+- child-name hygiene bucket, rule rank 4, then child index order
 
 Explicit non-goals:
 
@@ -403,9 +412,9 @@ No active instance paths exist. The delimiter is reserved for future planning,
 so current authored names containing `.` remain valid and import/export
 compatible.
 
-Suggested ordering:
+Current ordering:
 
-- child-name hygiene bucket, child index order, rule rank 5
+- child-name hygiene bucket, rule rank 5, then child index order
 
 Explicit non-goals:
 
@@ -453,9 +462,9 @@ The current system does not derive identity, graph keys, runtime variables,
 imports, or exports from normalized child names. This is a future readability
 and migration-readiness signal only.
 
-Suggested ordering:
+Current ordering:
 
-- child-name hygiene bucket, child index order, rule rank 6
+- child-name hygiene bucket, rule rank 6, then child index order
 
 Explicit non-goals:
 
@@ -502,9 +511,9 @@ Why non-blocking:
 Case-only differences are valid authored metadata today. The warning is a
 future compatibility signal and not a correctness failure.
 
-Suggested ordering:
+Current ordering:
 
-- child-name hygiene bucket, child index order, rule rank 7
+- child-name hygiene bucket, rule rank 7, then child index order
 
 Explicit non-goals:
 
@@ -877,8 +886,7 @@ deduplicate, or generate names.
 ## Future Activation Requirements
 
 This checkpoint defines the exact first-phase child-name hygiene codes and the
-intended opt-in helper API. Before implementing that helper, the implementation
-checkpoint should preserve these documented boundaries:
+implemented opt-in helper API. The implementation preserves these boundaries:
 
 - warnings are emitted only when the helper is called explicitly
 - the helper returns `DiagnosticEnvelope[]`

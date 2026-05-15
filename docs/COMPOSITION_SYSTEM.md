@@ -573,8 +573,8 @@ Schema validation is the `validateComponent` boundary. `validateComponent`
 remains responsible for schema correctness, including local structural checks
 and optional registry-backed child reference checks when registry context is
 explicitly provided. It should not become future-path, canonical identity, or
-future-safe child naming warning logic. Future warnings should remain separate
-and opt-in initially.
+future-safe child naming warning logic. Child-name hygiene warnings remain
+separate and opt-in.
 
 Graph validation remains component-type-only. The graph validator validates
 unknown component references, direct self-reference, and indirect
@@ -582,12 +582,14 @@ component-type cycles. It does not validate child naming hygiene, instance
 paths, canonical IDs, runtime semantics, runtime variable naming, child
 instance IDs, or adapter behavior.
 
-Metadata hygiene diagnostics are future warning-only checks. They may
-eventually report child name whitespace risks, reserved `.`, normalized sibling
-collisions, case-only sibling collisions, path-unsafe punctuation, and empty or
-ambiguous names. These warnings are non-blocking, non-mutating, and do not
-change runtime behavior, import/export behavior, resolver behavior, graph
-validation, or schema validity.
+Metadata hygiene diagnostics are warning-only checks. The isolated
+`collectChildNameHygieneDiagnostics(schema)` helper now reports first-phase
+child-name whitespace risks, reserved `.`, normalized sibling collisions, and
+case-only sibling collisions when called directly. Additional path-unsafe
+punctuation and ambiguous display warnings remain future work. These warnings
+are opt-in, non-blocking, non-mutating, and do not change runtime behavior,
+import/export behavior, resolver behavior, graph validation, or schema
+validity.
 
 Future canonical/path diagnostics may report migration-readiness risks, but
 they must not activate canonical IDs, create shadow identity, or turn names
@@ -620,9 +622,9 @@ selectively. Default mode must remain permissive.
 
 ### Future-Safe Child Naming Warnings
 
-Future-safe child naming warnings are planned as child metadata hygiene for
-`composition.children[].name`. They are not active today and do not change
-current validation behavior.
+Future-safe child naming warnings are child metadata hygiene for
+`composition.children[].name`. The first isolated helper exists, but it is not
+wired into validation flows and does not change current validation behavior.
 
 Current child naming model:
 
@@ -634,7 +636,7 @@ Current child naming model:
 - repeated child component types remain valid under different child names
 - import/export preserves authored child names
 
-Future warning candidates include:
+Implemented opt-in child-name hygiene codes cover:
 
 - reserved `.` because it is planned as the future semantic instance-path
   delimiter
@@ -643,13 +645,17 @@ Future warning candidates include:
 - tabs or newlines
 - duplicate normalized sibling names
 - case-only sibling collisions
+
+Future warning candidates still include:
+
 - punctuation-heavy or path-unsafe names
 - empty or ambiguous display names
 
 Future severity model:
 
-- this phase is documentation-only
-- a later phase may add warning-only diagnostics
+- the first child-name hygiene helper emits `warning` severity only when called
+  directly
+- warnings are not emitted by `validateComponent` or graph validation
 - hard errors should exist only after a canonical identity and path migration
   strategy exists
 - strict mode, if ever added, must be opt-in and backward-compatible
@@ -961,7 +967,7 @@ Composition integration currently does not include:
 - canonical collision enforcement
 - canonical name normalization
 - child instance IDs
-- warning-only metadata diagnostics implementation
+- warning-only metadata diagnostics wiring into validation flows
 - aggregate diagnostics behavior beyond pure coordination
 - strict mode
 - child naming validation warnings or errors
@@ -1046,7 +1052,9 @@ Completed planning documentation checkpoints:
 4. Warning-only metadata diagnostics architecture remains docs-only.
 5. Warning catalog planning remains docs-only.
 6. Child-name hygiene diagnostics API and codes planning remains docs-only.
-7. Diagnostic contract planning is superseded by isolated diagnostic contract
+7. Child-name hygiene diagnostics foundation is implemented as isolated opt-in
+   infrastructure.
+8. Diagnostic contract planning is superseded by isolated diagnostic contract
    and aggregate coordinator foundations.
 
 Future child naming work should start with warning-only metadata diagnostics.
@@ -1055,13 +1063,11 @@ and migration tooling should exist before hard errors.
 
 Recommended future diagnostics phases:
 
-1. Implement the isolated opt-in child-name hygiene diagnostics helper with
-   tests, using the planned codes and API.
-2. Add broader structured diagnostics internally while preserving legacy string
+1. Add broader structured diagnostics internally while preserving legacy string
    output.
-3. Add aggregate reporting beyond pure coordination if needed.
-4. Add migration tooling.
-5. Consider optional strict mode only after migration tooling exists.
+2. Add aggregate reporting beyond pure coordination if needed.
+3. Add migration tooling.
+4. Consider optional strict mode only after migration tooling exists.
 
 Do not continue to later phases until each earlier phase has established the
 needed compatibility boundary.

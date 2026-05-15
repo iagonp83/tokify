@@ -3,12 +3,12 @@
 This document defines the diagnostic contract and aggregate diagnostics boundary
 for Tokify.
 
-The isolated diagnostic contract and aggregate coordinator foundations now
-exist. They do not activate structured diagnostics in validators, activate
-warning collection, rewrite validators, change current string diagnostics,
-change import/export, change resolver/runtime behavior, activate canonical IDs,
-activate child instance IDs, introduce instance paths, or introduce adapter
-diagnostics.
+The isolated diagnostic contract, aggregate coordinator, and child-name hygiene
+diagnostics foundations now exist. They do not activate structured diagnostics
+in validators, activate warning collection, rewrite validators, change current
+string diagnostics, change import/export, change resolver/runtime behavior,
+activate canonical IDs, activate child instance IDs, introduce instance paths,
+or introduce adapter diagnostics.
 
 ## Current Active Model
 
@@ -20,12 +20,16 @@ Current diagnostics infrastructure:
   diagnostic envelope, helper constructors, comparison, and deterministic sort
 - `src/compiler/diagnostics/aggregateDiagnostics.ts` defines a pure aggregate
   coordinator for already-created diagnostic envelopes
+- `src/compiler/diagnostics/childNameHygieneDiagnostics.ts` defines a pure
+  opt-in producer for child-name hygiene warning envelopes
 
 Active behavior:
 
 - `validateComponent` remains schema correctness validation
 - the component graph validator remains component-type-only
-- warnings remain planned but inactive
+- warning collection remains planned but inactive in validation flows
+- `collectChildNameHygieneDiagnostics(schema)` emits structured warnings only
+  when called directly
 - structured diagnostics infrastructure exists but is not wired into validators
   or public validation APIs
 - aggregate diagnostics exists as a pure coordinator only
@@ -326,7 +330,7 @@ The diagnostic contract must preserve existing architecture boundaries:
 
 - schema validation remains separate from graph validation
 - graph validation remains component-type-only
-- metadata hygiene warnings remain advisory and opt-in when introduced
+- metadata hygiene warnings remain advisory and opt-in
 - planned warning families and exact first-phase child-name hygiene codes are
   documented in
   [`WARNING_CATALOG.md`](./WARNING_CATALOG.md)

@@ -157,15 +157,15 @@ sequence must not become child instance identity or durable path identity.
 
 ## Future-Safe Child Naming Warnings
 
-Future-safe child naming warnings are a planned metadata hygiene policy for
+Future-safe child naming warnings are a metadata hygiene policy for
 `composition.children[].name`.
 
-They are not active today. Current child names remain authored metadata. They
-are parent-scoped, preserved by import/export, and are not canonical IDs,
-runtime variable names, or active instance paths. Repeated child component
-types remain valid under different child names.
+They are not active in validation flows. Current child names remain authored
+metadata. They are parent-scoped, preserved by import/export, and are not
+canonical IDs, runtime variable names, or active instance paths. Repeated child
+component types remain valid under different child names.
 
-Future warning candidates:
+Implemented opt-in warning candidates:
 
 - reserved `.` because it is planned as the future semantic instance-path
   delimiter
@@ -174,11 +174,13 @@ Future warning candidates:
 - repeated whitespace that can create visually ambiguous names
 - tabs or newlines that can make names hard to display, diff, serialize, or
   read in diagnostics
-- duplicate normalized sibling names, such as names that match after trimming,
-  whitespace collapsing, punctuation handling, or other future display-safe
+- duplicate normalized sibling names, based on first-phase whitespace
   normalization
 - case-only sibling collisions, such as `icon` and `Icon`, where future tools
   or target systems may disagree on case sensitivity
+
+Future warning candidates:
+
 - punctuation-heavy or path-unsafe names that may be awkward for display paths,
   machine paths, files, URLs, packages, or diagnostics
 - empty or ambiguous display names that are technically present but not useful
@@ -186,8 +188,9 @@ Future warning candidates:
 
 Future severity model:
 
-- this phase is documentation-only
-- a later phase may add warning-only metadata diagnostics
+- the isolated child-name hygiene helper emits `warning` severity only when
+  called directly
+- warnings are not emitted by `validateComponent` or graph validation
 - warnings must not fail import, build, schema validation, graph validation,
   resolution, runtime emission, preview rendering, or adapter output
 - hard errors should exist only after a canonical identity and path migration
@@ -207,8 +210,9 @@ Compatibility rules:
 
 ## Warning-Only Metadata Diagnostics Architecture
 
-Warning-only metadata diagnostics are future planning only. They do not exist
-as active behavior yet.
+Warning-only metadata diagnostics remain opt-in and inactive in validation
+flows. The isolated child-name hygiene helper exists, but it only emits
+structured warnings when called directly.
 
 The diagnostic envelope and aggregate diagnostics boundary are documented in
 [`DIAGNOSTIC_CONTRACT.md`](./DIAGNOSTIC_CONTRACT.md).
@@ -238,8 +242,8 @@ registry-backed child reference checks when explicit registry context is
 provided.
 
 `validateComponent` should not become future-path, canonical identity, or
-future-safe naming warning logic. Future warnings should remain separate and
-opt-in initially.
+future-safe naming warning logic. Child-name hygiene warnings remain separate
+and opt-in.
 
 Schema validation errors affect schema validity. Future metadata warnings do
 not.
@@ -269,15 +273,18 @@ warnings are metadata hygiene, not graph traversal.
 
 ### Metadata Hygiene Diagnostics Layer
 
-Metadata hygiene diagnostics are future warning-only checks for authored
-metadata that remains valid but may be risky for future tooling.
+Metadata hygiene diagnostics are warning-only checks for authored metadata
+that remains valid but may be risky for future tooling.
 
-Future warning categories include:
+The implemented opt-in child-name hygiene helper covers:
 
 - child name whitespace risks
 - reserved `.`
 - normalized sibling collisions
 - case-only sibling collisions
+
+Future warning categories still include:
+
 - path-unsafe punctuation
 - empty or ambiguous names
 
@@ -645,9 +652,9 @@ Recommended sequence:
    risks.
 4. Keep the diagnostic contract and aggregate coordinator isolated from
    validators, runtime, resolver, and import/export behavior.
-5. Later, implement the isolated opt-in child-name hygiene diagnostics helper
-   with tests, using the planned codes and API, without changing schema
-   validity, graph validation, runtime behavior, import/export, or adapters.
+5. The isolated opt-in child-name hygiene diagnostics helper is implemented
+   with tests and remains unwired from schema validity, graph validation,
+   runtime behavior, import/export, and adapters.
 6. Later, add broader structured diagnostics internally while preserving legacy
    string output.
 7. Later, add optional aggregate reporting beyond pure coordination without

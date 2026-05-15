@@ -34,6 +34,7 @@ Current stabilized areas:
 - Warning-only Metadata Diagnostics Architecture Documentation Checkpoint
 - Warning Catalog Planning Documentation Checkpoint
 - Child Name Hygiene Diagnostics API & Codes Planning Checkpoint
+- Child Name Hygiene Diagnostics Foundation
 - Diagnostic Contract Planning Documentation Checkpoint
 - Diagnostic Contract Foundation
 - Diagnostic Aggregate Coordinator Foundation
@@ -75,6 +76,8 @@ Automated regression tests cover:
   kept separate
 - stable diagnostic envelope creation and deterministic diagnostic sorting
 - pure diagnostic aggregate coordination for already-created diagnostics
+- isolated opt-in child-name hygiene diagnostics for first-phase structured
+  warning envelopes
 
 ## Component Model Structure
 
@@ -317,30 +320,32 @@ The planned warning catalog is documented in:
 docs/WARNING_CATALOG.md
 ```
 
-That checkpoint is documentation-only. It defines future warning families for
-metadata hygiene and canonical/path readiness, likely diagnostic code families,
-likely authored-data path targets, warning severity expectations,
-non-blocking rationale, and explicit non-goals. It does not add warning
-helpers, warning producers, validator wiring, graph validation wiring, strict
-mode, canonical IDs, child instance IDs, instance paths, path-derived runtime
+That checkpoint defines warning families for metadata hygiene and
+canonical/path readiness, diagnostic code families, authored-data path targets,
+warning severity expectations, non-blocking rationale, and explicit non-goals.
+It does not activate validator wiring, graph validation wiring, strict mode,
+canonical IDs, child instance IDs, instance paths, path-derived runtime
 variables, or public behavior changes.
 
-The Child Name Hygiene Diagnostics API & Codes Planning checkpoint defines the
-first implementable warning producer boundary without implementing it. The
-planned future helper is:
-
-```ts
-collectChildNameHygieneDiagnostics(schema: ComponentSchema): DiagnosticEnvelope[]
-```
-
-The likely future files are:
+The isolated Child Name Hygiene Diagnostics Foundation now exists in:
 
 ```txt
 src/compiler/diagnostics/childNameHygieneDiagnostics.ts
 src/compiler/diagnostics/childNameHygieneDiagnostics.test.ts
 ```
 
-The exact first-phase planned codes are:
+It exposes:
+
+```ts
+collectChildNameHygieneDiagnostics(schema: ComponentSchema): DiagnosticEnvelope[]
+```
+
+The helper is pure and opt-in. It emits structured `DiagnosticEnvelope`
+warnings only when called directly, returns no strings, does not mutate input,
+does not call `validateComponent`, does not call the graph validator, and does
+not call `aggregateDiagnostics` internally.
+
+The implemented first-phase codes are:
 
 - `METADATA_CHILD_NAME_LEADING_WHITESPACE`
 - `METADATA_CHILD_NAME_TRAILING_WHITESPACE`
@@ -350,13 +355,18 @@ The exact first-phase planned codes are:
 - `METADATA_CHILD_NAME_CASE_COLLISION`
 - `PATH_CHILD_NAME_RESERVED_DELIMITER`
 
-The planned helper remains pure and opt-in. It should return already-created
-`DiagnosticEnvelope` objects, use `severity: warning`, use `layer: schema`
-under the current `DiagnosticLayer` contract, and use
-`source.name: childNameHygiene`. It must not return strings, call
-`validateComponent`, call the graph validator, call `aggregateDiagnostics`
-internally by default, mutate input, inspect resolver/runtime/import-export
-state, or change public behavior.
+The helper uses `severity: warning`, `layer: schema`, and
+`source.name: childNameHygiene`. Diagnostic paths target authored schema
+metadata at:
+
+```txt
+["composition", "children", childIndex, "name"]
+```
+
+It does not inspect resolver output, runtime output, `runtimePlan`, runtime
+emission, import/export payloads, `PreviewCanvas`, adapters, DOM, React, CSS
+selectors, generated files, canonical IDs, child instance IDs, instance paths,
+or path-derived runtime variables.
 
 Warnings must not fail import, build, schema validation, graph validation,
 resolution, runtime emission, preview rendering, or adapter output. Hard errors
@@ -392,19 +402,20 @@ Validators own rules. Aggregate diagnostics may coordinate output, but must not
 become monolithic validation logic.
 
 `validateComponent` remains schema correctness validation. It should not become
-future-path, canonical identity, or future-safe naming warning logic. Future
-warnings should remain separate and opt-in initially.
+future-path, canonical identity, or future-safe naming warning logic.
+Child-name hygiene warnings remain separate and opt-in.
 
 The graph validator remains component-type-only. It validates unknown component
 references, direct self-reference, and indirect component-type cycles. It does
 not validate child naming hygiene, instance paths, canonical IDs, runtime
 semantics, or runtime variable naming.
 
-Metadata warning diagnostics are future child metadata hygiene only. Future
-warning categories may include child name whitespace risks, reserved `.`,
-normalized sibling collisions, case-only collisions, path-unsafe punctuation,
-and empty or ambiguous names. Warnings are non-blocking, non-mutating, do not
-change runtime behavior, and do not affect schema validity.
+Metadata warning diagnostics are child metadata hygiene only. The isolated
+child-name hygiene helper covers whitespace risks, reserved `.`, normalized
+sibling collisions, and case-only collisions. Path-unsafe punctuation and empty
+or ambiguous display-name warnings remain future work. Warnings are
+non-blocking, non-mutating, do not change runtime behavior, and do not affect
+schema validity.
 
 Future canonical/path warnings must not activate canonical IDs, create shadow
 identity, or make names identity. Names remain human-authored labels, and paths
@@ -469,13 +480,14 @@ canonical IDs, child instance IDs, or instance paths.
 
 Current validators remain unchanged. `validateComponent` remains schema
 correctness validation, the component graph validator remains
-component-type-only, warning-only metadata diagnostics remain planned but
-inactive, aggregate diagnostics remain coordinator-only, current string
-diagnostics remain backward-compatible, and no public behavior changed.
+component-type-only, warning collection remains opt-in and inactive in
+validation flows, aggregate diagnostics remain coordinator-only, current
+string diagnostics remain backward-compatible, and no public behavior changed.
 
 Current severity values are `error`, `warning`, and `info`. Severity does not
-imply runtime behavior. Warnings are non-blocking by default and remain inactive
-until a later explicit warning producer is introduced.
+imply runtime behavior. Warnings are non-blocking by default and are emitted
+only by opt-in helper calls unless a later explicit collection API is
+introduced.
 
 Future diagnostic codes should be stable, namespaced, and machine-facing. Codes
 must not contain dynamic values, must not be reused for different meanings, and
@@ -1384,7 +1396,7 @@ planning or architecture audits before implementation:
 - canonicalization rules
 - escaping rules
 - safe-name and diagnostic helper boundaries
-- future-safe child naming warning diagnostics
+- validator-integrated child naming warning diagnostics
 - diagnostic code taxonomy
 - opt-in warning collection
 - diagnostic migration from legacy strings
@@ -1416,9 +1428,10 @@ planning or architecture audits before implementation:
 - No persisted canonical component IDs or child instance IDs.
 - No canonical name normalization.
 - No canonical validation warnings or errors.
-- No child naming warning diagnostics yet.
+- No child naming warning diagnostics wired into validation flows.
 - No child naming validation errors.
-- No warning-only metadata diagnostics implementation.
+- No warning collection or public validation warning API.
+- No warning producers beyond the isolated opt-in child-name hygiene helper.
 - No diagnostic wiring into validators or public validation APIs.
 - No aggregate diagnostics behavior beyond pure coordination.
 - No diagnostic migration from strings.
@@ -1457,11 +1470,11 @@ mode only after a migration policy, with migration tooling before hard errors.
 The warning-only metadata diagnostics architecture checkpoint is
 documentation-only. The warning catalog planning checkpoint is also
 documentation-only, and the child-name hygiene API and codes planning
-checkpoint is documentation-only. Future work should proceed through an
-isolated opt-in child-name hygiene helper implementation with tests,
-structured diagnostics internally while preserving legacy string output,
-migration reporting and tooling, aggregate reporting beyond pure coordination
-if needed, and only then optional strict mode.
+checkpoint is documentation-only. The isolated child-name hygiene diagnostics
+foundation is implemented but remains opt-in and unwired. Future work should
+proceed through broader structured diagnostics internally while preserving
+legacy string output, migration reporting and tooling, aggregate reporting
+beyond pure coordination if needed, and only then optional strict mode.
 
 The diagnostic contract and aggregate coordinator foundations are closed as
 isolated infrastructure. Future work should proceed through structured
