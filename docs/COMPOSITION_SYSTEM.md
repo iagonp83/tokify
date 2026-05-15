@@ -1045,7 +1045,8 @@ Completed planning documentation checkpoints:
 3. Future-safe child naming warning policy remains docs-only.
 4. Warning-only metadata diagnostics architecture remains docs-only.
 5. Warning catalog planning remains docs-only.
-6. Diagnostic contract planning is superseded by isolated diagnostic contract
+6. Child-name hygiene diagnostics API and codes planning remains docs-only.
+7. Diagnostic contract planning is superseded by isolated diagnostic contract
    and aggregate coordinator foundations.
 
 Future child naming work should start with warning-only metadata diagnostics.
@@ -1054,8 +1055,10 @@ and migration tooling should exist before hard errors.
 
 Recommended future diagnostics phases:
 
-1. Add structured diagnostics internally while preserving legacy string output.
-2. Add opt-in warning collection based on the planned warning catalog.
+1. Implement the isolated opt-in child-name hygiene diagnostics helper with
+   tests, using the planned codes and API.
+2. Add broader structured diagnostics internally while preserving legacy string
+   output.
 3. Add aggregate reporting beyond pure coordination if needed.
 4. Add migration tooling.
 5. Consider optional strict mode only after migration tooling exists.

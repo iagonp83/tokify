@@ -327,7 +327,8 @@ The diagnostic contract must preserve existing architecture boundaries:
 - schema validation remains separate from graph validation
 - graph validation remains component-type-only
 - metadata hygiene warnings remain advisory and opt-in when introduced
-- planned warning families are documented in
+- planned warning families and exact first-phase child-name hygiene codes are
+  documented in
   [`WARNING_CATALOG.md`](./WARNING_CATALOG.md)
 - canonical identity remains inactive
 - child instance IDs remain inactive

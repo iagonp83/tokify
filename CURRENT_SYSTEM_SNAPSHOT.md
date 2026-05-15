@@ -33,6 +33,7 @@ Current stabilized areas:
 - Future-safe Child Naming Warnings Planning Documentation Checkpoint
 - Warning-only Metadata Diagnostics Architecture Documentation Checkpoint
 - Warning Catalog Planning Documentation Checkpoint
+- Child Name Hygiene Diagnostics API & Codes Planning Checkpoint
 - Diagnostic Contract Planning Documentation Checkpoint
 - Diagnostic Contract Foundation
 - Diagnostic Aggregate Coordinator Foundation
@@ -323,6 +324,39 @@ non-blocking rationale, and explicit non-goals. It does not add warning
 helpers, warning producers, validator wiring, graph validation wiring, strict
 mode, canonical IDs, child instance IDs, instance paths, path-derived runtime
 variables, or public behavior changes.
+
+The Child Name Hygiene Diagnostics API & Codes Planning checkpoint defines the
+first implementable warning producer boundary without implementing it. The
+planned future helper is:
+
+```ts
+collectChildNameHygieneDiagnostics(schema: ComponentSchema): DiagnosticEnvelope[]
+```
+
+The likely future files are:
+
+```txt
+src/compiler/diagnostics/childNameHygieneDiagnostics.ts
+src/compiler/diagnostics/childNameHygieneDiagnostics.test.ts
+```
+
+The exact first-phase planned codes are:
+
+- `METADATA_CHILD_NAME_LEADING_WHITESPACE`
+- `METADATA_CHILD_NAME_TRAILING_WHITESPACE`
+- `METADATA_CHILD_NAME_REPEATED_WHITESPACE`
+- `METADATA_CHILD_NAME_TAB_OR_NEWLINE`
+- `METADATA_CHILD_NAME_NORMALIZED_COLLISION`
+- `METADATA_CHILD_NAME_CASE_COLLISION`
+- `PATH_CHILD_NAME_RESERVED_DELIMITER`
+
+The planned helper remains pure and opt-in. It should return already-created
+`DiagnosticEnvelope` objects, use `severity: warning`, use `layer: schema`
+under the current `DiagnosticLayer` contract, and use
+`source.name: childNameHygiene`. It must not return strings, call
+`validateComponent`, call the graph validator, call `aggregateDiagnostics`
+internally by default, mutate input, inspect resolver/runtime/import-export
+state, or change public behavior.
 
 Warnings must not fail import, build, schema validation, graph validation,
 resolution, runtime emission, preview rendering, or adapter output. Hard errors
@@ -1422,9 +1456,12 @@ mode only after a migration policy, with migration tooling before hard errors.
 
 The warning-only metadata diagnostics architecture checkpoint is
 documentation-only. The warning catalog planning checkpoint is also
-documentation-only. Future work should proceed through opt-in warning
-collection, migration reporting and tooling, aggregate reporting beyond pure
-coordination if needed, and only then optional strict mode.
+documentation-only, and the child-name hygiene API and codes planning
+checkpoint is documentation-only. Future work should proceed through an
+isolated opt-in child-name hygiene helper implementation with tests,
+structured diagnostics internally while preserving legacy string output,
+migration reporting and tooling, aggregate reporting beyond pure coordination
+if needed, and only then optional strict mode.
 
 The diagnostic contract and aggregate coordinator foundations are closed as
 isolated infrastructure. Future work should proceed through structured

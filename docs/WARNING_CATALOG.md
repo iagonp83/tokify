@@ -57,16 +57,477 @@ Warnings are advisory migration and readability signals. They must not:
 
 ## Code Family Conventions
 
-Exact diagnostic codes remain future work. Likely code families should be
-stable, machine-facing, and namespaced by domain:
+Exact first-phase child-name hygiene diagnostic codes are planned below.
+Additional future codes remain future work. Code families should be stable,
+machine-facing, and namespaced by domain:
 
 - `METADATA_CHILD_NAME_*` for child metadata hygiene
 - `PATH_CHILD_NAME_*` for future path-readiness warnings
 - `CANONICAL_CHILD_NAME_*` for future canonical-readiness warnings
 - `COMPAT_CHILD_NAME_*` for compatibility or migration-readiness warnings
 
-These families are planning labels only. They do not create active warning
-producers.
+These families are planning labels except where exact first-phase codes are
+listed in this document. They do not create active warning producers.
+
+## First Implementable Producer: Child Name Hygiene
+
+This section defines the first planned warning producer boundary before any
+implementation exists.
+
+Likely future file:
+
+```txt
+src/compiler/diagnostics/childNameHygieneDiagnostics.ts
+```
+
+Likely future test file:
+
+```txt
+src/compiler/diagnostics/childNameHygieneDiagnostics.test.ts
+```
+
+Likely future API:
+
+```ts
+collectChildNameHygieneDiagnostics(schema: ComponentSchema): DiagnosticEnvelope[]
+```
+
+The first implementation should be pure and opt-in. It should accept a
+`ComponentSchema`; a later refactor may accept a smaller schema-like child
+metadata input only if that keeps the helper independent from validators,
+runtime, resolver, import/export, and adapters.
+
+The helper should return already-created `DiagnosticEnvelope` objects. It
+should not mutate input, return strings, call `validateComponent`, call the
+component graph validator, or call `aggregateDiagnostics` internally unless a
+later checkpoint explicitly justifies that dependency.
+
+It should not inspect resolver output, token resolver output, `runtimePlan`,
+runtime emission, preview runtime consumption, `PreviewCanvas`, import/export
+payloads, adapters, DOM, React output, CSS selectors, generated files, or
+runtime variable names.
+
+### First-Phase Layer And Source
+
+Current `DiagnosticLayer` values do not include a dedicated `metadata` layer.
+The first child-name hygiene producer should therefore use:
+
+- `layer`: `schema`
+- `source.name`: `childNameHygiene`
+- `severity`: `warning`
+
+The `schema` layer here means the authored schema is the data being inspected.
+It does not mean `validateComponent` owns the rules, and it does not make these
+warnings schema validity failures. The `source.name` field preserves the
+separate rule owner.
+
+### First-Phase Ordering Strategy
+
+Ordering should be deterministic and should use `sortDiagnostics` after the
+helper returns envelopes to any caller.
+
+Suggested first-phase `order` strategy:
+
+- `bucket`: use one stable child-name hygiene warning bucket, separate from
+  blocking schema and graph errors
+- `sequence`: derive from `composition.children` order first, then by stable
+  rule rank within each child
+
+Suggested rule rank within each child:
+
+1. `METADATA_CHILD_NAME_LEADING_WHITESPACE`
+2. `METADATA_CHILD_NAME_TRAILING_WHITESPACE`
+3. `METADATA_CHILD_NAME_REPEATED_WHITESPACE`
+4. `METADATA_CHILD_NAME_TAB_OR_NEWLINE`
+5. `PATH_CHILD_NAME_RESERVED_DELIMITER`
+6. `METADATA_CHILD_NAME_NORMALIZED_COLLISION`
+7. `METADATA_CHILD_NAME_CASE_COLLISION`
+
+Sibling collision diagnostics should point at each affected child name rather
+than only producing a parent-level summary. If a future reporter adds summaries,
+that should be additive and should not replace child-targeted diagnostics.
+
+### First-Phase Normalization Semantics
+
+Whitespace-normalized sibling collision detection should use only this
+normalization:
+
+1. trim leading and trailing whitespace
+2. collapse each internal whitespace run to a single ASCII space
+
+This normalization is for comparison only. It must not rewrite source data,
+change import/export behavior, change displayed names, or produce canonical
+IDs.
+
+Case-only sibling collision detection should be separate from whitespace
+normalization. The first phase should compare exact authored strings with a
+conservative case-insensitive comparison after ruling out exact equality. It
+should not lowercase authored names as source data.
+
+Unicode case-folding should be conservative in the first phase. If the first
+implementation relies on JavaScript case conversion, the docs and tests should
+avoid claiming full locale-aware or Unicode-normalization behavior. Unicode
+normalization, locale-specific casing, accent folding, transliteration, and
+slugification are deferred.
+
+### Exact First-Phase Codes
+
+#### METADATA_CHILD_NAME_LEADING_WHITESPACE
+
+Purpose:
+
+Warn when a child name starts with whitespace that may be invisible or hard to
+notice in diagnostics, review, future display paths, or migration reports.
+
+Trigger condition:
+
+- `composition.children[childIndex].name` begins with whitespace
+
+Authored-data path target:
+
+- `["composition", "children", childIndex, "name"]`
+
+Severity:
+
+- `warning`
+
+Layer:
+
+- `schema`
+
+Source:
+
+- `childNameHygiene`
+
+Classification:
+
+- metadata hygiene
+
+Why non-blocking:
+
+Leading whitespace is valid authored metadata today. The warning is about
+readability and future migration readiness, not schema correctness.
+
+Suggested ordering:
+
+- child-name hygiene bucket, child index order, rule rank 1
+
+Explicit non-goals:
+
+- do not trim the name
+- do not fail validation
+- do not change import/export
+- do not infer identity
+
+#### METADATA_CHILD_NAME_TRAILING_WHITESPACE
+
+Purpose:
+
+Warn when a child name ends with whitespace that may be invisible or hard to
+notice in diagnostics, review, future display paths, or migration reports.
+
+Trigger condition:
+
+- `composition.children[childIndex].name` ends with whitespace
+
+Authored-data path target:
+
+- `["composition", "children", childIndex, "name"]`
+
+Severity:
+
+- `warning`
+
+Layer:
+
+- `schema`
+
+Source:
+
+- `childNameHygiene`
+
+Classification:
+
+- metadata hygiene
+
+Why non-blocking:
+
+Trailing whitespace is valid authored metadata today. The warning is advisory
+and does not affect current validation, runtime, graph, or serialization
+behavior.
+
+Suggested ordering:
+
+- child-name hygiene bucket, child index order, rule rank 2
+
+Explicit non-goals:
+
+- do not trim the name
+- do not fail validation
+- do not change import/export
+- do not create canonical names
+
+#### METADATA_CHILD_NAME_REPEATED_WHITESPACE
+
+Purpose:
+
+Warn when a child name contains repeated internal whitespace runs that may make
+names visually ambiguous or collision-prone in future display paths and
+migration reports.
+
+Trigger condition:
+
+- `composition.children[childIndex].name` contains an internal whitespace run
+  of two or more whitespace characters
+
+Authored-data path target:
+
+- `["composition", "children", childIndex, "name"]`
+
+Severity:
+
+- `warning`
+
+Layer:
+
+- `schema`
+
+Source:
+
+- `childNameHygiene`
+
+Classification:
+
+- metadata hygiene
+
+Why non-blocking:
+
+Repeated whitespace is a readability concern. It does not make the schema
+invalid and must not change resolver, runtime, graph, import/export, or adapter
+behavior.
+
+Suggested ordering:
+
+- child-name hygiene bucket, child index order, rule rank 3
+
+Explicit non-goals:
+
+- do not collapse whitespace in source data
+- do not change current string diagnostics
+- do not introduce strict mode
+- do not reinterpret whitespace as path syntax
+
+#### METADATA_CHILD_NAME_TAB_OR_NEWLINE
+
+Purpose:
+
+Warn when a child name includes tabs or line breaks that may be difficult to
+see, render, compare, or report consistently.
+
+Trigger condition:
+
+- `composition.children[childIndex].name` contains a tab, carriage return, or
+  newline
+
+Authored-data path target:
+
+- `["composition", "children", childIndex, "name"]`
+
+Severity:
+
+- `warning`
+
+Layer:
+
+- `schema`
+
+Source:
+
+- `childNameHygiene`
+
+Classification:
+
+- metadata hygiene
+
+Why non-blocking:
+
+Tabs and newlines are authoring hygiene risks, not current correctness
+failures. Existing imports, exports, and validation behavior must remain
+compatible.
+
+Suggested ordering:
+
+- child-name hygiene bucket, child index order, rule rank 4
+
+Explicit non-goals:
+
+- do not rewrite tabs or newlines
+- do not reject imported data
+- do not change schema validity
+- do not generate replacement names
+
+#### PATH_CHILD_NAME_RESERVED_DELIMITER
+
+Purpose:
+
+Warn when a child name contains `.` because `.` is reserved as the planned
+future semantic instance-path delimiter.
+
+Trigger condition:
+
+- `composition.children[childIndex].name` contains `.`
+
+Authored-data path target:
+
+- `["composition", "children", childIndex, "name"]`
+
+Severity:
+
+- `warning`
+
+Layer:
+
+- `schema`
+
+Source:
+
+- `childNameHygiene`
+
+Classification:
+
+- path readiness
+
+Why non-blocking:
+
+No active instance paths exist. The delimiter is reserved for future planning,
+so current authored names containing `.` remain valid and import/export
+compatible.
+
+Suggested ordering:
+
+- child-name hygiene bucket, child index order, rule rank 5
+
+Explicit non-goals:
+
+- do not introduce instance paths
+- do not treat `.` as active runtime semantics
+- do not rewrite `.` on import or export
+- do not make delimiter warnings hard errors
+
+#### METADATA_CHILD_NAME_NORMALIZED_COLLISION
+
+Purpose:
+
+Warn when sibling child names collide after first-phase whitespace
+normalization, which means trimming leading/trailing whitespace and collapsing
+internal whitespace runs to a single ASCII space.
+
+Trigger condition:
+
+- two or more siblings under the same `composition.children` array have
+  different authored names but the same first-phase whitespace-normalized name
+
+Authored-data path target:
+
+- `["composition", "children", childIndex, "name"]` for each affected sibling
+
+Severity:
+
+- `warning`
+
+Layer:
+
+- `schema`
+
+Source:
+
+- `childNameHygiene`
+
+Classification:
+
+- metadata hygiene
+
+Why non-blocking:
+
+The current system does not derive identity, graph keys, runtime variables,
+imports, or exports from normalized child names. This is a future readability
+and migration-readiness signal only.
+
+Suggested ordering:
+
+- child-name hygiene bucket, child index order, rule rank 6
+
+Explicit non-goals:
+
+- do not create canonical normalization
+- do not rewrite or merge siblings
+- do not reject current schemas
+- do not alter graph traversal
+- do not change import/export payloads
+
+#### METADATA_CHILD_NAME_CASE_COLLISION
+
+Purpose:
+
+Warn when sibling child names differ only by case under the first-phase
+case-insensitive comparison.
+
+Trigger condition:
+
+- two or more siblings under the same `composition.children` array have
+  different authored names but the same conservative case-insensitive form
+
+Authored-data path target:
+
+- `["composition", "children", childIndex, "name"]` for each affected sibling
+
+Severity:
+
+- `warning`
+
+Layer:
+
+- `schema`
+
+Source:
+
+- `childNameHygiene`
+
+Classification:
+
+- metadata hygiene
+
+Why non-blocking:
+
+Case-only differences are valid authored metadata today. The warning is a
+future compatibility signal and not a correctness failure.
+
+Suggested ordering:
+
+- child-name hygiene bucket, child index order, rule rank 7
+
+Explicit non-goals:
+
+- do not lowercase authored names
+- do not introduce locale-specific casing rules in the first phase
+- do not make names identity
+- do not block import/export
+- do not introduce adapter-specific file-system rules in core
+
+### Deferred Codes
+
+These codes remain deferred until a later checkpoint decides they are precise
+and safe enough to implement:
+
+- `PATH_CHILD_NAME_UNSAFE_CHARACTER`
+- `PATH_CHILD_NAME_PUNCTUATION_RISK`
+- `METADATA_CHILD_NAME_AMBIGUOUS_DISPLAY`
+- `CANONICAL_CHILD_NAME_MIGRATION_RISK`
+- `PATH_CHILD_NAME_MIGRATION_RISK`
+- `COMPAT_CHILD_NAME_LEGACY_RISK`
+
+The deferred codes need tighter trigger conditions before implementation.
+They should not be smuggled into the first child-name hygiene producer.
 
 ## Planned Warning Families
 
@@ -415,14 +876,24 @@ deduplicate, or generate names.
 
 ## Future Activation Requirements
 
-Before any warning producer is implemented, a later checkpoint should define:
+This checkpoint defines the exact first-phase child-name hygiene codes and the
+intended opt-in helper API. Before implementing that helper, the implementation
+checkpoint should preserve these documented boundaries:
+
+- warnings are emitted only when the helper is called explicitly
+- the helper returns `DiagnosticEnvelope[]`
+- legacy string diagnostics remain backward-compatible
+- aggregate diagnostics receives already-created warning envelopes only from
+  callers
+
+Before any additional warning producer or deferred code is implemented, a later
+checkpoint should define:
 
 - the exact diagnostic codes
-- the opt-in collection API, if any
+- the exact opt-in collection API, if different from the first helper
 - whether warnings are emitted internally, surfaced to users, or both
-- how legacy string diagnostics remain backward-compatible
-- how aggregate diagnostics receives already-created warning envelopes
 - migration messaging for canonical/path readiness
+- any aggregate reporting needs beyond pure coordination
 
 Strict mode is out of scope. If it is ever considered, it must come after
 warning-only diagnostics, migration reporting, migration tooling, and an

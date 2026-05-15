@@ -645,11 +645,11 @@ Recommended sequence:
    risks.
 4. Keep the diagnostic contract and aggregate coordinator isolated from
    validators, runtime, resolver, and import/export behavior.
-5. Later, add structured diagnostics internally while preserving legacy string
-   output.
-6. Later, add opt-in warning collection based on the planned warning catalog
-   without changing schema validity,
-   graph validation, runtime behavior, import/export, or adapters.
+5. Later, implement the isolated opt-in child-name hygiene diagnostics helper
+   with tests, using the planned codes and API, without changing schema
+   validity, graph validation, runtime behavior, import/export, or adapters.
+6. Later, add broader structured diagnostics internally while preserving legacy
+   string output.
 7. Later, add optional aggregate reporting beyond pure coordination without
    owning validator rules.
 8. Later, add migration tooling before hard errors.
