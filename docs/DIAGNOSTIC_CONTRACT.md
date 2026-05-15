@@ -3,12 +3,12 @@
 This document defines the diagnostic contract and aggregate diagnostics boundary
 for Tokify.
 
-The isolated diagnostic contract, aggregate coordinator, and child-name hygiene
-diagnostics foundations now exist. They do not activate structured diagnostics
-in validators, activate warning collection, rewrite validators, change current
-string diagnostics, change import/export, change resolver/runtime behavior,
-activate canonical IDs, activate child instance IDs, introduce instance paths,
-or introduce adapter diagnostics.
+The isolated diagnostic contract, aggregate coordinator, child-name hygiene
+diagnostics, and legacy formatter foundations now exist. They do not activate
+structured diagnostics in validators, activate warning collection, rewrite
+validators, change current string diagnostics, change import/export, change
+resolver/runtime behavior, activate canonical IDs, activate child instance IDs,
+introduce instance paths, or introduce adapter diagnostics.
 
 ## Current Active Model
 
@@ -22,6 +22,8 @@ Current diagnostics infrastructure:
   coordinator for already-created diagnostic envelopes
 - `src/compiler/diagnostics/childNameHygieneDiagnostics.ts` defines a pure
   opt-in producer for child-name hygiene warning envelopes
+- `src/compiler/diagnostics/legacyDiagnosticFormatter.ts` defines a pure
+  formatter from structured diagnostic envelopes to legacy strings
 
 Active behavior:
 
@@ -33,6 +35,7 @@ Active behavior:
 - structured diagnostics infrastructure exists but is not wired into validators
   or public validation APIs
 - aggregate diagnostics exists as a pure coordinator only
+- the legacy formatter exists as compatibility infrastructure only
 - current string diagnostics remain backward-compatible
 - existing validation APIs remain valid
 - no public behavior changes because of the diagnostics infrastructure
@@ -278,12 +281,25 @@ Migration principles:
 - structured diagnostics should be additive when introduced
 - do not rewrite messages and introduce structure in the same risky migration
 - existing tests should not break due to diagnostic migration
-- legacy string rendering may later be produced from structured diagnostics
+- legacy string rendering is available from structured diagnostics through the
+  isolated formatter boundary
 - existing callers that consume strings should keep working during migration
 - new structured diagnostics should preserve enough information to render the
   legacy string shape where needed
 - envelope-to-string formatting is the intended compatibility path
 - string-to-envelope reconstruction is intentionally rejected
+
+The current compatibility formatter exposes:
+
+```ts
+formatDiagnosticAsLegacyString(diagnostic)
+formatDiagnosticsAsLegacyStrings(diagnostics)
+```
+
+Current legacy formatting returns exactly `diagnostic.message`. It ignores
+severity, code, path, layer, source, order metadata, and suggestions. Batch
+formatting preserves input order, does not sort, does not mutate diagnostics,
+returns a new array, and returns `[]` for empty input.
 
 A safe migration path may introduce internal structured diagnostics first, then
 render current string diagnostics from that structure. That migration should be
@@ -351,18 +367,17 @@ Shared diagnostic formatting does not imply shared rule ownership.
 
 Recommended order:
 
-1. Keep the implemented diagnostic contract and aggregate coordinator isolated
-   from validator/runtime/resolver/import-export behavior.
-2. Later, add formatter foundation for `DiagnosticEnvelope` to legacy strings.
-3. Later, add formatter parity tests for existing legacy strings.
-4. Later, migrate one validator or rule family internally while preserving
+1. Keep the implemented diagnostic contract, aggregate coordinator, and legacy
+   formatter isolated from validator/runtime/resolver/import-export behavior.
+2. Later, add formatter parity tests for existing legacy strings.
+3. Later, migrate one validator or rule family internally while preserving
    public return shape and legacy string output.
-5. Later, add opt-in warning collection for metadata hygiene.
-6. Later, add aggregate reporting for collection, normalization, rendering, or
+4. Later, add opt-in warning collection for metadata hygiene.
+5. Later, add aggregate reporting for collection, normalization, rendering, or
    legacy string adaptation if a caller needs one combined result.
-7. Later, add optional structured public APIs.
-8. Later, add migration reporting for canonical/path readiness.
-9. Later, consider optional strict mode only after migration tooling exists.
+6. Later, add optional structured public APIs.
+7. Later, add migration reporting for canonical/path readiness.
+8. Later, consider optional strict mode only after migration tooling exists.
 
 Each phase should be additive and should avoid changing validator rules while
 changing diagnostic representation.
@@ -375,6 +390,7 @@ This checkpoint does not introduce:
 - graph validator rewrites
 - warning activation
 - diagnostic wiring into validators or public validation APIs
+- formatter wiring into validators or public validation APIs
 - aggregate diagnostics behavior beyond pure coordination
 - import/export changes
 - resolver changes

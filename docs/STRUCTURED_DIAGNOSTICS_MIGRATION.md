@@ -3,12 +3,12 @@
 This document defines the migration plan from legacy string diagnostics to
 internal structured `DiagnosticEnvelope` diagnostics.
 
-This is a documentation-only checkpoint. It does not add source code, tests,
-formatters, validator migrations, validator wiring, public validation APIs,
-runtime behavior, resolver behavior, `runtimePlan` behavior, runtime emission,
-import/export behavior, `PreviewCanvas` behavior, canonical IDs, child instance
-IDs, instance paths, path-derived runtime variables, strict mode, or blocking
-warnings.
+The isolated legacy formatter foundation now exists as compatibility
+infrastructure. This plan still does not introduce validator migrations,
+validator wiring, public validation APIs, runtime behavior, resolver behavior,
+`runtimePlan` behavior, runtime emission, import/export behavior,
+`PreviewCanvas` behavior, canonical IDs, child instance IDs, instance paths,
+path-derived runtime variables, strict mode, or blocking warnings.
 
 ## Current Boundary
 
@@ -18,6 +18,8 @@ Current public validator behavior remains legacy-compatible:
 - the component graph validator returns its current legacy string diagnostics
 - warning diagnostics remain opt-in and non-blocking
 - aggregate diagnostics remains coordinator-only
+- the legacy formatter exists, but is not wired into validators or public
+  validation APIs
 
 Structured diagnostics are an internal migration layer first. They should make
 diagnostics easier to sort, format, test, and aggregate without changing public
@@ -40,6 +42,19 @@ Rule producers must not format public strings directly once migrated.
 Formatters must not own validation rules. Renderers must not infer validation
 meaning. Aggregate diagnostics must not invoke validators or mutate envelopes.
 
+The current formatter layer is implemented in:
+
+```txt
+src/compiler/diagnostics/legacyDiagnosticFormatter.ts
+```
+
+It exposes:
+
+```ts
+formatDiagnosticAsLegacyString(diagnostic)
+formatDiagnosticsAsLegacyStrings(diagnostics)
+```
+
 ## Compatibility Strategy
 
 Legacy string diagnostics remain the public compatibility contract during
@@ -59,6 +74,12 @@ During migration, a validator may internally produce envelopes and immediately
 format them back to the exact legacy strings expected by existing callers.
 Only after parity is proven should the validator's internals switch fully to
 structured production.
+
+The current legacy formatter maps each `DiagnosticEnvelope` to exactly
+`diagnostic.message`. It intentionally ignores severity, code, path, layer,
+source, order metadata, and suggestions. Batch formatting preserves input
+order, does not sort, does not mutate input diagnostics, returns a new array,
+and returns `[]` for empty input.
 
 ## Validator Ownership
 
@@ -101,6 +122,13 @@ Formatting belongs to a dedicated formatter layer. Formatters convert
 must preserve legacy string parity during migration and should not mutate
 diagnostics or input schemas.
 
+The current legacy formatter is pure compatibility infrastructure. It performs
+`DiagnosticEnvelope -> legacy string` conversion only. It does not parse legacy
+strings, reconstruct envelopes, own validation rules, call validators, call
+aggregate diagnostics, render UI, inspect runtime or resolver output, or
+introduce import/export, `PreviewCanvas`, adapter, canonical ID, child instance
+ID, instance path, or path-derived runtime variable behavior.
+
 Rendering belongs outside validators. UI, CLI, reports, logs, and adapters may
 render formatted diagnostics later, but validators should not know about those
 targets.
@@ -140,16 +168,19 @@ over already-created envelopes.
 
 ## Safe Migration Phases
 
+Closed phase:
+
+- **Formatter foundation**: a small formatter layer now renders
+  `DiagnosticEnvelope` values to legacy strings without changing validators.
+
 Recommended future phases:
 
-1. **Formatter foundation**: add a small formatter layer that renders
-   `DiagnosticEnvelope` values to legacy strings without changing validators.
-2. **Formatter parity tests**: prove envelope-to-string rendering matches
+1. **Formatter parity tests**: prove envelope-to-string rendering matches
    current legacy strings exactly for one target rule family.
-3. **Validator-local internal structured migration**: migrate one validator or
+2. **Validator-local internal structured migration**: migrate one validator or
    one rule family internally while preserving the validator's public return
    shape and legacy strings.
-4. **Optional structured public APIs later**: after validator-local parity and
+3. **Optional structured public APIs later**: after validator-local parity and
    compatibility are proven, consider additive structured diagnostic access
    without removing legacy behavior.
 
@@ -209,11 +240,9 @@ Avoid:
 
 ## Explicit Non-Goals
 
-This migration plan does not introduce:
+Beyond the isolated formatter foundation, this migration plan does not
+introduce:
 
-- source code
-- tests
-- a formatter implementation
 - validator migration
 - validator wiring
 - public validation API changes

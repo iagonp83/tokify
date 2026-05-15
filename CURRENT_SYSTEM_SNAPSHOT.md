@@ -39,6 +39,7 @@ Current stabilized areas:
 - Diagnostic Contract Planning Documentation Checkpoint
 - Diagnostic Contract Foundation
 - Diagnostic Aggregate Coordinator Foundation
+- Legacy Diagnostic Formatter Foundation
 - Component Registry Foundation Commit 1
 - Registry-backed Composition Metadata Validation Commit 2
 - Graph Validator Planning documentation boundary
@@ -79,6 +80,8 @@ Automated regression tests cover:
 - pure diagnostic aggregate coordination for already-created diagnostics
 - isolated opt-in child-name hygiene diagnostics for first-phase structured
   warning envelopes
+- isolated legacy diagnostic formatting from structured envelopes to legacy
+  strings
 
 ## Component Model Structure
 
@@ -479,6 +482,34 @@ is not behaviorally interpreted, does not rewrite diagnostics, and does not
 couple aggregation to validators, runtime, resolver, registry, import/export,
 canonical IDs, child instance IDs, or instance paths.
 
+The isolated Legacy Diagnostic Formatter Foundation now exists in:
+
+```txt
+src/compiler/diagnostics/legacyDiagnosticFormatter.ts
+src/compiler/diagnostics/legacyDiagnosticFormatter.test.ts
+```
+
+`legacyDiagnosticFormatter.ts` is a pure compatibility formatter. It exposes:
+
+```ts
+formatDiagnosticAsLegacyString(diagnostic)
+formatDiagnosticsAsLegacyStrings(diagnostics)
+```
+
+The formatter converts `DiagnosticEnvelope` values to legacy string
+diagnostics. Current legacy formatting returns exactly `diagnostic.message`.
+It intentionally ignores severity, code, path, layer, source, order metadata,
+and suggestions.
+
+Batch formatting preserves input order, does not sort diagnostics, does not
+mutate input diagnostics or the input array, returns a new string array, and
+returns `[]` for empty input.
+
+The formatter is compatibility infrastructure only. It is not wired into
+validators, public validation APIs, warning collection, aggregate diagnostics,
+runtime, resolver, import/export, `PreviewCanvas`, schemas, component model
+behavior, or adapters.
+
 Current validators remain unchanged. `validateComponent` remains schema
 correctness validation, the component graph validator remains
 component-type-only, warning collection remains opt-in and inactive in
@@ -510,8 +541,9 @@ should eventually normalize cycle paths deterministically.
 
 Structured diagnostics should be additive when introduced. Current string
 diagnostics must remain backward-compatible, existing tests should not break
-because of diagnostic migration, and legacy string rendering may later be
-produced from structured diagnostics.
+because of diagnostic migration, and the isolated legacy formatter now provides
+the `DiagnosticEnvelope -> legacy string` compatibility boundary without
+changing validators.
 
 Structured diagnostics migration planning is documented in:
 
@@ -519,11 +551,11 @@ Structured diagnostics migration planning is documented in:
 docs/STRUCTURED_DIAGNOSTICS_MIGRATION.md
 ```
 
-That checkpoint is documentation-only. It defines structured diagnostics as an
-internal migration layer first. Legacy string diagnostics remain the public
-compatibility contract for current validators. Validators migrate
-independently, own their own rule production, and must preserve their public
-return shapes until a later explicit public API phase.
+That checkpoint defines structured diagnostics as an internal migration layer
+first. Legacy string diagnostics remain the public compatibility contract for
+current validators. Validators migrate independently, own their own rule
+production, and must preserve their public return shapes until a later explicit
+public API phase.
 
 The intended compatibility path is envelope-to-string formatting:
 
@@ -539,7 +571,7 @@ The migration plan separates producer, formatter, aggregate, renderer, and
 public API boundaries:
 
 - producers create `DiagnosticEnvelope` objects for rules they own
-- formatters convert envelopes to legacy strings for compatibility
+- the formatter converts envelopes to legacy strings for compatibility
 - aggregate diagnostics sorts and combines already-created envelopes only
 - renderers live outside validators
 - public validator APIs remain legacy-compatible until explicitly migrated
@@ -551,12 +583,11 @@ migration.
 
 Planned future phases are:
 
-1. formatter foundation
-2. formatter parity tests
-3. validator-local internal structured migration
-4. optional structured public APIs later
+1. formatter parity tests
+2. validator-local internal structured migration
+3. optional structured public APIs later
 
-The migration plan does not wire diagnostics into validators, add formatters,
+The migration plan does not wire diagnostics or the formatter into validators,
 migrate validators, change public validation APIs, activate warnings by
 default, touch runtime/resolver/import-export/PreviewCanvas/adapters, activate
 canonical IDs, introduce child instance IDs, introduce instance paths, or
@@ -1449,7 +1480,6 @@ planning or architecture audits before implementation:
 - validator-integrated child naming warning diagnostics
 - diagnostic code taxonomy
 - opt-in warning collection
-- diagnostic formatter foundation
 - formatter parity testing
 - validator-local structured diagnostic migration
 - aggregate diagnostics reporting beyond pure coordination
@@ -1487,7 +1517,7 @@ planning or architecture audits before implementation:
 - No diagnostic wiring into validators or public validation APIs.
 - No aggregate diagnostics behavior beyond pure coordination.
 - No diagnostic migration implementation from strings.
-- No formatter implementation.
+- No formatter wiring into validators or public validation APIs.
 - No structured public validation API.
 - No strict mode.
 - No schema-breaking naming rules.
@@ -1526,17 +1556,16 @@ documentation-only. The warning catalog planning checkpoint is also
 documentation-only, and the child-name hygiene API and codes planning
 checkpoint is documentation-only. The isolated child-name hygiene diagnostics
 foundation is implemented but remains opt-in and unwired. Future work should
-proceed through formatter foundation and parity testing before any broader
-structured diagnostics migration, aggregate reporting beyond pure coordination
-if needed, and only then optional strict mode.
+proceed through formatter parity testing before any broader structured
+diagnostics migration, aggregate reporting beyond pure coordination if needed,
+and only then optional strict mode.
 
-The diagnostic contract and aggregate coordinator foundations are closed as
-isolated infrastructure. The structured diagnostics migration planning
-checkpoint is documentation-only. Future work should proceed through formatter
-foundation, formatter parity tests, validator-local internal structured
-migration, and only later optional structured public APIs. Opt-in warning
-collection, migration reporting, and optional strict mode remain later phases
-after compatibility boundaries are proven.
+The diagnostic contract, aggregate coordinator, and legacy formatter
+foundations are closed as isolated infrastructure. Future work should proceed
+through formatter parity tests, validator-local internal structured migration,
+and only later optional structured public APIs. Opt-in warning collection,
+migration reporting, and optional strict mode remain later phases after
+compatibility boundaries are proven.
 
 The pure authored-name-based component-type graph validator checkpoint is
 closed. Future work should continue with small metadata-only phases or dedicated
