@@ -336,6 +336,81 @@ describe("validateComponent composition metadata", () => {
     expect(result).not.toHaveProperty("warnings");
   });
 
+  it("keeps structured composition part local reference diagnostics legacy-compatible", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      name: " ",
+      slots: [
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        }
+      ],
+      states: [{ name: "hover" }],
+      tokenBindings: [
+        {
+          slot: "missingTokenSlot",
+          target: "background",
+          token: "semantic.color.accent"
+        }
+      ],
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: []
+        },
+        {
+          default: "lg",
+          name: "size",
+          options: ["sm", "md"]
+        }
+      ],
+      composition: {
+        parts: [
+          {
+            name: "label",
+            slot: "firstMissingPartSlot"
+          },
+          {
+            name: "icon",
+            slot: "secondMissingPartSlot"
+          }
+        ],
+        slotRelations: [
+          {
+            parentSlot: "missingParent",
+            slot: "missingRelationSlot"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: [
+        "Component name is required.",
+        'Component requires a "root" slot.',
+        'Component requires a "default" state.',
+        'Variant axis "tone" requires at least one option.',
+        'Variant axis "size" default "lg" must be one of its options.',
+        'Token binding "background" references unknown slot "missingTokenSlot".',
+        'Composition slot relation references unknown slot "missingRelationSlot".',
+        'Composition slot relation references unknown parent slot "missingParent".',
+        'Composition part "label" references unknown slot "firstMissingPartSlot".',
+        'Composition part "icon" references unknown slot "secondMissingPartSlot".'
+      ],
+      valid: false
+    });
+    expect(Array.isArray(result.errors)).toBe(true);
+    expect(result.errors.every((error) => typeof error === "string")).toBe(true);
+    expect(
+      result.errors.some((error) => error.toLowerCase().includes("warning"))
+    ).toBe(false);
+    expect(result).not.toHaveProperty("diagnostics");
+    expect(result).not.toHaveProperty("warnings");
+  });
+
   it("keeps structured presence diagnostics legacy-compatible", () => {
     const result = validateComponent({
       ...baseSchema,

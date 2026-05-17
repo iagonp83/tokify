@@ -7,6 +7,7 @@ import {
 } from "../diagnostics/diagnosticContract";
 import { formatDiagnosticsAsLegacyStrings } from "../diagnostics/legacyDiagnosticFormatter";
 import type {
+  ComponentCompositionPart,
   ComponentCompositionSlotRelation,
   ComponentSchema,
   ComponentTokenBinding,
@@ -62,12 +63,10 @@ export function validateComponent(
     );
   });
 
-  schema.composition?.parts?.forEach((part) => {
-    if (!slotNames.has(part.slot)) {
-      errors.push(
-        `Composition part "${part.name}" references unknown slot "${part.slot}".`
-      );
-    }
+  schema.composition?.parts?.forEach((part, partIndex) => {
+    errors.push(
+      ...validateCompositionPartLocalReference(part, partIndex, slotNames)
+    );
   });
 
   schema.composition?.children?.forEach((child) => {
@@ -146,6 +145,8 @@ type TokenBindingDiagnosticCode =
 type CompositionSlotRelationDiagnosticCode =
   | "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT"
   | "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT";
+
+type CompositionPartDiagnosticCode = "SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT";
 
 function validateSchemaPresence(
   schema: ComponentSchema,
@@ -452,6 +453,54 @@ function createCompositionSlotRelationDiagnostic({
     message,
     order: {
       bucket: 2,
+      sequence
+    },
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
+}
+
+function validateCompositionPartLocalReference(
+  part: ComponentCompositionPart,
+  partIndex: number,
+  slotNames: ReadonlySet<string>
+): string[] {
+  const diagnostics: DiagnosticEnvelope<CompositionPartDiagnosticCode>[] = [];
+
+  if (!slotNames.has(part.slot)) {
+    diagnostics.push(
+      createCompositionPartDiagnostic({
+        code: "SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT",
+        message: `Composition part "${part.name}" references unknown slot "${part.slot}".`,
+        path: createDiagnosticPath("composition", "parts", partIndex, "slot"),
+        sequence: partIndex
+      })
+    );
+  }
+
+  return formatDiagnosticsAsLegacyStrings(diagnostics);
+}
+
+function createCompositionPartDiagnostic({
+  code,
+  message,
+  path,
+  sequence
+}: {
+  readonly code: CompositionPartDiagnosticCode;
+  readonly message: string;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+  readonly sequence: number;
+}): DiagnosticEnvelope<CompositionPartDiagnosticCode> {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order: {
+      bucket: 3,
       sequence
     },
     path,
