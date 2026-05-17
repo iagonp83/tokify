@@ -7,6 +7,7 @@ import {
 } from "../diagnostics/diagnosticContract";
 import { formatDiagnosticsAsLegacyStrings } from "../diagnostics/legacyDiagnosticFormatter";
 import type {
+  ComponentCompositionChild,
   ComponentCompositionPart,
   ComponentCompositionSlotRelation,
   ComponentSchema,
@@ -69,18 +70,10 @@ export function validateComponent(
     );
   });
 
-  schema.composition?.children?.forEach((child) => {
-    if (!child.name.trim()) {
-      errors.push("Composition child name is required.");
-    }
-
-    if (!child.component.trim()) {
-      errors.push(
-        child.name.trim()
-          ? `Composition child "${child.name}" requires a component reference.`
-          : "Composition child requires a component reference."
-      );
-    }
+  schema.composition?.children?.forEach((child, childIndex) => {
+    errors.push(
+      ...validateCompositionChildMetadataShape(child, childIndex)
+    );
 
     if (options.registry && child.component.trim()) {
       if (child.component === schema.name) {
@@ -147,6 +140,10 @@ type CompositionSlotRelationDiagnosticCode =
   | "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT";
 
 type CompositionPartDiagnosticCode = "SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT";
+
+type CompositionChildMetadataShapeDiagnosticCode =
+  | "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED"
+  | "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED";
 
 function validateSchemaPresence(
   schema: ComponentSchema,
@@ -501,6 +498,73 @@ function createCompositionPartDiagnostic({
     message,
     order: {
       bucket: 3,
+      sequence
+    },
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
+}
+
+function validateCompositionChildMetadataShape(
+  child: ComponentCompositionChild,
+  childIndex: number
+): string[] {
+  const diagnostics: DiagnosticEnvelope<CompositionChildMetadataShapeDiagnosticCode>[] =
+    [];
+  const baseSequence = childIndex * 2;
+
+  if (!child.name.trim()) {
+    diagnostics.push(
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED",
+        message: "Composition child name is required.",
+        path: createDiagnosticPath("composition", "children", childIndex, "name"),
+        sequence: baseSequence
+      })
+    );
+  }
+
+  if (!child.component.trim()) {
+    diagnostics.push(
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED",
+        message: child.name.trim()
+          ? `Composition child "${child.name}" requires a component reference.`
+          : "Composition child requires a component reference.",
+        path: createDiagnosticPath(
+          "composition",
+          "children",
+          childIndex,
+          "component"
+        ),
+        sequence: baseSequence + 1
+      })
+    );
+  }
+
+  return formatDiagnosticsAsLegacyStrings(diagnostics);
+}
+
+function createCompositionChildMetadataShapeDiagnostic({
+  code,
+  message,
+  path,
+  sequence
+}: {
+  readonly code: CompositionChildMetadataShapeDiagnosticCode;
+  readonly message: string;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+  readonly sequence: number;
+}): DiagnosticEnvelope<CompositionChildMetadataShapeDiagnosticCode> {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order: {
+      bucket: 4,
       sequence
     },
     path,
