@@ -29,17 +29,7 @@ export function validateComponent(
     schema.variants.map((axis) => [axis.name, axis.options])
   );
 
-  if (!schema.name.trim()) {
-    errors.push("Component name is required.");
-  }
-
-  if (!slotNames.has("root")) {
-    errors.push('Component requires a "root" slot.');
-  }
-
-  if (!stateNames.has("default")) {
-    errors.push('Component requires a "default" state.');
-  }
+  errors.push(...validateSchemaPresence(schema, slotNames, stateNames));
 
   schema.variants.forEach((axis, variantIndex) => {
     errors.push(...validateVariantAxis(axis, variantIndex));
@@ -164,9 +154,84 @@ export function validateComponent(
   };
 }
 
+type SchemaPresenceDiagnosticCode =
+  | "SCHEMA_COMPONENT_NAME_REQUIRED"
+  | "SCHEMA_ROOT_SLOT_REQUIRED"
+  | "SCHEMA_DEFAULT_STATE_REQUIRED";
+
 type VariantAxisDiagnosticCode =
   | "SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS"
   | "SCHEMA_VARIANT_AXIS_INVALID_DEFAULT";
+
+function validateSchemaPresence(
+  schema: ComponentSchema,
+  slotNames: ReadonlySet<string>,
+  stateNames: ReadonlySet<string>
+): string[] {
+  const diagnostics: DiagnosticEnvelope<SchemaPresenceDiagnosticCode>[] = [];
+
+  if (!schema.name.trim()) {
+    diagnostics.push(
+      createSchemaPresenceDiagnostic({
+        code: "SCHEMA_COMPONENT_NAME_REQUIRED",
+        message: "Component name is required.",
+        path: createDiagnosticPath("name"),
+        sequence: 0
+      })
+    );
+  }
+
+  if (!slotNames.has("root")) {
+    diagnostics.push(
+      createSchemaPresenceDiagnostic({
+        code: "SCHEMA_ROOT_SLOT_REQUIRED",
+        message: 'Component requires a "root" slot.',
+        path: createDiagnosticPath("slots"),
+        sequence: 1
+      })
+    );
+  }
+
+  if (!stateNames.has("default")) {
+    diagnostics.push(
+      createSchemaPresenceDiagnostic({
+        code: "SCHEMA_DEFAULT_STATE_REQUIRED",
+        message: 'Component requires a "default" state.',
+        path: createDiagnosticPath("states"),
+        sequence: 2
+      })
+    );
+  }
+
+  return formatDiagnosticsAsLegacyStrings(diagnostics);
+}
+
+function createSchemaPresenceDiagnostic({
+  code,
+  message,
+  path,
+  sequence
+}: {
+  readonly code: SchemaPresenceDiagnosticCode;
+  readonly message: string;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+  readonly sequence: number;
+}): DiagnosticEnvelope<SchemaPresenceDiagnosticCode> {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order: {
+      bucket: -1,
+      sequence
+    },
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
+}
 
 function validateVariantAxis(
   axis: ComponentVariantAxis,

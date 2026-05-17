@@ -193,6 +193,48 @@ describe("validateComponent composition metadata", () => {
     });
   });
 
+  it("keeps structured presence diagnostics legacy-compatible", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      name: " ",
+      slots: [
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        }
+      ],
+      states: [{ name: "hover" }],
+      tokenBindings: [],
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: []
+        },
+        {
+          default: "lg",
+          name: "size",
+          options: ["sm", "md"]
+        }
+      ]
+    });
+
+    expect(result).toEqual({
+      errors: [
+        "Component name is required.",
+        'Component requires a "root" slot.',
+        'Component requires a "default" state.',
+        'Variant axis "tone" requires at least one option.',
+        'Variant axis "size" default "lg" must be one of its options.'
+      ],
+      valid: false
+    });
+    expect(result.errors.every((error) => typeof error === "string")).toBe(true);
+    expect(result).not.toHaveProperty("diagnostics");
+    expect(result).not.toHaveProperty("warnings");
+  });
+
   it("reports empty variant options with unchanged legacy string output", () => {
     const result = validateComponent({
       ...baseSchema,
