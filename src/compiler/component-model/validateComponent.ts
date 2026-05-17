@@ -87,11 +87,13 @@ export function validateComponent(
       }
     }
 
-    if (!slotNames.has(child.slot)) {
-      errors.push(
-        `Composition child "${child.name}" references unknown slot "${child.slot}".`
-      );
-    }
+    errors.push(
+      ...validateCompositionChildLocalSlotReference(
+        child,
+        childIndex,
+        slotNames
+      )
+    );
   });
 
   errors.push(...validateSlotRelationTopology(schema, slotNames));
@@ -144,6 +146,9 @@ type CompositionPartDiagnosticCode = "SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT";
 type CompositionChildMetadataShapeDiagnosticCode =
   | "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED"
   | "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED";
+
+type CompositionChildLocalSlotReferenceDiagnosticCode =
+  "SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT";
 
 function validateSchemaPresence(
   schema: ComponentSchema,
@@ -565,6 +570,55 @@ function createCompositionChildMetadataShapeDiagnostic({
     message,
     order: {
       bucket: 4,
+      sequence
+    },
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
+}
+
+function validateCompositionChildLocalSlotReference(
+  child: ComponentCompositionChild,
+  childIndex: number,
+  slotNames: ReadonlySet<string>
+): string[] {
+  const diagnostics: DiagnosticEnvelope<CompositionChildLocalSlotReferenceDiagnosticCode>[] =
+    [];
+
+  if (!slotNames.has(child.slot)) {
+    diagnostics.push(
+      createCompositionChildLocalSlotReferenceDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT",
+        message: `Composition child "${child.name}" references unknown slot "${child.slot}".`,
+        path: createDiagnosticPath("composition", "children", childIndex, "slot"),
+        sequence: childIndex
+      })
+    );
+  }
+
+  return formatDiagnosticsAsLegacyStrings(diagnostics);
+}
+
+function createCompositionChildLocalSlotReferenceDiagnostic({
+  code,
+  message,
+  path,
+  sequence
+}: {
+  readonly code: CompositionChildLocalSlotReferenceDiagnosticCode;
+  readonly message: string;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+  readonly sequence: number;
+}): DiagnosticEnvelope<CompositionChildLocalSlotReferenceDiagnosticCode> {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order: {
+      bucket: 5,
       sequence
     },
     path,
