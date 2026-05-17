@@ -6,12 +6,12 @@ internal structured `DiagnosticEnvelope` diagnostics.
 The isolated legacy formatter foundation now exists as compatibility
 infrastructure, and validator-local internal structured migrations are closed
 for `validateComponent` top-level schema presence diagnostics, variant-axis
-diagnostics, and token binding diagnostics only. This plan still does not
-introduce broad validator migration, global validator wiring, public validation
-APIs, runtime behavior, resolver behavior, `runtimePlan` behavior, runtime
-emission, import/export behavior, `PreviewCanvas` behavior, canonical IDs,
-child instance IDs, instance paths, path-derived runtime variables, strict mode,
-or blocking warnings.
+diagnostics, token binding diagnostics, and composition slot relation local
+reference diagnostics only. This plan still does not introduce broad validator
+migration, global validator wiring, public validation APIs, runtime behavior,
+resolver behavior, `runtimePlan` behavior, runtime emission, import/export
+behavior, `PreviewCanvas` behavior, canonical IDs, child instance IDs, instance
+paths, path-derived runtime variables, strict mode, or blocking warnings.
 
 ## Current Boundary
 
@@ -19,8 +19,9 @@ Current public validator behavior remains legacy-compatible:
 
 - `validateComponent` returns its current legacy string diagnostics
 - `validateComponent` internally migrates only its top-level schema presence
-  diagnostics, variant-axis diagnostics, and token binding diagnostics through
-  validator-local helpers
+  diagnostics, variant-axis diagnostics, token binding diagnostics, and
+  composition slot relation local reference diagnostics through validator-local
+  helpers
 - the migrated top-level schema presence codes are
   `SCHEMA_COMPONENT_NAME_REQUIRED`, `SCHEMA_ROOT_SLOT_REQUIRED`, and
   `SCHEMA_DEFAULT_STATE_REQUIRED`
@@ -32,6 +33,9 @@ Current public validator behavior remains legacy-compatible:
   `SCHEMA_TOKEN_BINDING_UNKNOWN_STATE`,
   `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS`, and
   `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION`
+- the migrated composition slot relation local reference codes are
+  `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT` and
+  `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT`
 - the component graph validator returns its current legacy string diagnostics
 - warning diagnostics remain opt-in and non-blocking
 - aggregate diagnostics remains coordinator-only
@@ -106,8 +110,9 @@ Validators own rule production for their domains.
 
 `validateComponent` owns schema-local correctness rules only. Its current
 internally structured rule families are top-level schema presence validation,
-variant-axis validation, and token binding validation. The local helpers
-create structured envelopes for only:
+variant-axis validation, token binding validation, and composition slot relation
+local reference validation. The local helpers create structured envelopes for
+only:
 
 - `SCHEMA_COMPONENT_NAME_REQUIRED`
 - `SCHEMA_ROOT_SLOT_REQUIRED`
@@ -118,15 +123,16 @@ create structured envelopes for only:
 - `SCHEMA_TOKEN_BINDING_UNKNOWN_STATE`
 - `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS`
 - `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION`
+- `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT`
+- `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT`
 
 They immediately format those envelopes back to legacy strings and return
 `string[]` to the existing validator flow. Broader `validateComponent`
-structured diagnostics may eventually cover composition local slot references,
-part metadata, child metadata shape, slot relation correctness, duplicate local
-metadata, and already-supported optional registry-backed child reference checks.
-It must not own graph traversal, child-name hygiene warnings, canonical
-readiness, resolver behavior, runtime behavior, import/export behavior, or
-adapter behavior.
+structured diagnostics may eventually cover composition part metadata, child
+metadata shape, slot relation topology, duplicate local metadata, and
+already-supported optional registry-backed child reference checks. It must not
+own graph traversal, child-name hygiene warnings, canonical readiness, resolver
+behavior, runtime behavior, import/export behavior, or adapter behavior.
 
 The component graph validator owns component-type graph rules only. Its
 structured diagnostics may eventually cover unknown component references,
@@ -150,9 +156,9 @@ warnings, or change public validation APIs.
 This checkpoint was documentation-only. It inventoried the
 `validateComponent` legacy string diagnostics that were not yet internally
 structured at the time of the inventory. Since then, the top-level schema
-presence, variant-axis, and token binding slices have closed. The current
-remaining inventory starts after the closed entries below. This documentation
-checkpoint did not change
+presence, variant-axis, token binding, and composition slot relation local
+reference slices have closed. The current remaining inventory starts after the
+closed entries below. This documentation checkpoint did not change
 validator behavior, public APIs, graph validation, warning collection,
 aggregate diagnostics, runtime, resolver, import/export, `PreviewCanvas`, or
 adapters.
@@ -169,6 +175,8 @@ legacy migration slices:
 - `SCHEMA_TOKEN_BINDING_UNKNOWN_STATE`
 - `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS`
 - `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION`
+- `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT`
+- `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT`
 
 Current legacy ordering in `validateComponent` is:
 
@@ -176,8 +184,8 @@ Current legacy ordering in `validateComponent` is:
 2. variant-axis checks, already internally structured, in `variants` array order
 3. token binding checks, already internally structured, in `tokenBindings`
    array order, with condition checks in authored object entry order
-4. composition slot relation local reference checks in `slotRelations` array
-   order
+4. composition slot relation local reference checks, already internally
+   structured, in `slotRelations` array order
 5. composition part local reference checks in `parts` array order
 6. composition child shape, optional registry-backed reference, and local slot
    reference checks in `children` array order
@@ -192,9 +200,12 @@ Rollback boundaries used below:
   and restore the previous three top-level `errors.push(...)` branches.
 - **Token binding helper rollback**: delete only the validator-local token
   binding helper and restore the previous token binding loop strings.
-- **Composition reference helper rollback**: delete only the future
-  validator-local composition reference helper and restore the current
-  `slotRelations`, `parts`, or `children` branch strings.
+- **Composition slot relation local reference helper rollback**: delete only the
+  validator-local slot relation local reference helper and restore the previous
+  `slotRelations` branch strings.
+- **Composition reference helper rollback**: delete only a future
+  validator-local composition reference helper and restore the current `parts`
+  or `children` branch strings.
 - **Topology helper rollback**: restore `validateSlotRelationTopology` to
   constructing and returning the current legacy strings directly.
 - **Duplicate helper rollback**: delete only the future duplicate metadata
@@ -347,13 +358,12 @@ Rollback boundaries used below:
 - `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION`
 - Migration status: closed
 
-### Remaining Legacy Diagnostic Inventory
-
 #### Composition Slot Relation Unknown Slot
 
 - Current legacy message:
   `Composition slot relation references unknown slot "{slot}".`
-- Current location/branch: `validateComponent.ts:88`,
+- Current location/branch: validator-local composition slot relation local
+  reference helper branch,
   `if (!slotNames.has(relation.slot))`
 - Current deterministic ordering position: first possible diagnostic for each
   `slotRelations` entry, after all token binding diagnostics and before the same
@@ -364,17 +374,17 @@ Rollback boundaries used below:
 - Depends on graph validation: no
 - Depends on runtime/resolver/import-export: no
 - Message stability risk: low
-- Rollback boundary: composition reference helper rollback
-- Parity test difficulty: low
-- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT`
-- Recommended migration priority: P1, after top-level presence and before
-  topology
+- Rollback boundary: composition slot relation local reference helper rollback
+- Parity test difficulty: low; parity coverage is closed
+- `DiagnosticCode`: `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT`
+- Migration status: closed
 
 #### Composition Slot Relation Unknown Parent Slot
 
 - Current legacy message:
   `Composition slot relation references unknown parent slot "{parentSlot}".`
-- Current location/branch: `validateComponent.ts:94`,
+- Current location/branch: validator-local composition slot relation local
+  reference helper branch,
   `if (relation.parentSlot && !slotNames.has(relation.parentSlot))`
 - Current deterministic ordering position: second possible diagnostic for each
   `slotRelations` entry, after the same relation's unknown-slot diagnostic if
@@ -385,12 +395,12 @@ Rollback boundaries used below:
 - Depends on graph validation: no
 - Depends on runtime/resolver/import-export: no
 - Message stability risk: low
-- Rollback boundary: composition reference helper rollback
-- Parity test difficulty: low
-- Candidate `DiagnosticCode`:
-  `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT`
-- Recommended migration priority: P1, after top-level presence and before
-  topology
+- Rollback boundary: composition slot relation local reference helper rollback
+- Parity test difficulty: low; parity coverage is closed
+- `DiagnosticCode`: `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT`
+- Migration status: closed
+
+### Remaining Legacy Diagnostic Inventory
 
 #### Composition Part Unknown Slot
 
@@ -686,6 +696,25 @@ diagnostics before condition diagnostics for the same binding, unknown variant
 axis early-return behavior, and the current skip behavior for `undefined`
 condition entries.
 
+### Closed Composition Slot Relation Local Reference Structured Slice
+
+The fourth validator-local internal structured migration is now closed. The
+migrated composition slot relation local reference family is:
+
+- `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT`
+- `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT`
+
+This closed slice preserves the current public `string[]` return shape, avoids
+a top-level structured diagnostics array, avoids `aggregateDiagnostics`, avoids
+graph validator changes, avoids registry-backed check changes, avoids topology
+diagnostic migration, and avoids warning integration.
+
+Composition slot relation local reference diagnostics remain ordered after
+top-level schema presence, variant-axis, and token binding diagnostics. The
+migrated helper preserves `slotRelations` array order and same-relation
+ordering where unknown-slot diagnostics appear before unknown-parent-slot
+diagnostics.
+
 ## Normalization, Formatting, Rendering
 
 Normalization belongs to the producer that owns the rule. For example,
@@ -773,6 +802,15 @@ Closed phase:
   `validateComponent` token binding diagnostics now create
   `DiagnosticEnvelope` values internally and immediately format them back to
   legacy strings through `legacyDiagnosticFormatter`.
+- **Composition slot relation local reference formatter parity tests for
+  validateComponent**: byte-for-byte parity is proven for unknown slot, unknown
+  parent slot, ordering after presence, variant-axis, and token binding
+  diagnostics, `slotRelations` array order, same-relation unknown-slot before
+  unknown-parent-slot order, formatter non-sorting, and formatter non-mutation.
+- **Fourth validator-local internal structured migration**:
+  `validateComponent` composition slot relation local reference diagnostics now
+  create `DiagnosticEnvelope` values internally and immediately format them
+  back to legacy strings through `legacyDiagnosticFormatter`.
 
 Recommended future phases:
 
@@ -843,8 +881,9 @@ Avoid:
 ## Explicit Non-Goals
 
 Beyond the isolated formatter foundation and the closed `validateComponent`
-top-level schema presence, variant-axis, and token binding validator-local
-migrations, this migration plan does not introduce:
+top-level schema presence, variant-axis, token binding, and composition slot
+relation local reference validator-local migrations, this migration plan does
+not introduce:
 
 - broad validator migration
 - global validator wiring
