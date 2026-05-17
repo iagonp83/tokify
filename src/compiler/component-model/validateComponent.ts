@@ -6,7 +6,11 @@ import {
   type DiagnosticEnvelope
 } from "../diagnostics/diagnosticContract";
 import { formatDiagnosticsAsLegacyStrings } from "../diagnostics/legacyDiagnosticFormatter";
-import type { ComponentSchema, ComponentVariantAxis } from "./component.types";
+import type {
+  ComponentSchema,
+  ComponentTokenBinding,
+  ComponentVariantAxis
+} from "./component.types";
 import type { ComponentRegistry } from "./componentRegistry";
 
 export type ComponentValidationResult = {
@@ -35,43 +39,16 @@ export function validateComponent(
     errors.push(...validateVariantAxis(axis, variantIndex));
   });
 
-  schema.tokenBindings.forEach((binding) => {
-    if (!slotNames.has(binding.slot)) {
-      errors.push(
-        `Token binding "${binding.target}" references unknown slot "${binding.slot}".`
-      );
-    }
-
-    Object.entries(binding.conditions ?? {}).forEach(([axisName, option]) => {
-      if (option === undefined) {
-        return;
-      }
-
-      if (axisName === "state") {
-        if (!stateNames.has(option)) {
-          errors.push(
-            `Token binding "${binding.target}" references unknown state "${option}".`
-          );
-        }
-
-        return;
-      }
-
-      const axisOptions = variantAxes.get(axisName);
-
-      if (!axisOptions) {
-        errors.push(
-          `Token binding "${binding.target}" references unknown variant axis "${axisName}".`
-        );
-        return;
-      }
-
-      if (!axisOptions.includes(option)) {
-        errors.push(
-          `Token binding "${binding.target}" references unknown ${axisName} option "${option}".`
-        );
-      }
-    });
+  schema.tokenBindings.forEach((binding, bindingIndex) => {
+    errors.push(
+      ...validateTokenBinding(
+        binding,
+        bindingIndex,
+        slotNames,
+        stateNames,
+        variantAxes
+      )
+    );
   });
 
   schema.composition?.slotRelations?.forEach((relation) => {
@@ -162,6 +139,12 @@ type SchemaPresenceDiagnosticCode =
 type VariantAxisDiagnosticCode =
   | "SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS"
   | "SCHEMA_VARIANT_AXIS_INVALID_DEFAULT";
+
+type TokenBindingDiagnosticCode =
+  | "SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT"
+  | "SCHEMA_TOKEN_BINDING_UNKNOWN_STATE"
+  | "SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS"
+  | "SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION";
 
 function validateSchemaPresence(
   schema: ComponentSchema,
@@ -283,6 +266,120 @@ function createVariantAxisDiagnostic({
     message,
     order: {
       bucket: 0,
+      sequence
+    },
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
+}
+
+function validateTokenBinding(
+  binding: ComponentTokenBinding,
+  bindingIndex: number,
+  slotNames: ReadonlySet<string>,
+  stateNames: ReadonlySet<string>,
+  variantAxes: ReadonlyMap<string, readonly string[]>
+): string[] {
+  const diagnostics: DiagnosticEnvelope<TokenBindingDiagnosticCode>[] = [];
+  const baseSequence = bindingIndex * 1000;
+
+  if (!slotNames.has(binding.slot)) {
+    diagnostics.push(
+      createTokenBindingDiagnostic({
+        code: "SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT",
+        message: `Token binding "${binding.target}" references unknown slot "${binding.slot}".`,
+        path: createDiagnosticPath("tokenBindings", bindingIndex, "slot"),
+        sequence: baseSequence
+      })
+    );
+  }
+
+  Object.entries(binding.conditions ?? {}).forEach(
+    ([axisName, option], conditionIndex) => {
+      if (option === undefined) {
+        return;
+      }
+
+      if (axisName === "state") {
+        if (!stateNames.has(option)) {
+          diagnostics.push(
+            createTokenBindingDiagnostic({
+              code: "SCHEMA_TOKEN_BINDING_UNKNOWN_STATE",
+              message: `Token binding "${binding.target}" references unknown state "${option}".`,
+              path: createDiagnosticPath(
+                "tokenBindings",
+                bindingIndex,
+                "conditions",
+                "state"
+              ),
+              sequence: baseSequence + conditionIndex + 1
+            })
+          );
+        }
+
+        return;
+      }
+
+      const axisOptions = variantAxes.get(axisName);
+
+      if (!axisOptions) {
+        diagnostics.push(
+          createTokenBindingDiagnostic({
+            code: "SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS",
+            message: `Token binding "${binding.target}" references unknown variant axis "${axisName}".`,
+            path: createDiagnosticPath(
+              "tokenBindings",
+              bindingIndex,
+              "conditions",
+              axisName
+            ),
+            sequence: baseSequence + conditionIndex + 1
+          })
+        );
+        return;
+      }
+
+      if (!axisOptions.includes(option)) {
+        diagnostics.push(
+          createTokenBindingDiagnostic({
+            code: "SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION",
+            message: `Token binding "${binding.target}" references unknown ${axisName} option "${option}".`,
+            path: createDiagnosticPath(
+              "tokenBindings",
+              bindingIndex,
+              "conditions",
+              axisName
+            ),
+            sequence: baseSequence + conditionIndex + 1
+          })
+        );
+      }
+    }
+  );
+
+  return formatDiagnosticsAsLegacyStrings(diagnostics);
+}
+
+function createTokenBindingDiagnostic({
+  code,
+  message,
+  path,
+  sequence
+}: {
+  readonly code: TokenBindingDiagnosticCode;
+  readonly message: string;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+  readonly sequence: number;
+}): DiagnosticEnvelope<TokenBindingDiagnosticCode> {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order: {
+      bucket: 1,
       sequence
     },
     path,

@@ -193,6 +193,83 @@ describe("validateComponent composition metadata", () => {
     });
   });
 
+  it("keeps structured token binding diagnostics legacy-compatible", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      name: " ",
+      slots: [
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        }
+      ],
+      states: [{ name: "hover" }],
+      tokenBindings: [
+        {
+          conditions: {
+            state: "focus",
+            tone: "primary",
+            emphasis: "strong",
+            density: undefined,
+            size: "xl"
+          },
+          slot: "missingSlot",
+          target: "background",
+          token: "semantic.color.accent"
+        },
+        {
+          conditions: {
+            tone: "secondary"
+          },
+          slot: "secondMissingSlot",
+          target: "color",
+          token: "semantic.color.foreground"
+        }
+      ],
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: []
+        },
+        {
+          default: "lg",
+          name: "size",
+          options: ["sm", "md"]
+        }
+      ]
+    });
+
+    expect(result).toEqual({
+      errors: [
+        "Component name is required.",
+        'Component requires a "root" slot.',
+        'Component requires a "default" state.',
+        'Variant axis "tone" requires at least one option.',
+        'Variant axis "size" default "lg" must be one of its options.',
+        'Token binding "background" references unknown slot "missingSlot".',
+        'Token binding "background" references unknown state "focus".',
+        'Token binding "background" references unknown tone option "primary".',
+        'Token binding "background" references unknown variant axis "emphasis".',
+        'Token binding "background" references unknown size option "xl".',
+        'Token binding "color" references unknown slot "secondMissingSlot".',
+        'Token binding "color" references unknown tone option "secondary".'
+      ],
+      valid: false
+    });
+    expect(result.errors).not.toContain(
+      'Token binding "background" references unknown emphasis option "strong".'
+    );
+    expect(result.errors).not.toContain(
+      'Token binding "background" references unknown density option "undefined".'
+    );
+    expect(Array.isArray(result.errors)).toBe(true);
+    expect(result.errors.every((error) => typeof error === "string")).toBe(true);
+    expect(result).not.toHaveProperty("diagnostics");
+    expect(result).not.toHaveProperty("warnings");
+  });
+
   it("keeps structured presence diagnostics legacy-compatible", () => {
     const result = validateComponent({
       ...baseSchema,
