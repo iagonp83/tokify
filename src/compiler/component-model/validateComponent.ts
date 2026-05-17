@@ -7,6 +7,7 @@ import {
 } from "../diagnostics/diagnosticContract";
 import { formatDiagnosticsAsLegacyStrings } from "../diagnostics/legacyDiagnosticFormatter";
 import type {
+  ComponentCompositionSlotRelation,
   ComponentSchema,
   ComponentTokenBinding,
   ComponentVariantAxis
@@ -51,18 +52,14 @@ export function validateComponent(
     );
   });
 
-  schema.composition?.slotRelations?.forEach((relation) => {
-    if (!slotNames.has(relation.slot)) {
-      errors.push(
-        `Composition slot relation references unknown slot "${relation.slot}".`
-      );
-    }
-
-    if (relation.parentSlot && !slotNames.has(relation.parentSlot)) {
-      errors.push(
-        `Composition slot relation references unknown parent slot "${relation.parentSlot}".`
-      );
-    }
+  schema.composition?.slotRelations?.forEach((relation, relationIndex) => {
+    errors.push(
+      ...validateCompositionSlotRelationLocalReferences(
+        relation,
+        relationIndex,
+        slotNames
+      )
+    );
   });
 
   schema.composition?.parts?.forEach((part) => {
@@ -145,6 +142,10 @@ type TokenBindingDiagnosticCode =
   | "SCHEMA_TOKEN_BINDING_UNKNOWN_STATE"
   | "SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS"
   | "SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION";
+
+type CompositionSlotRelationDiagnosticCode =
+  | "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT"
+  | "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT";
 
 function validateSchemaPresence(
   schema: ComponentSchema,
@@ -380,6 +381,77 @@ function createTokenBindingDiagnostic({
     message,
     order: {
       bucket: 1,
+      sequence
+    },
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
+}
+
+function validateCompositionSlotRelationLocalReferences(
+  relation: ComponentCompositionSlotRelation,
+  relationIndex: number,
+  slotNames: ReadonlySet<string>
+): string[] {
+  const diagnostics: DiagnosticEnvelope<CompositionSlotRelationDiagnosticCode>[] =
+    [];
+  const baseSequence = relationIndex * 2;
+
+  if (!slotNames.has(relation.slot)) {
+    diagnostics.push(
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+        message: `Composition slot relation references unknown slot "${relation.slot}".`,
+        path: createDiagnosticPath(
+          "composition",
+          "slotRelations",
+          relationIndex,
+          "slot"
+        ),
+        sequence: baseSequence
+      })
+    );
+  }
+
+  if (relation.parentSlot && !slotNames.has(relation.parentSlot)) {
+    diagnostics.push(
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT",
+        message: `Composition slot relation references unknown parent slot "${relation.parentSlot}".`,
+        path: createDiagnosticPath(
+          "composition",
+          "slotRelations",
+          relationIndex,
+          "parentSlot"
+        ),
+        sequence: baseSequence + 1
+      })
+    );
+  }
+
+  return formatDiagnosticsAsLegacyStrings(diagnostics);
+}
+
+function createCompositionSlotRelationDiagnostic({
+  code,
+  message,
+  path,
+  sequence
+}: {
+  readonly code: CompositionSlotRelationDiagnosticCode;
+  readonly message: string;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+  readonly sequence: number;
+}): DiagnosticEnvelope<CompositionSlotRelationDiagnosticCode> {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order: {
+      bucket: 2,
       sequence
     },
     path,
