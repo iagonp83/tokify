@@ -29,6 +29,10 @@ type CompositionSlotRelationDiagnosticCode =
 
 type CompositionPartDiagnosticCode = "SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT";
 
+type CompositionChildMetadataShapeDiagnosticCode =
+  | "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED"
+  | "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED";
+
 const baseSchema = {
   editable: {
     fields: ["variants"],
@@ -162,6 +166,30 @@ function createCompositionPartDiagnostic({
   path
 }: {
   readonly code: CompositionPartDiagnosticCode;
+  readonly message: string;
+  readonly order: DiagnosticOrder;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+}): DiagnosticEnvelope {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order,
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
+}
+
+function createCompositionChildMetadataShapeDiagnostic({
+  code,
+  message,
+  order,
+  path
+}: {
+  readonly code: CompositionChildMetadataShapeDiagnosticCode;
   readonly message: string;
   readonly order: DiagnosticOrder;
   readonly path: ReturnType<typeof createDiagnosticPath>;
@@ -1807,6 +1835,482 @@ describe("validateComponent composition part diagnostic formatter parity", () =>
     expect(diagnostics).toEqual(diagnosticsBeforeFormat);
     expect(firstPartDiagnostic).toEqual(firstPartDiagnosticBeforeFormat);
     expect(secondPartDiagnostic).toEqual(secondPartDiagnosticBeforeFormat);
+  });
+});
+
+describe("validateComponent composition child metadata shape diagnostic formatter parity", () => {
+  it("formats blank composition child name diagnostics to the current legacy string", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        children: [
+          {
+            component: "Icon",
+            name: " ",
+            slot: "root"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED",
+        message: legacyErrors[0],
+        order: {
+          bucket: 4,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "children", 0, "name")
+      })
+    ];
+
+    expect(legacyErrors).toEqual(["Composition child name is required."]);
+    expect(structuredDiagnostics[0]).toMatchObject({
+      code: "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED",
+      layer: diagnosticLayers.schema,
+      order: {
+        bucket: 4,
+        sequence: 0
+      },
+      path: ["composition", "children", 0, "name"],
+      severity: diagnosticSeverities.error,
+      source: {
+        name: "validateComponent"
+      }
+    });
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("formats named composition child component-required diagnostics to the current legacy string", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        children: [
+          {
+            component: " ",
+            name: "leadingIcon",
+            slot: "root"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED",
+        message: legacyErrors[0],
+        order: {
+          bucket: 4,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "children", 0, "component")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      'Composition child "leadingIcon" requires a component reference.'
+    ]);
+    expect(structuredDiagnostics[0]).toMatchObject({
+      code: "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED",
+      layer: diagnosticLayers.schema,
+      order: {
+        bucket: 4,
+        sequence: 1
+      },
+      path: ["composition", "children", 0, "component"],
+      severity: diagnosticSeverities.error,
+      source: {
+        name: "validateComponent"
+      }
+    });
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("formats unnamed composition child component-required diagnostics to the current legacy string", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        children: [
+          {
+            component: " ",
+            name: " ",
+            slot: "root"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED",
+        message: legacyErrors[1],
+        order: {
+          bucket: 4,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "children", 0, "component")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      "Composition child name is required.",
+      "Composition child requires a component reference."
+    ]);
+    expect(structuredDiagnostics[0]).toMatchObject({
+      code: "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED",
+      layer: diagnosticLayers.schema,
+      order: {
+        bucket: 4,
+        sequence: 1
+      },
+      path: ["composition", "children", 0, "component"],
+      severity: diagnosticSeverities.error,
+      source: {
+        name: "validateComponent"
+      }
+    });
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual([
+      legacyErrors[1]
+    ]);
+  });
+
+  it("preserves migrated-family ordering before composition child metadata shape diagnostics", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      name: " ",
+      slots: [
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        }
+      ],
+      states: [{ name: "hover" }],
+      tokenBindings: [
+        {
+          slot: "missingTokenSlot",
+          target: "background",
+          token: "semantic.color.accent"
+        }
+      ],
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: []
+        },
+        {
+          default: "lg",
+          name: "size",
+          options: ["sm", "md"]
+        }
+      ],
+      composition: {
+        children: [
+          {
+            component: " ",
+            name: " ",
+            slot: "content"
+          }
+        ],
+        parts: [
+          {
+            name: "label",
+            slot: "missingPartSlot"
+          }
+        ],
+        slotRelations: [
+          {
+            parentSlot: "missingParent",
+            slot: "missingRelationSlot"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createPresenceDiagnostic({
+        code: "SCHEMA_COMPONENT_NAME_REQUIRED",
+        message: legacyErrors[0],
+        order: {
+          bucket: -1,
+          sequence: 0
+        },
+        path: createDiagnosticPath("name")
+      }),
+      createPresenceDiagnostic({
+        code: "SCHEMA_ROOT_SLOT_REQUIRED",
+        message: legacyErrors[1],
+        order: {
+          bucket: -1,
+          sequence: 1
+        },
+        path: createDiagnosticPath("slots")
+      }),
+      createPresenceDiagnostic({
+        code: "SCHEMA_DEFAULT_STATE_REQUIRED",
+        message: legacyErrors[2],
+        order: {
+          bucket: -1,
+          sequence: 2
+        },
+        path: createDiagnosticPath("states")
+      }),
+      createVariantDiagnostic({
+        code: "SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS",
+        message: legacyErrors[3],
+        order: {
+          bucket: 0,
+          sequence: 0
+        },
+        path: createDiagnosticPath("variants", 0, "options")
+      }),
+      createVariantDiagnostic({
+        code: "SCHEMA_VARIANT_AXIS_INVALID_DEFAULT",
+        message: legacyErrors[4],
+        order: {
+          bucket: 0,
+          sequence: 3
+        },
+        path: createDiagnosticPath("variants", 1, "default")
+      }),
+      createTokenBindingDiagnostic({
+        code: "SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT",
+        message: legacyErrors[5],
+        order: {
+          bucket: 1,
+          sequence: 0
+        },
+        path: createDiagnosticPath("tokenBindings", 0, "slot")
+      }),
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+        message: legacyErrors[6],
+        order: {
+          bucket: 2,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 0, "slot")
+      }),
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT",
+        message: legacyErrors[7],
+        order: {
+          bucket: 2,
+          sequence: 1
+        },
+        path: createDiagnosticPath(
+          "composition",
+          "slotRelations",
+          0,
+          "parentSlot"
+        )
+      }),
+      createCompositionPartDiagnostic({
+        code: "SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT",
+        message: legacyErrors[8],
+        order: {
+          bucket: 3,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "parts", 0, "slot")
+      }),
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED",
+        message: legacyErrors[9],
+        order: {
+          bucket: 4,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "children", 0, "name")
+      }),
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED",
+        message: legacyErrors[10],
+        order: {
+          bucket: 4,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "children", 0, "component")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      "Component name is required.",
+      'Component requires a "root" slot.',
+      'Component requires a "default" state.',
+      'Variant axis "tone" requires at least one option.',
+      'Variant axis "size" default "lg" must be one of its options.',
+      'Token binding "background" references unknown slot "missingTokenSlot".',
+      'Composition slot relation references unknown slot "missingRelationSlot".',
+      'Composition slot relation references unknown parent slot "missingParent".',
+      'Composition part "label" references unknown slot "missingPartSlot".',
+      "Composition child name is required.",
+      "Composition child requires a component reference."
+    ]);
+    expect(structuredDiagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "SCHEMA_COMPONENT_NAME_REQUIRED",
+      "SCHEMA_ROOT_SLOT_REQUIRED",
+      "SCHEMA_DEFAULT_STATE_REQUIRED",
+      "SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS",
+      "SCHEMA_VARIANT_AXIS_INVALID_DEFAULT",
+      "SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT",
+      "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+      "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT",
+      "SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT",
+      "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED",
+      "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED"
+    ]);
+    expect(
+      structuredDiagnostics.map((diagnostic) => diagnostic.order.bucket)
+    ).toEqual([-1, -1, -1, 0, 0, 1, 2, 2, 3, 4, 4]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("preserves composition child array order and same-child metadata shape ordering", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        children: [
+          {
+            component: " ",
+            name: " ",
+            slot: "root"
+          },
+          {
+            component: " ",
+            name: "field",
+            slot: "root"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED",
+        message: legacyErrors[0],
+        order: {
+          bucket: 4,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "children", 0, "name")
+      }),
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED",
+        message: legacyErrors[1],
+        order: {
+          bucket: 4,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "children", 0, "component")
+      }),
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED",
+        message: legacyErrors[2],
+        order: {
+          bucket: 4,
+          sequence: 3
+        },
+        path: createDiagnosticPath("composition", "children", 1, "component")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      "Composition child name is required.",
+      "Composition child requires a component reference.",
+      'Composition child "field" requires a component reference.'
+    ]);
+    expect(
+      structuredDiagnostics.map((diagnostic) => diagnostic.order.sequence)
+    ).toEqual([0, 1, 3]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("formats composition child metadata shape diagnostic lists in input order without sorting", () => {
+    const structuredDiagnostics = [
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED",
+        message: 'Composition child "field" requires a component reference.',
+        order: {
+          bucket: 4,
+          sequence: 3
+        },
+        path: createDiagnosticPath("composition", "children", 1, "component")
+      }),
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED",
+        message: "Composition child name is required.",
+        order: {
+          bucket: 4,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "children", 0, "name")
+      })
+    ];
+
+    expect(
+      structuredDiagnostics.map((diagnostic) => diagnostic.order.sequence)
+    ).toEqual([3, 0]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual([
+      'Composition child "field" requires a component reference.',
+      "Composition child name is required."
+    ]);
+  });
+
+  it("does not mutate composition child metadata shape diagnostic fixtures while formatting", () => {
+    const nameDiagnostic = createCompositionChildMetadataShapeDiagnostic({
+      code: "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED",
+      message: "Composition child name is required.",
+      order: {
+        bucket: 4,
+        sequence: 0
+      },
+      path: createDiagnosticPath("composition", "children", 0, "name")
+    });
+    const componentDiagnostic = createCompositionChildMetadataShapeDiagnostic({
+      code: "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED",
+      message: 'Composition child "field" requires a component reference.',
+      order: {
+        bucket: 4,
+        sequence: 3
+      },
+      path: createDiagnosticPath("composition", "children", 1, "component")
+    });
+    const diagnostics = [componentDiagnostic, nameDiagnostic];
+    const diagnosticsBeforeFormat = [...diagnostics];
+    const nameDiagnosticBeforeFormat = {
+      ...nameDiagnostic,
+      order: { ...nameDiagnostic.order },
+      path: [...nameDiagnostic.path],
+      source: { ...nameDiagnostic.source }
+    };
+    const componentDiagnosticBeforeFormat = {
+      ...componentDiagnostic,
+      order: { ...componentDiagnostic.order },
+      path: [...componentDiagnostic.path],
+      source: { ...componentDiagnostic.source }
+    };
+
+    const formatted = formatDiagnosticsAsLegacyStrings(diagnostics);
+
+    expect(formatted).toEqual([
+      'Composition child "field" requires a component reference.',
+      "Composition child name is required."
+    ]);
+    expect(formatted).not.toBe(diagnostics);
+    expect(diagnostics).toEqual(diagnosticsBeforeFormat);
+    expect(nameDiagnostic).toEqual(nameDiagnosticBeforeFormat);
+    expect(componentDiagnostic).toEqual(componentDiagnosticBeforeFormat);
   });
 });
 
