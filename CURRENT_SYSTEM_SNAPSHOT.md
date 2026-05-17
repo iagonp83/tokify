@@ -43,6 +43,7 @@ Current stabilized areas:
 - ValidateComponent Variant Diagnostic Formatter Parity Checkpoint
 - First Internal Structured Validator Migration: validateComponent variant-axis
   diagnostics
+- ValidateComponent Structured Slice Inventory Documentation Checkpoint
 - Component Registry Foundation Commit 1
 - Registry-backed Composition Metadata Validation Commit 2
 - Graph Validator Planning documentation boundary
@@ -607,8 +608,13 @@ preserved during migration.
 The first formatter parity test checkpoint is closed for
 `validateComponent` variant-axis diagnostics. The first validator-local
 internal structured migration is also closed for that same rule family only.
-Broader `validateComponent` migration, graph validator migration, warning
-activation, aggregate reporting, and structured public APIs remain future work.
+The validateComponent structured slice inventory checkpoint is closed as a
+documentation-only map of the remaining legacy string diagnostics, their
+ordering, dependencies, rollback boundaries, parity-test difficulty, candidate
+codes, and recommended priorities. It recommends the top-level schema presence
+rules as the next safest validator-local structured migration slice. Broader
+`validateComponent` migration, graph validator migration, warning activation,
+aggregate reporting, and structured public APIs remain future work.
 
 The migration plan does not introduce global diagnostic or formatter wiring
 into validators, public validation API changes, warning activation by default,
@@ -1589,12 +1595,14 @@ if needed, and only then optional strict mode.
 The diagnostic contract, aggregate coordinator, and legacy formatter
 foundations are closed as isolated infrastructure. The validateComponent
 variant-axis formatter parity and first internal structured migration
-checkpoints are closed. Future work should proceed through additional
-rule-family parity and validator-local migration slices, with broader
-`validateComponent` migration and optional structured public APIs kept for
-later explicit phases. Opt-in warning collection, migration reporting, and
-optional strict mode remain later phases after compatibility boundaries are
-proven.
+checkpoints are closed. The validateComponent structured slice inventory
+checkpoint is also closed as documentation only, and identifies the top-level
+schema presence rules as the next safest schema-local slice. Future work should
+proceed through additional rule-family parity and validator-local migration
+slices, with broader `validateComponent` migration and optional structured
+public APIs kept for later explicit phases. Opt-in warning collection,
+migration reporting, and optional strict mode remain later phases after
+compatibility boundaries are proven.
 
 The pure authored-name-based component-type graph validator checkpoint is
 closed. Future work should continue with small metadata-only phases or dedicated

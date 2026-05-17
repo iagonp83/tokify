@@ -127,6 +127,513 @@ already-created envelopes. It must not call validators, normalize validator
 output, format messages, render UI, adapt to legacy strings, activate
 warnings, or change public validation APIs.
 
+## ValidateComponent Structured Slice Inventory
+
+This checkpoint is documentation-only. It inventories the remaining
+`validateComponent` legacy string diagnostics that are not yet internally
+structured. It does not change validator behavior, public APIs, graph
+validation, warning collection, aggregate diagnostics, runtime, resolver,
+import/export, `PreviewCanvas`, or adapters.
+
+Already internally structured and therefore excluded from the remaining
+inventory:
+
+- `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS`
+- `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
+
+Current legacy ordering in `validateComponent` is:
+
+1. top-level schema presence checks
+2. variant-axis checks, already internally structured, in `variants` array order
+3. token binding checks in `tokenBindings` array order, with condition checks in
+   authored object entry order
+4. composition slot relation local reference checks in `slotRelations` array
+   order
+5. composition part local reference checks in `parts` array order
+6. composition child shape, optional registry-backed reference, and local slot
+   reference checks in `children` array order
+7. slot relation topology checks, with self-reference diagnostics discovered
+   before cycle diagnostics
+8. duplicate `slotRelations`, duplicate `parts`, and duplicate `children`
+   diagnostics, each in first repeated value discovery order
+
+Rollback boundaries used below:
+
+- **Presence helper rollback**: delete only the future validator-local presence
+  helper and restore the three existing top-level `errors.push(...)` branches.
+- **Token binding helper rollback**: delete only the future validator-local
+  token binding helper and restore the current token binding loop strings.
+- **Composition reference helper rollback**: delete only the future
+  validator-local composition reference helper and restore the current
+  `slotRelations`, `parts`, or `children` branch strings.
+- **Topology helper rollback**: restore `validateSlotRelationTopology` to
+  constructing and returning the current legacy strings directly.
+- **Duplicate helper rollback**: delete only the future duplicate metadata
+  diagnostic helper and restore the current `findDuplicates(...).forEach`
+  string branches.
+- **Registry branch rollback**: restore the current optional
+  `options.registry` child reference branch strings.
+
+### Remaining Legacy Diagnostic Inventory
+
+#### Component Name Required
+
+- Current legacy message: `Component name is required.`
+- Current location/branch: `validateComponent.ts:32`, `if (!schema.name.trim())`
+- Current deterministic ordering position: first possible diagnostic, before
+  root slot, default state, variant-axis diagnostics, and every composition
+  rule
+- Rule family: top-level schema presence
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low
+- Rollback boundary: presence helper rollback
+- Parity test difficulty: low
+- Candidate `DiagnosticCode`: `SCHEMA_COMPONENT_NAME_REQUIRED`
+- Recommended migration priority: P0, next safest slice
+
+#### Root Slot Required
+
+- Current legacy message: `Component requires a "root" slot.`
+- Current location/branch: `validateComponent.ts:36`,
+  `if (!slotNames.has("root"))`
+- Current deterministic ordering position: after component name, before default
+  state and variant-axis diagnostics
+- Rule family: top-level schema presence
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low
+- Rollback boundary: presence helper rollback
+- Parity test difficulty: low
+- Candidate `DiagnosticCode`: `SCHEMA_ROOT_SLOT_REQUIRED`
+- Recommended migration priority: P0, next safest slice
+
+#### Default State Required
+
+- Current legacy message: `Component requires a "default" state.`
+- Current location/branch: `validateComponent.ts:40`,
+  `if (!stateNames.has("default"))`
+- Current deterministic ordering position: after component name and root slot,
+  before variant-axis diagnostics
+- Rule family: top-level schema presence
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low
+- Rollback boundary: presence helper rollback
+- Parity test difficulty: low
+- Candidate `DiagnosticCode`: `SCHEMA_DEFAULT_STATE_REQUIRED`
+- Recommended migration priority: P0, next safest slice
+
+#### Token Binding Unknown Slot
+
+- Current legacy message:
+  `Token binding "{target}" references unknown slot "{slot}".`
+- Current location/branch: `validateComponent.ts:49`,
+  `if (!slotNames.has(binding.slot))`
+- Current deterministic ordering position: first diagnostic for each
+  `tokenBindings` entry, after all top-level and variant-axis diagnostics, and
+  before that binding's condition diagnostics
+- Rule family: token binding local references
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low
+- Rollback boundary: token binding helper rollback
+- Parity test difficulty: low to medium, because token binding diagnostics are
+  easiest to prove as a family
+- Candidate `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT`
+- Recommended migration priority: P1, after the top-level presence slice
+
+#### Token Binding Unknown State
+
+- Current legacy message:
+  `Token binding "{target}" references unknown state "{option}".`
+- Current location/branch: `validateComponent.ts:60`, condition branch where
+  `axisName === "state"` and `!stateNames.has(option)`
+- Current deterministic ordering position: within the current binding's
+  `Object.entries(binding.conditions ?? {})` order, after that binding's
+  unknown-slot diagnostic if present, before later condition entries and before
+  later token bindings
+- Rule family: token binding local references
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low
+- Rollback boundary: token binding helper rollback
+- Parity test difficulty: medium, because parity must preserve authored
+  condition entry order and the `undefined` condition skip
+- Candidate `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_STATE`
+- Recommended migration priority: P1, after the top-level presence slice
+
+#### Token Binding Unknown Variant Axis
+
+- Current legacy message:
+  `Token binding "{target}" references unknown variant axis "{axisName}".`
+- Current location/branch: `validateComponent.ts:72`, condition branch where
+  `variantAxes.get(axisName)` is missing
+- Current deterministic ordering position: within the current binding's
+  condition entry order, after the binding-level unknown-slot diagnostic if
+  present, and before later condition entries and later token bindings
+- Rule family: token binding local references
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low
+- Rollback boundary: token binding helper rollback
+- Parity test difficulty: medium, because parity must preserve condition entry
+  order and the early return that prevents an unknown-option diagnostic for the
+  same condition
+- Candidate `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS`
+- Recommended migration priority: P1, after the top-level presence slice
+
+#### Token Binding Unknown Variant Option
+
+- Current legacy message:
+  `Token binding "{target}" references unknown {axisName} option "{option}".`
+- Current location/branch: `validateComponent.ts:79`, condition branch where a
+  variant axis exists but does not include the selected option
+- Current deterministic ordering position: within the current binding's
+  condition entry order, after the binding-level unknown-slot diagnostic if
+  present, and before later condition entries and later token bindings
+- Rule family: token binding local references
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: medium, because the human string embeds the authored
+  axis name as grammar
+- Rollback boundary: token binding helper rollback
+- Parity test difficulty: medium, because tests must preserve condition order
+  and axis-name interpolation
+- Candidate `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION`
+- Recommended migration priority: P1, after the top-level presence slice
+
+#### Composition Slot Relation Unknown Slot
+
+- Current legacy message:
+  `Composition slot relation references unknown slot "{slot}".`
+- Current location/branch: `validateComponent.ts:88`,
+  `if (!slotNames.has(relation.slot))`
+- Current deterministic ordering position: first possible diagnostic for each
+  `slotRelations` entry, after all token binding diagnostics and before the same
+  relation's unknown-parent-slot diagnostic
+- Rule family: composition local slot references
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low
+- Rollback boundary: composition reference helper rollback
+- Parity test difficulty: low
+- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT`
+- Recommended migration priority: P1, after top-level presence and before
+  topology
+
+#### Composition Slot Relation Unknown Parent Slot
+
+- Current legacy message:
+  `Composition slot relation references unknown parent slot "{parentSlot}".`
+- Current location/branch: `validateComponent.ts:94`,
+  `if (relation.parentSlot && !slotNames.has(relation.parentSlot))`
+- Current deterministic ordering position: second possible diagnostic for each
+  `slotRelations` entry, after the same relation's unknown-slot diagnostic if
+  present and before later relation entries
+- Rule family: composition local slot references
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low
+- Rollback boundary: composition reference helper rollback
+- Parity test difficulty: low
+- Candidate `DiagnosticCode`:
+  `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT`
+- Recommended migration priority: P1, after top-level presence and before
+  topology
+
+#### Composition Part Unknown Slot
+
+- Current legacy message:
+  `Composition part "{partName}" references unknown slot "{slot}".`
+- Current location/branch: `validateComponent.ts:102`,
+  `if (!slotNames.has(part.slot))`
+- Current deterministic ordering position: after all slot relation local
+  reference diagnostics and before composition child diagnostics
+- Rule family: composition local slot references
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low
+- Rollback boundary: composition reference helper rollback
+- Parity test difficulty: low
+- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT`
+- Recommended migration priority: P1, after top-level presence and before
+  topology
+
+#### Composition Child Name Required
+
+- Current legacy message: `Composition child name is required.`
+- Current location/branch: `validateComponent.ts:110`,
+  `if (!child.name.trim())`
+- Current deterministic ordering position: first possible diagnostic for each
+  `children` entry, after part diagnostics and before component-reference,
+  registry-backed, and child-slot diagnostics for the same child
+- Rule family: composition child metadata shape
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: medium, because future child-name hygiene warnings
+  are adjacent but must remain separate and opt-in
+- Rollback boundary: composition reference helper rollback
+- Parity test difficulty: low to medium, mainly to prove no warning activation
+- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED`
+- Recommended migration priority: P2, after simpler schema-local reference
+  families and without wiring child-name hygiene warnings
+
+#### Composition Child Component Required
+
+- Current legacy messages:
+  `Composition child "{childName}" requires a component reference.` and
+  `Composition child requires a component reference.`
+- Current location/branch: `validateComponent.ts:114`,
+  `if (!child.component.trim())`, with a message branch based on
+  `child.name.trim()`
+- Current deterministic ordering position: after the same child's blank-name
+  diagnostic if present, before optional registry-backed child component checks
+  and before the same child's unknown-slot diagnostic
+- Rule family: composition child metadata shape
+- Purely schema-local: yes
+- Depends on registry: no for this branch
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: medium, because one rule has two legacy message
+  shapes
+- Rollback boundary: composition reference helper rollback
+- Parity test difficulty: medium, because parity should cover both named and
+  unnamed child branches
+- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED`
+- Recommended migration priority: P2, after simpler schema-local reference
+  families
+
+#### Registry-Backed Composition Child Self-Reference
+
+- Current legacy message:
+  `Composition child "{childName}" cannot reference parent component "{schemaName}".`
+- Current location/branch: `validateComponent.ts:122`, optional
+  `options.registry && child.component.trim()` branch where
+  `child.component === schema.name`
+- Current deterministic ordering position: after blank child name and blank
+  child component checks for the same child, before unknown registry component
+  and before the same child's unknown-slot diagnostic
+- Rule family: optional registry-backed composition child component references
+- Purely schema-local: no
+- Depends on registry: yes
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: medium, because a related direct self-reference rule
+  also exists in the separate component-type graph validator with different
+  wording
+- Rollback boundary: registry branch rollback
+- Parity test difficulty: medium
+- Candidate `DiagnosticCode`: `REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE`
+- Recommended migration priority: deferred; do not include in the next
+  schema-local slice
+
+#### Registry-Backed Composition Child Unknown Component
+
+- Current legacy message:
+  `Composition child "{childName}" references unknown component "{componentName}".`
+- Current location/branch: `validateComponent.ts:127`, optional
+  `options.registry && child.component.trim()` branch where
+  `!hasRegistryComponent(options.registry, child.component)`
+- Current deterministic ordering position: after blank child name and blank
+  child component checks for the same child, mutually exclusive with the
+  registry-backed self-reference diagnostic, and before the same child's
+  unknown-slot diagnostic
+- Rule family: optional registry-backed composition child component references
+- Purely schema-local: no
+- Depends on registry: yes
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: medium, because a related unknown component rule also
+  exists in the separate component-type graph validator with different wording
+- Rollback boundary: registry branch rollback
+- Parity test difficulty: medium
+- Candidate `DiagnosticCode`: `REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT`
+- Recommended migration priority: deferred; do not include in the next
+  schema-local slice
+
+#### Composition Child Unknown Slot
+
+- Current legacy message:
+  `Composition child "{childName}" references unknown slot "{slot}".`
+- Current location/branch: `validateComponent.ts:134`,
+  `if (!slotNames.has(child.slot))`
+- Current deterministic ordering position: last possible diagnostic for each
+  `children` entry, after child shape and optional registry-backed component
+  reference diagnostics for the same child
+- Rule family: composition local slot references
+- Purely schema-local: yes
+- Depends on registry: no for this branch
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low
+- Rollback boundary: composition reference helper rollback
+- Parity test difficulty: low
+- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT`
+- Recommended migration priority: P1, after top-level presence and before
+  topology
+
+#### Composition Slot Relation Self-Parent
+
+- Current legacy message:
+  `Composition slot relation "{slot}" cannot reference itself as parent.`
+- Current location/branch: `validateComponent.ts:269`, inside
+  `validateSlotRelationTopology`, after unknown slot and unknown parent slot
+  relations have been skipped
+- Current deterministic ordering position: after all direct composition child
+  diagnostics and before slot relation cycle diagnostics and duplicate metadata
+  diagnostics
+- Rule family: schema-local slot relation topology
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no; this is local slot topology, not the
+  component-type graph validator
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low to medium, because it is embedded in topology
+  traversal and skips invalid local references first
+- Rollback boundary: topology helper rollback
+- Parity test difficulty: medium
+- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT`
+- Recommended migration priority: P3, after simpler schema-local families
+
+#### Composition Slot Relation Cycle
+
+- Current legacy message:
+  `Composition slot relations contain a cycle: {cyclePath}.`
+- Current location/branch: `validateComponent.ts:287`,
+  `findSlotRelationCycles(relations).forEach(...)`
+- Current deterministic ordering position: after topology self-parent
+  diagnostics and before duplicate metadata diagnostics; cycle ordering follows
+  the discovered relation traversal order after duplicate relation slots are
+  skipped
+- Rule family: schema-local slot relation topology
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no; this is local slot topology, not the
+  component-type graph validator
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: high relative to other schema-local rules, because
+  the cycle path text depends on traversal and cycle normalization behavior
+- Rollback boundary: topology helper rollback
+- Parity test difficulty: high
+- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
+- Recommended migration priority: P3, defer until simpler schema-local families
+  are migrated
+
+#### Duplicate Composition Slot Relation
+
+- Current legacy message:
+  `Composition slot relation "{slot}" is duplicated.`
+- Current location/branch: `validateComponent.ts:143`,
+  `findDuplicates(composition.slotRelations.map((relation) => relation.slot))`
+- Current deterministic ordering position: after slot relation topology
+  diagnostics and before duplicate composition part diagnostics
+- Rule family: duplicate local composition metadata
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low
+- Rollback boundary: duplicate helper rollback
+- Parity test difficulty: low
+- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE`
+- Recommended migration priority: P2, safe but not as foundational as the
+  top-level presence slice
+
+#### Duplicate Composition Part
+
+- Current legacy message:
+  `Composition part "{partName}" is duplicated.`
+- Current location/branch: `validateComponent.ts:149`,
+  `findDuplicates(composition.parts.map((part) => part.name))`
+- Current deterministic ordering position: after duplicate slot relation
+  diagnostics and before duplicate composition child diagnostics
+- Rule family: duplicate local composition metadata
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: low
+- Rollback boundary: duplicate helper rollback
+- Parity test difficulty: low
+- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_PART_DUPLICATE`
+- Recommended migration priority: P2, safe but not as foundational as the
+  top-level presence slice
+
+#### Duplicate Composition Child
+
+- Current legacy message:
+  `Composition child "{childName}" is duplicated.`
+- Current location/branch: `validateComponent.ts:155`,
+  `findDuplicates(composition.children.map((child) => child.name))`
+- Current deterministic ordering position: after duplicate slot relation and
+  duplicate part diagnostics; currently the last `validateComponent` diagnostic
+  family
+- Rule family: duplicate local composition metadata
+- Purely schema-local: yes
+- Depends on registry: no
+- Depends on graph validation: no
+- Depends on runtime/resolver/import-export: no
+- Message stability risk: medium, because child-name hygiene warnings are
+  adjacent but must remain separate and opt-in
+- Rollback boundary: duplicate helper rollback
+- Parity test difficulty: low to medium, mainly to prove no warning activation
+- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_CHILD_DUPLICATE`
+- Recommended migration priority: P2, safe but should stay separate from
+  child-name hygiene warning integration
+
+### Recommended Next Structured Slice
+
+The next safest structured migration slice is the top-level schema presence
+family:
+
+- `SCHEMA_COMPONENT_NAME_REQUIRED`
+- `SCHEMA_ROOT_SLOT_REQUIRED`
+- `SCHEMA_DEFAULT_STATE_REQUIRED`
+
+Why this slice is safest:
+
+- it is tiny and purely schema-local
+- it has no registry, graph validator, runtime, resolver, import/export,
+  `PreviewCanvas`, or adapter dependency
+- it is the first diagnostic block in `validateComponent`, so ordering parity is
+  straightforward
+- all three legacy messages are stable and already covered by existing public
+  validation behavior
+- rollback can delete only a validator-local presence helper and restore the
+  existing `errors.push(...)` branches
+- parity tests can cover exact legacy strings, field metadata, ordering before
+  variant-axis diagnostics, no input mutation, and no public API change
+
+This slice should still preserve the current public `string[]` return shape,
+avoid a top-level structured diagnostics array, avoid `aggregateDiagnostics`,
+avoid graph validator changes, and avoid warning integration. If sorted
+diagnostic order metadata is introduced for this helper, use an ordering bucket
+that precedes the already-migrated variant-axis bucket without renumbering the
+variant-axis migration in the same change.
+
 ## Normalization, Formatting, Rendering
 
 Normalization belongs to the producer that owns the rule. For example,
