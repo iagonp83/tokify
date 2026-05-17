@@ -4,29 +4,32 @@ This document defines the migration plan from legacy string diagnostics to
 internal structured `DiagnosticEnvelope` diagnostics.
 
 The isolated legacy formatter foundation now exists as compatibility
-infrastructure, and the first validator-local internal structured migration is
-closed for `validateComponent` variant-axis diagnostics only. This plan still
-does not introduce broad validator migration, global validator wiring, public
-validation APIs, runtime behavior, resolver behavior, `runtimePlan` behavior,
-runtime emission, import/export behavior, `PreviewCanvas` behavior, canonical
-IDs, child instance IDs, instance paths, path-derived runtime variables, strict
-mode, or blocking warnings.
+infrastructure, and validator-local internal structured migrations are closed
+for `validateComponent` top-level schema presence diagnostics and variant-axis
+diagnostics only. This plan still does not introduce broad validator migration,
+global validator wiring, public validation APIs, runtime behavior, resolver
+behavior, `runtimePlan` behavior, runtime emission, import/export behavior,
+`PreviewCanvas` behavior, canonical IDs, child instance IDs, instance paths,
+path-derived runtime variables, strict mode, or blocking warnings.
 
 ## Current Boundary
 
 Current public validator behavior remains legacy-compatible:
 
 - `validateComponent` returns its current legacy string diagnostics
-- `validateComponent` internally migrates only its variant-axis diagnostics
-  through a validator-local helper
+- `validateComponent` internally migrates only its top-level schema presence
+  diagnostics and variant-axis diagnostics through validator-local helpers
+- the migrated top-level schema presence codes are
+  `SCHEMA_COMPONENT_NAME_REQUIRED`, `SCHEMA_ROOT_SLOT_REQUIRED`, and
+  `SCHEMA_DEFAULT_STATE_REQUIRED`
 - the migrated variant-axis codes are
   `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS` and
   `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
 - the component graph validator returns its current legacy string diagnostics
 - warning diagnostics remain opt-in and non-blocking
 - aggregate diagnostics remains coordinator-only
-- the legacy formatter is used only by the local variant-axis compatibility
-  helper and is not globally wired into validators or public validation APIs
+- the legacy formatter is used only by local validateComponent compatibility
+  helpers and is not globally wired into validators or public validation APIs
 
 Structured diagnostics are an internal migration layer first. They should make
 diagnostics easier to sort, format, test, and aggregate without changing public
@@ -94,14 +97,18 @@ and returns `[]` for empty input.
 
 Validators own rule production for their domains.
 
-`validateComponent` owns schema-local correctness rules only. Its first
-internally structured rule family is variant-axis validation. The local helper
-creates structured envelopes for only:
+`validateComponent` owns schema-local correctness rules only. Its current
+internally structured rule families are top-level schema presence validation
+and variant-axis validation. The local helpers create structured envelopes for
+only:
 
+- `SCHEMA_COMPONENT_NAME_REQUIRED`
+- `SCHEMA_ROOT_SLOT_REQUIRED`
+- `SCHEMA_DEFAULT_STATE_REQUIRED`
 - `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS`
 - `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
 
-It immediately formats those envelopes back to legacy strings and returns
+They immediately format those envelopes back to legacy strings and return
 `string[]` to the existing validator flow. Broader `validateComponent`
 structured diagnostics may eventually cover local slot references, part
 metadata, child metadata shape, slot relation correctness, duplicate local
@@ -129,15 +136,21 @@ warnings, or change public validation APIs.
 
 ## ValidateComponent Structured Slice Inventory
 
-This checkpoint is documentation-only. It inventories the remaining
-`validateComponent` legacy string diagnostics that are not yet internally
-structured. It does not change validator behavior, public APIs, graph
-validation, warning collection, aggregate diagnostics, runtime, resolver,
-import/export, `PreviewCanvas`, or adapters.
+This checkpoint was documentation-only. It inventoried the
+`validateComponent` legacy string diagnostics that were not yet internally
+structured at the time of the inventory. Since then, the top-level schema
+presence slice has closed. The current remaining inventory starts after the
+closed presence entries below. This documentation checkpoint did not change
+validator behavior, public APIs, graph validation, warning collection,
+aggregate diagnostics, runtime, resolver, import/export, `PreviewCanvas`, or
+adapters.
 
-Already internally structured and therefore excluded from the remaining
-inventory:
+Currently internally structured and therefore excluded from future remaining
+legacy migration slices:
 
+- `SCHEMA_COMPONENT_NAME_REQUIRED`
+- `SCHEMA_ROOT_SLOT_REQUIRED`
+- `SCHEMA_DEFAULT_STATE_REQUIRED`
 - `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS`
 - `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
 
@@ -159,8 +172,8 @@ Current legacy ordering in `validateComponent` is:
 
 Rollback boundaries used below:
 
-- **Presence helper rollback**: delete only the future validator-local presence
-  helper and restore the three existing top-level `errors.push(...)` branches.
+- **Presence helper rollback**: delete only the validator-local presence helper
+  and restore the previous three top-level `errors.push(...)` branches.
 - **Token binding helper rollback**: delete only the future validator-local
   token binding helper and restore the current token binding loop strings.
 - **Composition reference helper rollback**: delete only the future
@@ -174,12 +187,13 @@ Rollback boundaries used below:
 - **Registry branch rollback**: restore the current optional
   `options.registry` child reference branch strings.
 
-### Remaining Legacy Diagnostic Inventory
+### Closed Since Inventory
 
 #### Component Name Required
 
 - Current legacy message: `Component name is required.`
-- Current location/branch: `validateComponent.ts:32`, `if (!schema.name.trim())`
+- Current location/branch: validator-local presence helper branch,
+  `if (!schema.name.trim())`
 - Current deterministic ordering position: first possible diagnostic, before
   root slot, default state, variant-axis diagnostics, and every composition
   rule
@@ -190,14 +204,14 @@ Rollback boundaries used below:
 - Depends on runtime/resolver/import-export: no
 - Message stability risk: low
 - Rollback boundary: presence helper rollback
-- Parity test difficulty: low
-- Candidate `DiagnosticCode`: `SCHEMA_COMPONENT_NAME_REQUIRED`
-- Recommended migration priority: P0, next safest slice
+- Parity test difficulty: low; parity coverage is closed
+- `DiagnosticCode`: `SCHEMA_COMPONENT_NAME_REQUIRED`
+- Migration status: closed
 
 #### Root Slot Required
 
 - Current legacy message: `Component requires a "root" slot.`
-- Current location/branch: `validateComponent.ts:36`,
+- Current location/branch: validator-local presence helper branch,
   `if (!slotNames.has("root"))`
 - Current deterministic ordering position: after component name, before default
   state and variant-axis diagnostics
@@ -208,14 +222,14 @@ Rollback boundaries used below:
 - Depends on runtime/resolver/import-export: no
 - Message stability risk: low
 - Rollback boundary: presence helper rollback
-- Parity test difficulty: low
-- Candidate `DiagnosticCode`: `SCHEMA_ROOT_SLOT_REQUIRED`
-- Recommended migration priority: P0, next safest slice
+- Parity test difficulty: low; parity coverage is closed
+- `DiagnosticCode`: `SCHEMA_ROOT_SLOT_REQUIRED`
+- Migration status: closed
 
 #### Default State Required
 
 - Current legacy message: `Component requires a "default" state.`
-- Current location/branch: `validateComponent.ts:40`,
+- Current location/branch: validator-local presence helper branch,
   `if (!stateNames.has("default"))`
 - Current deterministic ordering position: after component name and root slot,
   before variant-axis diagnostics
@@ -226,9 +240,11 @@ Rollback boundaries used below:
 - Depends on runtime/resolver/import-export: no
 - Message stability risk: low
 - Rollback boundary: presence helper rollback
-- Parity test difficulty: low
-- Candidate `DiagnosticCode`: `SCHEMA_DEFAULT_STATE_REQUIRED`
-- Recommended migration priority: P0, next safest slice
+- Parity test difficulty: low; parity coverage is closed
+- `DiagnosticCode`: `SCHEMA_DEFAULT_STATE_REQUIRED`
+- Migration status: closed
+
+### Remaining Legacy Diagnostic Inventory
 
 #### Token Binding Unknown Slot
 
@@ -604,16 +620,16 @@ Rollback boundaries used below:
 - Recommended migration priority: P2, safe but should stay separate from
   child-name hygiene warning integration
 
-### Recommended Next Structured Slice
+### Closed Presence Structured Slice
 
-The next safest structured migration slice is the top-level schema presence
-family:
+The structured migration slice previously recommended by this inventory is now
+closed. The migrated top-level schema presence family is:
 
 - `SCHEMA_COMPONENT_NAME_REQUIRED`
 - `SCHEMA_ROOT_SLOT_REQUIRED`
 - `SCHEMA_DEFAULT_STATE_REQUIRED`
 
-Why this slice is safest:
+Why this slice was selected:
 
 - it is tiny and purely schema-local
 - it has no registry, graph validator, runtime, resolver, import/export,
@@ -623,16 +639,14 @@ Why this slice is safest:
 - all three legacy messages are stable and already covered by existing public
   validation behavior
 - rollback can delete only a validator-local presence helper and restore the
-  existing `errors.push(...)` branches
+  previous `errors.push(...)` branches
 - parity tests can cover exact legacy strings, field metadata, ordering before
   variant-axis diagnostics, no input mutation, and no public API change
 
-This slice should still preserve the current public `string[]` return shape,
-avoid a top-level structured diagnostics array, avoid `aggregateDiagnostics`,
-avoid graph validator changes, and avoid warning integration. If sorted
-diagnostic order metadata is introduced for this helper, use an ordering bucket
-that precedes the already-migrated variant-axis bucket without renumbering the
-variant-axis migration in the same change.
+The closed slice preserves the current public `string[]` return shape, avoids a
+top-level structured diagnostics array, avoids `aggregateDiagnostics`, avoids
+graph validator changes, and avoids warning integration. Presence diagnostics
+remain ordered before the already-migrated variant-axis diagnostics.
 
 ## Normalization, Formatting, Rendering
 
@@ -705,6 +719,14 @@ Closed phase:
   `validateComponent` variant-axis diagnostics now create
   `DiagnosticEnvelope` values internally and immediately format them back to
   legacy strings through `legacyDiagnosticFormatter`.
+- **Presence formatter parity tests for validateComponent**:
+  byte-for-byte parity is proven for component-name-required,
+  root-slot-required, and default-state-required diagnostics, including
+  ordering before variant-axis diagnostics.
+- **Second validator-local internal structured migration**:
+  `validateComponent` top-level schema presence diagnostics now create
+  `DiagnosticEnvelope` values internally and immediately format them back to
+  legacy strings through `legacyDiagnosticFormatter`.
 
 Recommended future phases:
 
@@ -774,9 +796,9 @@ Avoid:
 
 ## Explicit Non-Goals
 
-Beyond the isolated formatter foundation and the closed
-`validateComponent` variant-axis validator-local migration, this migration plan
-does not introduce:
+Beyond the isolated formatter foundation and the closed `validateComponent`
+top-level schema presence and variant-axis validator-local migrations, this
+migration plan does not introduce:
 
 - broad validator migration
 - global validator wiring
