@@ -5,12 +5,13 @@ internal structured `DiagnosticEnvelope` diagnostics.
 
 The isolated legacy formatter foundation now exists as compatibility
 infrastructure, and validator-local internal structured migrations are closed
-for `validateComponent` top-level schema presence diagnostics and variant-axis
-diagnostics only. This plan still does not introduce broad validator migration,
-global validator wiring, public validation APIs, runtime behavior, resolver
-behavior, `runtimePlan` behavior, runtime emission, import/export behavior,
-`PreviewCanvas` behavior, canonical IDs, child instance IDs, instance paths,
-path-derived runtime variables, strict mode, or blocking warnings.
+for `validateComponent` top-level schema presence diagnostics, variant-axis
+diagnostics, and token binding diagnostics only. This plan still does not
+introduce broad validator migration, global validator wiring, public validation
+APIs, runtime behavior, resolver behavior, `runtimePlan` behavior, runtime
+emission, import/export behavior, `PreviewCanvas` behavior, canonical IDs,
+child instance IDs, instance paths, path-derived runtime variables, strict mode,
+or blocking warnings.
 
 ## Current Boundary
 
@@ -18,13 +19,19 @@ Current public validator behavior remains legacy-compatible:
 
 - `validateComponent` returns its current legacy string diagnostics
 - `validateComponent` internally migrates only its top-level schema presence
-  diagnostics and variant-axis diagnostics through validator-local helpers
+  diagnostics, variant-axis diagnostics, and token binding diagnostics through
+  validator-local helpers
 - the migrated top-level schema presence codes are
   `SCHEMA_COMPONENT_NAME_REQUIRED`, `SCHEMA_ROOT_SLOT_REQUIRED`, and
   `SCHEMA_DEFAULT_STATE_REQUIRED`
 - the migrated variant-axis codes are
   `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS` and
   `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
+- the migrated token binding codes are
+  `SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT`,
+  `SCHEMA_TOKEN_BINDING_UNKNOWN_STATE`,
+  `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS`, and
+  `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION`
 - the component graph validator returns its current legacy string diagnostics
 - warning diagnostics remain opt-in and non-blocking
 - aggregate diagnostics remains coordinator-only
@@ -98,24 +105,28 @@ and returns `[]` for empty input.
 Validators own rule production for their domains.
 
 `validateComponent` owns schema-local correctness rules only. Its current
-internally structured rule families are top-level schema presence validation
-and variant-axis validation. The local helpers create structured envelopes for
-only:
+internally structured rule families are top-level schema presence validation,
+variant-axis validation, and token binding validation. The local helpers
+create structured envelopes for only:
 
 - `SCHEMA_COMPONENT_NAME_REQUIRED`
 - `SCHEMA_ROOT_SLOT_REQUIRED`
 - `SCHEMA_DEFAULT_STATE_REQUIRED`
 - `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS`
 - `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_STATE`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION`
 
 They immediately format those envelopes back to legacy strings and return
 `string[]` to the existing validator flow. Broader `validateComponent`
-structured diagnostics may eventually cover local slot references, part
-metadata, child metadata shape, slot relation correctness, duplicate local
-metadata, and already-supported optional registry-backed child reference
-checks. It must not own graph traversal, child-name hygiene warnings,
-canonical readiness, resolver behavior, runtime behavior, import/export
-behavior, or adapter behavior.
+structured diagnostics may eventually cover composition local slot references,
+part metadata, child metadata shape, slot relation correctness, duplicate local
+metadata, and already-supported optional registry-backed child reference checks.
+It must not own graph traversal, child-name hygiene warnings, canonical
+readiness, resolver behavior, runtime behavior, import/export behavior, or
+adapter behavior.
 
 The component graph validator owns component-type graph rules only. Its
 structured diagnostics may eventually cover unknown component references,
@@ -139,8 +150,9 @@ warnings, or change public validation APIs.
 This checkpoint was documentation-only. It inventoried the
 `validateComponent` legacy string diagnostics that were not yet internally
 structured at the time of the inventory. Since then, the top-level schema
-presence slice has closed. The current remaining inventory starts after the
-closed presence entries below. This documentation checkpoint did not change
+presence, variant-axis, and token binding slices have closed. The current
+remaining inventory starts after the closed entries below. This documentation
+checkpoint did not change
 validator behavior, public APIs, graph validation, warning collection,
 aggregate diagnostics, runtime, resolver, import/export, `PreviewCanvas`, or
 adapters.
@@ -153,13 +165,17 @@ legacy migration slices:
 - `SCHEMA_DEFAULT_STATE_REQUIRED`
 - `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS`
 - `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_STATE`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION`
 
 Current legacy ordering in `validateComponent` is:
 
 1. top-level schema presence checks
 2. variant-axis checks, already internally structured, in `variants` array order
-3. token binding checks in `tokenBindings` array order, with condition checks in
-   authored object entry order
+3. token binding checks, already internally structured, in `tokenBindings`
+   array order, with condition checks in authored object entry order
 4. composition slot relation local reference checks in `slotRelations` array
    order
 5. composition part local reference checks in `parts` array order
@@ -174,8 +190,8 @@ Rollback boundaries used below:
 
 - **Presence helper rollback**: delete only the validator-local presence helper
   and restore the previous three top-level `errors.push(...)` branches.
-- **Token binding helper rollback**: delete only the future validator-local
-  token binding helper and restore the current token binding loop strings.
+- **Token binding helper rollback**: delete only the validator-local token
+  binding helper and restore the previous token binding loop strings.
 - **Composition reference helper rollback**: delete only the future
   validator-local composition reference helper and restore the current
   `slotRelations`, `parts`, or `children` branch strings.
@@ -244,13 +260,11 @@ Rollback boundaries used below:
 - `DiagnosticCode`: `SCHEMA_DEFAULT_STATE_REQUIRED`
 - Migration status: closed
 
-### Remaining Legacy Diagnostic Inventory
-
 #### Token Binding Unknown Slot
 
 - Current legacy message:
   `Token binding "{target}" references unknown slot "{slot}".`
-- Current location/branch: `validateComponent.ts:49`,
+- Current location/branch: validator-local token binding helper branch,
   `if (!slotNames.has(binding.slot))`
 - Current deterministic ordering position: first diagnostic for each
   `tokenBindings` entry, after all top-level and variant-axis diagnostics, and
@@ -262,17 +276,16 @@ Rollback boundaries used below:
 - Depends on runtime/resolver/import-export: no
 - Message stability risk: low
 - Rollback boundary: token binding helper rollback
-- Parity test difficulty: low to medium, because token binding diagnostics are
-  easiest to prove as a family
-- Candidate `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT`
-- Recommended migration priority: P1, after the top-level presence slice
+- Parity test difficulty: low to medium; parity coverage is closed
+- `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT`
+- Migration status: closed
 
 #### Token Binding Unknown State
 
 - Current legacy message:
   `Token binding "{target}" references unknown state "{option}".`
-- Current location/branch: `validateComponent.ts:60`, condition branch where
-  `axisName === "state"` and `!stateNames.has(option)`
+- Current location/branch: validator-local token binding helper condition
+  branch where `axisName === "state"` and `!stateNames.has(option)`
 - Current deterministic ordering position: within the current binding's
   `Object.entries(binding.conditions ?? {})` order, after that binding's
   unknown-slot diagnostic if present, before later condition entries and before
@@ -285,16 +298,17 @@ Rollback boundaries used below:
 - Message stability risk: low
 - Rollback boundary: token binding helper rollback
 - Parity test difficulty: medium, because parity must preserve authored
-  condition entry order and the `undefined` condition skip
-- Candidate `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_STATE`
-- Recommended migration priority: P1, after the top-level presence slice
+  condition entry order and the `undefined` condition skip; parity coverage is
+  closed
+- `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_STATE`
+- Migration status: closed
 
 #### Token Binding Unknown Variant Axis
 
 - Current legacy message:
   `Token binding "{target}" references unknown variant axis "{axisName}".`
-- Current location/branch: `validateComponent.ts:72`, condition branch where
-  `variantAxes.get(axisName)` is missing
+- Current location/branch: validator-local token binding helper condition
+  branch where `variantAxes.get(axisName)` is missing
 - Current deterministic ordering position: within the current binding's
   condition entry order, after the binding-level unknown-slot diagnostic if
   present, and before later condition entries and later token bindings
@@ -307,16 +321,16 @@ Rollback boundaries used below:
 - Rollback boundary: token binding helper rollback
 - Parity test difficulty: medium, because parity must preserve condition entry
   order and the early return that prevents an unknown-option diagnostic for the
-  same condition
-- Candidate `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS`
-- Recommended migration priority: P1, after the top-level presence slice
+  same condition; parity coverage is closed
+- `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS`
+- Migration status: closed
 
 #### Token Binding Unknown Variant Option
 
 - Current legacy message:
   `Token binding "{target}" references unknown {axisName} option "{option}".`
-- Current location/branch: `validateComponent.ts:79`, condition branch where a
-  variant axis exists but does not include the selected option
+- Current location/branch: validator-local token binding helper condition
+  branch where a variant axis exists but does not include the selected option
 - Current deterministic ordering position: within the current binding's
   condition entry order, after the binding-level unknown-slot diagnostic if
   present, and before later condition entries and later token bindings
@@ -329,9 +343,11 @@ Rollback boundaries used below:
   axis name as grammar
 - Rollback boundary: token binding helper rollback
 - Parity test difficulty: medium, because tests must preserve condition order
-  and axis-name interpolation
-- Candidate `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION`
-- Recommended migration priority: P1, after the top-level presence slice
+  and axis-name interpolation; parity coverage is closed
+- `DiagnosticCode`: `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION`
+- Migration status: closed
+
+### Remaining Legacy Diagnostic Inventory
 
 #### Composition Slot Relation Unknown Slot
 
@@ -648,6 +664,28 @@ top-level structured diagnostics array, avoids `aggregateDiagnostics`, avoids
 graph validator changes, and avoids warning integration. Presence diagnostics
 remain ordered before the already-migrated variant-axis diagnostics.
 
+### Closed Token Binding Structured Slice
+
+The third validator-local internal structured migration is now closed. The
+migrated token binding family is:
+
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_STATE`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION`
+
+This closed slice preserves the current public `string[]` return shape, avoids
+a top-level structured diagnostics array, avoids `aggregateDiagnostics`, avoids
+graph validator changes, avoids registry-backed check changes, and avoids
+warning integration.
+
+Token binding diagnostics remain ordered after top-level schema presence and
+variant-axis diagnostics. The migrated helper preserves `tokenBindings` array
+order, authored `Object.entries(binding.conditions ?? {})` order, unknown-slot
+diagnostics before condition diagnostics for the same binding, unknown variant
+axis early-return behavior, and the current skip behavior for `undefined`
+condition entries.
+
 ## Normalization, Formatting, Rendering
 
 Normalization belongs to the producer that owns the rule. For example,
@@ -727,6 +765,14 @@ Closed phase:
   `validateComponent` top-level schema presence diagnostics now create
   `DiagnosticEnvelope` values internally and immediately format them back to
   legacy strings through `legacyDiagnosticFormatter`.
+- **Token binding formatter parity tests for validateComponent**:
+  byte-for-byte parity is proven for unknown slot, unknown state, unknown
+  variant axis, unknown variant option, token binding order, authored condition
+  order, unknown-axis early return, and `undefined` condition skip behavior.
+- **Third validator-local internal structured migration**:
+  `validateComponent` token binding diagnostics now create
+  `DiagnosticEnvelope` values internally and immediately format them back to
+  legacy strings through `legacyDiagnosticFormatter`.
 
 Recommended future phases:
 
@@ -797,8 +843,8 @@ Avoid:
 ## Explicit Non-Goals
 
 Beyond the isolated formatter foundation and the closed `validateComponent`
-top-level schema presence and variant-axis validator-local migrations, this
-migration plan does not introduce:
+top-level schema presence, variant-axis, and token binding validator-local
+migrations, this migration plan does not introduce:
 
 - broad validator migration
 - global validator wiring

@@ -47,6 +47,9 @@ Current stabilized areas:
 - ValidateComponent Presence Diagnostic Formatter Parity Checkpoint
 - Second Internal Structured Validator Migration: validateComponent top-level
   schema presence diagnostics
+- ValidateComponent Token Binding Diagnostic Formatter Parity Checkpoint
+- Third Internal Structured Validator Migration: validateComponent token
+  binding diagnostics
 - Component Registry Foundation Commit 1
 - Registry-backed Composition Metadata Validation Commit 2
 - Graph Validator Planning documentation boundary
@@ -92,9 +95,10 @@ Automated regression tests cover:
 - formatter parity coverage for validateComponent variant-axis diagnostics
 - formatter parity coverage for validateComponent top-level schema presence
   diagnostics
+- formatter parity coverage for validateComponent token binding diagnostics
 - validator-local structured migration coverage for validateComponent
-  top-level schema presence and variant-axis diagnostics while preserving public
-  legacy strings
+  top-level schema presence, variant-axis, and token binding diagnostics while
+  preserving public legacy strings
 
 ## Component Model Structure
 
@@ -520,14 +524,15 @@ returns `[]` for empty input.
 
 The formatter is compatibility infrastructure only. It is now used by
 validator-local compatibility bridges inside `validateComponent` for the
-top-level schema presence and variant-axis rule families. It is not globally
-wired into validators, public validation APIs, warning collection, aggregate
-diagnostics, runtime, resolver, import/export, `PreviewCanvas`, schemas, UI,
-generated files, or adapters.
+top-level schema presence, variant-axis, and token binding rule families. It is
+not globally wired into validators, public validation APIs, warning collection,
+aggregate diagnostics, runtime, resolver, import/export, `PreviewCanvas`,
+schemas, UI, generated files, or adapters.
 
 Internal structured validator migrations are closed for only
-`validateComponent` top-level schema presence diagnostics and variant-axis
-diagnostics. The migrated top-level schema presence codes are:
+`validateComponent` top-level schema presence diagnostics, variant-axis
+diagnostics, and token binding diagnostics. The migrated top-level schema
+presence codes are:
 
 - `SCHEMA_COMPONENT_NAME_REQUIRED`
 - `SCHEMA_ROOT_SLOT_REQUIRED`
@@ -538,6 +543,13 @@ The migrated variant-axis codes are:
 - `SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS`
 - `SCHEMA_VARIANT_AXIS_INVALID_DEFAULT`
 
+The migrated token binding codes are:
+
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_STATE`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS`
+- `SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION`
+
 The helpers are module-private and validator-local. They create
 `DiagnosticEnvelope` objects for those rules, immediately format them through
 `legacyDiagnosticFormatter`, and return legacy `string[]` diagnostics to the
@@ -546,13 +558,16 @@ array was introduced in `validateComponent`, no global formatter wiring was
 added, and `aggregateDiagnostics` is not used by the validator.
 
 `validateComponent` still publicly returns legacy `string[]` diagnostics.
-Existing top-level schema presence and variant-axis legacy message text,
-ordering, and variant-axis empty-options short-circuit behavior are preserved.
-The component graph validator remains component-type-only and
-backward-compatible, warning collection remains opt-in and inactive in
-validation flows, aggregate diagnostics remain coordinator-only, public
-validation APIs remain unchanged, and no runtime, resolver, import/export,
-`PreviewCanvas`, UI, generated-file, or adapter behavior changed.
+Existing top-level schema presence, variant-axis, and token binding legacy
+message text and ordering are preserved. Variant-axis empty-options
+short-circuit behavior, token binding authored array order, condition entry
+order, unknown variant-axis early-return behavior, and `undefined` condition
+skip behavior are preserved. The component graph validator remains
+component-type-only and backward-compatible, warning collection remains opt-in
+and inactive in validation flows, aggregate diagnostics remain
+coordinator-only, public validation APIs remain unchanged, and no runtime,
+resolver, import/export, `PreviewCanvas`, UI, generated-file, or adapter
+behavior changed.
 
 Current severity values are `error`, `warning`, and `info`. Severity does not
 imply runtime behavior. Warnings are non-blocking by default and are emitted
@@ -620,16 +635,17 @@ names, layers, severities, and deterministic `order` metadata must be
 preserved during migration.
 
 Formatter parity test checkpoints are closed for `validateComponent`
-variant-axis diagnostics and top-level schema presence diagnostics. The first
-validator-local internal structured migration is closed for the variant-axis
-rule family, and the second validator-local internal structured migration is
-closed for the top-level schema presence rule family. The validateComponent
-structured slice inventory checkpoint is closed as a documentation-only map of
-the remaining legacy string diagnostics, their ordering, dependencies, rollback
-boundaries, parity-test difficulty, candidate codes, and recommended
-priorities. Broader `validateComponent` migration, graph validator migration,
-warning activation, aggregate reporting, and structured public APIs remain
-future work.
+variant-axis diagnostics, top-level schema presence diagnostics, and token
+binding diagnostics. The first validator-local internal structured migration is
+closed for the variant-axis rule family, the second validator-local internal
+structured migration is closed for the top-level schema presence rule family,
+and the third validator-local internal structured migration is closed for the
+token binding rule family. The validateComponent structured slice inventory
+checkpoint is closed as a documentation-only map of the remaining legacy string
+diagnostics, their ordering, dependencies, rollback boundaries, parity-test
+difficulty, candidate codes, and recommended priorities. Broader
+`validateComponent` migration, graph validator migration, warning activation,
+aggregate reporting, and structured public APIs remain future work.
 
 The migration plan does not introduce global diagnostic or formatter wiring
 into validators, public validation API changes, warning activation by default,
@@ -1525,9 +1541,10 @@ planning or architecture audits before implementation:
 - diagnostic code taxonomy
 - opt-in warning collection
 - broader formatter parity testing beyond the closed validateComponent
-  top-level schema presence and variant-axis checkpoints
+  top-level schema presence, variant-axis, and token binding checkpoints
 - validator-local structured diagnostic migration beyond the closed
-  validateComponent top-level schema presence and variant-axis rule families
+  validateComponent top-level schema presence, variant-axis, and token binding
+  rule families
 - aggregate diagnostics reporting beyond pure coordination
 - optional strict mode policy for child naming
 - migration tooling before hard child naming errors
@@ -1561,7 +1578,7 @@ planning or architecture audits before implementation:
 - No warning collection or public validation warning API.
 - No warning producers beyond the isolated opt-in child-name hygiene helper.
 - No diagnostic wiring into validators beyond the closed validateComponent
-  top-level schema presence and variant-axis local helpers.
+  top-level schema presence, variant-axis, and token binding local helpers.
 - No aggregate diagnostics behavior beyond pure coordination.
 - No string-to-envelope diagnostic migration.
 - No global formatter wiring into validators or public validation APIs.
@@ -1612,8 +1629,10 @@ foundations are closed as isolated infrastructure. The validateComponent
 variant-axis formatter parity and first internal structured migration
 checkpoints are closed. The validateComponent structured slice inventory
 checkpoint is also closed as documentation only. The validateComponent presence
-formatter parity and second internal structured migration checkpoints are now
-closed for the top-level schema presence rule family. Future work should
+formatter parity and second internal structured migration checkpoints are
+closed for the top-level schema presence rule family. The validateComponent
+token binding formatter parity and third internal structured migration
+checkpoints are closed for the token binding rule family. Future work should
 proceed through additional rule-family parity and validator-local migration
 slices, with broader `validateComponent` migration and optional structured
 public APIs kept for later explicit phases. Opt-in warning collection,
