@@ -23,6 +23,10 @@ type TokenBindingDiagnosticCode =
   | "SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_AXIS"
   | "SCHEMA_TOKEN_BINDING_UNKNOWN_VARIANT_OPTION";
 
+type CompositionSlotRelationDiagnosticCode =
+  | "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT"
+  | "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT";
+
 const baseSchema = {
   editable: {
     fields: ["variants"],
@@ -108,6 +112,30 @@ function createTokenBindingDiagnostic({
   path
 }: {
   readonly code: TokenBindingDiagnosticCode;
+  readonly message: string;
+  readonly order: DiagnosticOrder;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+}): DiagnosticEnvelope {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order,
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
+}
+
+function createCompositionSlotRelationDiagnostic({
+  code,
+  message,
+  order,
+  path
+}: {
+  readonly code: CompositionSlotRelationDiagnosticCode;
   readonly message: string;
   readonly order: DiagnosticOrder;
   readonly path: ReturnType<typeof createDiagnosticPath>;
@@ -977,6 +1005,440 @@ describe("validateComponent token binding diagnostic formatter parity", () => {
     expect(diagnostics).toEqual(diagnosticsBeforeFormat);
     expect(unknownSlotDiagnostic).toEqual(unknownSlotDiagnosticBeforeFormat);
     expect(unknownStateDiagnostic).toEqual(unknownStateDiagnosticBeforeFormat);
+  });
+});
+
+describe("validateComponent composition slot relation diagnostic formatter parity", () => {
+  it("formats unknown composition slot relation slot diagnostics to the current legacy string", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "missingSlot"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+        message: legacyErrors[0],
+        order: {
+          bucket: 2,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 0, "slot")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      'Composition slot relation references unknown slot "missingSlot".'
+    ]);
+    expect(structuredDiagnostics[0]).toMatchObject({
+      code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+      layer: diagnosticLayers.schema,
+      order: {
+        bucket: 2,
+        sequence: 0
+      },
+      path: ["composition", "slotRelations", 0, "slot"],
+      severity: diagnosticSeverities.error,
+      source: {
+        name: "validateComponent"
+      }
+    });
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("formats unknown composition slot relation parent-slot diagnostics to the current legacy string", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "missingParent",
+            slot: "root"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT",
+        message: legacyErrors[0],
+        order: {
+          bucket: 2,
+          sequence: 1
+        },
+        path: createDiagnosticPath(
+          "composition",
+          "slotRelations",
+          0,
+          "parentSlot"
+        )
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      'Composition slot relation references unknown parent slot "missingParent".'
+    ]);
+    expect(structuredDiagnostics[0]).toMatchObject({
+      code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT",
+      layer: diagnosticLayers.schema,
+      order: {
+        bucket: 2,
+        sequence: 1
+      },
+      path: ["composition", "slotRelations", 0, "parentSlot"],
+      severity: diagnosticSeverities.error,
+      source: {
+        name: "validateComponent"
+      }
+    });
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("preserves migrated-family ordering before composition slot relation diagnostics", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      name: " ",
+      slots: [
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        }
+      ],
+      states: [{ name: "hover" }],
+      tokenBindings: [
+        {
+          slot: "missingTokenSlot",
+          target: "background",
+          token: "semantic.color.accent"
+        }
+      ],
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: []
+        },
+        {
+          default: "lg",
+          name: "size",
+          options: ["sm", "md"]
+        }
+      ],
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "missingParent",
+            slot: "missingRelationSlot"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createPresenceDiagnostic({
+        code: "SCHEMA_COMPONENT_NAME_REQUIRED",
+        message: legacyErrors[0],
+        order: {
+          bucket: -1,
+          sequence: 0
+        },
+        path: createDiagnosticPath("name")
+      }),
+      createPresenceDiagnostic({
+        code: "SCHEMA_ROOT_SLOT_REQUIRED",
+        message: legacyErrors[1],
+        order: {
+          bucket: -1,
+          sequence: 1
+        },
+        path: createDiagnosticPath("slots")
+      }),
+      createPresenceDiagnostic({
+        code: "SCHEMA_DEFAULT_STATE_REQUIRED",
+        message: legacyErrors[2],
+        order: {
+          bucket: -1,
+          sequence: 2
+        },
+        path: createDiagnosticPath("states")
+      }),
+      createVariantDiagnostic({
+        code: "SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS",
+        message: legacyErrors[3],
+        order: {
+          bucket: 0,
+          sequence: 0
+        },
+        path: createDiagnosticPath("variants", 0, "options")
+      }),
+      createVariantDiagnostic({
+        code: "SCHEMA_VARIANT_AXIS_INVALID_DEFAULT",
+        message: legacyErrors[4],
+        order: {
+          bucket: 0,
+          sequence: 3
+        },
+        path: createDiagnosticPath("variants", 1, "default")
+      }),
+      createTokenBindingDiagnostic({
+        code: "SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT",
+        message: legacyErrors[5],
+        order: {
+          bucket: 1,
+          sequence: 0
+        },
+        path: createDiagnosticPath("tokenBindings", 0, "slot")
+      }),
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+        message: legacyErrors[6],
+        order: {
+          bucket: 2,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 0, "slot")
+      }),
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT",
+        message: legacyErrors[7],
+        order: {
+          bucket: 2,
+          sequence: 1
+        },
+        path: createDiagnosticPath(
+          "composition",
+          "slotRelations",
+          0,
+          "parentSlot"
+        )
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      "Component name is required.",
+      'Component requires a "root" slot.',
+      'Component requires a "default" state.',
+      'Variant axis "tone" requires at least one option.',
+      'Variant axis "size" default "lg" must be one of its options.',
+      'Token binding "background" references unknown slot "missingTokenSlot".',
+      'Composition slot relation references unknown slot "missingRelationSlot".',
+      'Composition slot relation references unknown parent slot "missingParent".'
+    ]);
+    expect(structuredDiagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "SCHEMA_COMPONENT_NAME_REQUIRED",
+      "SCHEMA_ROOT_SLOT_REQUIRED",
+      "SCHEMA_DEFAULT_STATE_REQUIRED",
+      "SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS",
+      "SCHEMA_VARIANT_AXIS_INVALID_DEFAULT",
+      "SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT",
+      "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+      "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT"
+    ]);
+    expect(
+      structuredDiagnostics.map((diagnostic) => diagnostic.order.bucket)
+    ).toEqual([-1, -1, -1, 0, 0, 1, 2, 2]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("preserves authored slot relation array order", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "firstMissingSlot"
+          },
+          {
+            parentSlot: "root",
+            slot: "secondMissingSlot"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+        message: legacyErrors[0],
+        order: {
+          bucket: 2,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 0, "slot")
+      }),
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+        message: legacyErrors[1],
+        order: {
+          bucket: 2,
+          sequence: 2
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 1, "slot")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      'Composition slot relation references unknown slot "firstMissingSlot".',
+      'Composition slot relation references unknown slot "secondMissingSlot".'
+    ]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("preserves unknown slot before unknown parent slot for the same relation", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "missingParent",
+            slot: "missingSlot"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+        message: legacyErrors[0],
+        order: {
+          bucket: 2,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 0, "slot")
+      }),
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT",
+        message: legacyErrors[1],
+        order: {
+          bucket: 2,
+          sequence: 1
+        },
+        path: createDiagnosticPath(
+          "composition",
+          "slotRelations",
+          0,
+          "parentSlot"
+        )
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      'Composition slot relation references unknown slot "missingSlot".',
+      'Composition slot relation references unknown parent slot "missingParent".'
+    ]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("formats composition slot relation diagnostic lists in input order without sorting", () => {
+    const structuredDiagnostics = [
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT",
+        message:
+          'Composition slot relation references unknown parent slot "missingParent".',
+        order: {
+          bucket: 2,
+          sequence: 1
+        },
+        path: createDiagnosticPath(
+          "composition",
+          "slotRelations",
+          0,
+          "parentSlot"
+        )
+      }),
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+        message: 'Composition slot relation references unknown slot "missingSlot".',
+        order: {
+          bucket: 2,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 0, "slot")
+      })
+    ];
+
+    expect(
+      structuredDiagnostics.map((diagnostic) => diagnostic.order.sequence)
+    ).toEqual([1, 0]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual([
+      'Composition slot relation references unknown parent slot "missingParent".',
+      'Composition slot relation references unknown slot "missingSlot".'
+    ]);
+  });
+
+  it("does not mutate composition slot relation diagnostic fixtures while formatting", () => {
+    const unknownSlotDiagnostic = createCompositionSlotRelationDiagnostic({
+      code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+      message: 'Composition slot relation references unknown slot "missingSlot".',
+      order: {
+        bucket: 2,
+        sequence: 0
+      },
+      path: createDiagnosticPath("composition", "slotRelations", 0, "slot")
+    });
+    const unknownParentSlotDiagnostic = createCompositionSlotRelationDiagnostic({
+      code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT",
+      message:
+        'Composition slot relation references unknown parent slot "missingParent".',
+      order: {
+        bucket: 2,
+        sequence: 1
+      },
+      path: createDiagnosticPath(
+        "composition",
+        "slotRelations",
+        0,
+        "parentSlot"
+      )
+    });
+    const diagnostics = [unknownParentSlotDiagnostic, unknownSlotDiagnostic];
+    const diagnosticsBeforeFormat = [...diagnostics];
+    const unknownSlotDiagnosticBeforeFormat = {
+      ...unknownSlotDiagnostic,
+      order: { ...unknownSlotDiagnostic.order },
+      path: [...unknownSlotDiagnostic.path],
+      source: { ...unknownSlotDiagnostic.source }
+    };
+    const unknownParentSlotDiagnosticBeforeFormat = {
+      ...unknownParentSlotDiagnostic,
+      order: { ...unknownParentSlotDiagnostic.order },
+      path: [...unknownParentSlotDiagnostic.path],
+      source: { ...unknownParentSlotDiagnostic.source }
+    };
+
+    const formatted = formatDiagnosticsAsLegacyStrings(diagnostics);
+
+    expect(formatted).toEqual([
+      'Composition slot relation references unknown parent slot "missingParent".',
+      'Composition slot relation references unknown slot "missingSlot".'
+    ]);
+    expect(formatted).not.toBe(diagnostics);
+    expect(diagnostics).toEqual(diagnosticsBeforeFormat);
+    expect(unknownSlotDiagnostic).toEqual(unknownSlotDiagnosticBeforeFormat);
+    expect(unknownParentSlotDiagnostic).toEqual(
+      unknownParentSlotDiagnosticBeforeFormat
+    );
   });
 });
 
