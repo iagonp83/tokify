@@ -7,12 +7,13 @@ The isolated legacy formatter foundation now exists as compatibility
 infrastructure, and validator-local internal structured migrations are closed
 for `validateComponent` top-level schema presence diagnostics, variant-axis
 diagnostics, token binding diagnostics, composition slot relation local
-reference diagnostics, and composition part local reference diagnostics only.
-This plan still does not introduce broad validator migration, global validator
-wiring, public validation APIs, runtime behavior, resolver behavior,
-`runtimePlan` behavior, runtime emission, import/export behavior,
-`PreviewCanvas` behavior, canonical IDs, child instance IDs, instance paths,
-path-derived runtime variables, strict mode, or blocking warnings.
+reference diagnostics, composition part local reference diagnostics, and
+composition child metadata shape diagnostics only. This plan still does not
+introduce broad validator migration, global validator wiring, public validation
+APIs, runtime behavior, resolver behavior, `runtimePlan` behavior, runtime
+emission, import/export behavior, `PreviewCanvas` behavior, canonical IDs,
+child instance IDs, instance paths, path-derived runtime variables, strict
+mode, or blocking warnings.
 
 ## Current Boundary
 
@@ -21,14 +22,16 @@ Current public validator behavior remains legacy-compatible:
 - `validateComponent` returns its current legacy string diagnostics
 - `validateComponent` internally migrates only its top-level schema presence
   diagnostics, variant-axis diagnostics, token binding diagnostics,
-  composition slot relation local reference diagnostics, and composition part
-  local reference diagnostics through validator-local helpers
+  composition slot relation local reference diagnostics, composition part local
+  reference diagnostics, and composition child metadata shape diagnostics
+  through validator-local helpers
 - the current internally migrated `validateComponent` families are:
   1. top-level schema presence diagnostics
   2. variant-axis diagnostics
   3. token binding diagnostics
   4. composition slot relation local reference diagnostics
   5. composition part local reference diagnostics
+  6. composition child metadata shape diagnostics
 - the migrated top-level schema presence codes are
   `SCHEMA_COMPONENT_NAME_REQUIRED`, `SCHEMA_ROOT_SLOT_REQUIRED`, and
   `SCHEMA_DEFAULT_STATE_REQUIRED`
@@ -45,6 +48,9 @@ Current public validator behavior remains legacy-compatible:
   `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT`
 - the migrated composition part local reference code is
   `SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT`
+- the migrated composition child metadata shape codes are
+  `SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED` and
+  `SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED`
 - the component graph validator returns its current legacy string diagnostics
 - warning diagnostics remain opt-in and non-blocking
 - aggregate diagnostics remains coordinator-only
@@ -120,8 +126,9 @@ Validators own rule production for their domains.
 `validateComponent` owns schema-local correctness rules only. Its current
 internally structured rule families are top-level schema presence validation,
 variant-axis validation, token binding validation, and composition slot relation
-local reference validation, and composition part local reference validation.
-The local helpers create structured envelopes for only:
+local reference validation, composition part local reference validation, and
+composition child metadata shape validation. The local helpers create
+structured envelopes for only:
 
 - `SCHEMA_COMPONENT_NAME_REQUIRED`
 - `SCHEMA_ROOT_SLOT_REQUIRED`
@@ -135,11 +142,13 @@ The local helpers create structured envelopes for only:
 - `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT`
 - `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT`
 - `SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT`
+- `SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED`
+- `SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED`
 
 They immediately format those envelopes back to legacy strings and return
 `string[]` to the existing validator flow. Broader `validateComponent`
-structured diagnostics may eventually cover child metadata shape, child local
-slot references, slot relation topology, duplicate local metadata, and
+structured diagnostics may eventually cover child local slot references, slot
+relation topology, duplicate local metadata, and
 already-supported optional registry-backed child reference checks. It must not
 own graph traversal, child-name hygiene warnings, canonical readiness,
 resolver behavior, runtime behavior, import/export behavior, or adapter
@@ -168,11 +177,11 @@ This checkpoint was documentation-only. It inventoried the
 `validateComponent` legacy string diagnostics that were not yet internally
 structured at the time of the inventory. Since then, the top-level schema
 presence, variant-axis, token binding, composition slot relation local
-reference, and composition part local reference slices have closed. The current
-remaining inventory starts after the closed entries below. This documentation
-checkpoint did not change validator behavior, public APIs, graph validation,
-warning collection, aggregate diagnostics, runtime, resolver, import/export,
-`PreviewCanvas`, or adapters.
+reference, composition part local reference, and composition child metadata
+shape slices have closed. The current remaining inventory starts after the
+closed entries below. This documentation checkpoint did not change validator
+behavior, public APIs, graph validation, warning collection, aggregate
+diagnostics, runtime, resolver, import/export, `PreviewCanvas`, or adapters.
 
 Currently internally structured and therefore excluded from future remaining
 legacy migration slices:
@@ -189,6 +198,8 @@ legacy migration slices:
 - `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT`
 - `SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT`
 - `SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT`
+- `SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED`
+- `SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED`
 
 Current legacy ordering in `validateComponent` is:
 
@@ -200,8 +211,9 @@ Current legacy ordering in `validateComponent` is:
    structured, in `slotRelations` array order
 5. composition part local reference checks, already internally structured, in
    `parts` array order
-6. composition child shape, optional registry-backed reference, and local slot
-   reference checks in `children` array order
+6. composition child metadata shape checks, already internally structured, in
+   `children` array order, followed by optional registry-backed reference and
+   local slot reference checks in `children` array order
 7. slot relation topology checks, with self-reference diagnostics discovered
    before cycle diagnostics
 8. duplicate `slotRelations`, duplicate `parts`, and duplicate `children`
@@ -219,9 +231,12 @@ Rollback boundaries used below:
 - **Composition part local reference helper rollback**: delete only the
   validator-local part local reference helper and restore the previous `parts`
   branch string.
-- **Composition child helper rollback**: delete only a future validator-local
-  child metadata or child reference helper and restore the current `children`
-  branch strings.
+- **Composition child metadata shape helper rollback**: delete only the
+  validator-local child metadata shape helper and restore the previous
+  blank-name and blank-component `children` branch strings.
+- **Composition child reference helper rollback**: delete only a future
+  validator-local child reference helper and restore the current child local
+  slot reference branch string.
 - **Topology helper rollback**: restore `validateSlotRelationTopology` to
   constructing and returning the current legacy strings directly.
 - **Duplicate helper rollback**: delete only the future duplicate metadata
@@ -436,12 +451,11 @@ Rollback boundaries used below:
 - `DiagnosticCode`: `SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT`
 - Migration status: closed
 
-### Remaining Legacy Diagnostic Inventory
-
 #### Composition Child Name Required
 
 - Current legacy message: `Composition child name is required.`
-- Current location/branch: `validateComponent.ts:110`,
+- Current location/branch: validator-local composition child metadata shape
+  helper branch,
   `if (!child.name.trim())`
 - Current deterministic ordering position: first possible diagnostic for each
   `children` entry, after part diagnostics and before component-reference,
@@ -453,18 +467,19 @@ Rollback boundaries used below:
 - Depends on runtime/resolver/import-export: no
 - Message stability risk: medium, because future child-name hygiene warnings
   are adjacent but must remain separate and opt-in
-- Rollback boundary: composition child helper rollback
-- Parity test difficulty: low to medium, mainly to prove no warning activation
-- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED`
-- Recommended migration priority: P2, after simpler schema-local reference
-  families and without wiring child-name hygiene warnings
+- Rollback boundary: composition child metadata shape helper rollback
+- Parity test difficulty: low to medium, mainly to prove no warning activation;
+  parity coverage is closed
+- `DiagnosticCode`: `SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED`
+- Migration status: closed
 
 #### Composition Child Component Required
 
 - Current legacy messages:
   `Composition child "{childName}" requires a component reference.` and
   `Composition child requires a component reference.`
-- Current location/branch: `validateComponent.ts:114`,
+- Current location/branch: validator-local composition child metadata shape
+  helper branch,
   `if (!child.component.trim())`, with a message branch based on
   `child.name.trim()`
 - Current deterministic ordering position: after the same child's blank-name
@@ -477,12 +492,13 @@ Rollback boundaries used below:
 - Depends on runtime/resolver/import-export: no
 - Message stability risk: medium, because one rule has two legacy message
   shapes
-- Rollback boundary: composition child helper rollback
+- Rollback boundary: composition child metadata shape helper rollback
 - Parity test difficulty: medium, because parity should cover both named and
-  unnamed child branches
-- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED`
-- Recommended migration priority: P2, after simpler schema-local reference
-  families
+  unnamed child branches; parity coverage is closed
+- `DiagnosticCode`: `SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED`
+- Migration status: closed
+
+### Remaining Legacy Diagnostic Inventory
 
 #### Registry-Backed Composition Child Self-Reference
 
@@ -547,7 +563,7 @@ Rollback boundaries used below:
 - Depends on graph validation: no
 - Depends on runtime/resolver/import-export: no
 - Message stability risk: low
-- Rollback boundary: composition child helper rollback
+- Rollback boundary: composition child reference helper rollback
 - Parity test difficulty: low
 - Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT`
 - Recommended migration priority: P1, after top-level presence and before
@@ -748,6 +764,27 @@ Composition part local reference diagnostics remain ordered after top-level
 schema presence, variant-axis, token binding, and composition slot relation
 local reference diagnostics. The migrated helper preserves `parts` array order.
 
+### Closed Composition Child Metadata Shape Structured Slice
+
+The sixth validator-local internal structured migration is now closed. The
+migrated composition child metadata shape family is:
+
+- `SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED`
+- `SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED`
+
+This closed slice preserves the current public `string[]` return shape, avoids
+a top-level structured diagnostics array, avoids `aggregateDiagnostics`, avoids
+graph validator changes, avoids registry-backed check changes, avoids
+composition child local slot reference migration, avoids topology diagnostic
+migration, avoids duplicate diagnostic migration, and avoids child-name hygiene
+warning integration.
+
+Composition child metadata shape diagnostics remain ordered after top-level
+schema presence, variant-axis, token binding, composition slot relation local
+reference, and composition part local reference diagnostics. The migrated helper
+preserves `children` array order, same-child blank-name-before-component
+ordering, and both named and unnamed missing-component message shapes.
+
 ## Normalization, Formatting, Rendering
 
 Normalization belongs to the producer that owns the rule. For example,
@@ -853,6 +890,17 @@ Closed phase:
   `validateComponent` composition part local reference diagnostics now create
   `DiagnosticEnvelope` values internally and immediately format them back to
   legacy strings through `legacyDiagnosticFormatter`.
+- **Composition child metadata shape formatter parity tests for
+  validateComponent**: byte-for-byte parity is proven for blank child name,
+  named missing component reference, unnamed missing component reference,
+  ordering after presence, variant-axis, token binding, composition slot
+  relation, and composition part diagnostics, `children` array order,
+  same-child blank-name before missing-component order, formatter non-sorting,
+  and formatter non-mutation.
+- **Sixth validator-local internal structured migration**:
+  `validateComponent` composition child metadata shape diagnostics now create
+  `DiagnosticEnvelope` values internally and immediately format them back to
+  legacy strings through `legacyDiagnosticFormatter`.
 
 Recommended future phases:
 
@@ -924,8 +972,9 @@ Avoid:
 
 Beyond the isolated formatter foundation and the closed `validateComponent`
 top-level schema presence, variant-axis, token binding, composition slot
-relation local reference, and composition part local reference validator-local
-migrations, this migration plan does not introduce:
+relation local reference, composition part local reference, and composition
+child metadata shape validator-local migrations, this migration plan does not
+introduce:
 
 - broad validator migration
 - global validator wiring
