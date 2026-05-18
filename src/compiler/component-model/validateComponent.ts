@@ -98,23 +98,7 @@ export function validateComponent(
 
   errors.push(...validateSlotRelationTopology(schema, slotNames));
 
-  findDuplicates(
-    schema.composition?.slotRelations?.map((relation) => relation.slot) ?? []
-  ).forEach((slot) => {
-    errors.push(`Composition slot relation "${slot}" is duplicated.`);
-  });
-
-  findDuplicates(schema.composition?.parts?.map((part) => part.name) ?? []).forEach(
-    (partName) => {
-      errors.push(`Composition part "${partName}" is duplicated.`);
-    }
-  );
-
-  findDuplicates(
-    schema.composition?.children?.map((child) => child.name) ?? []
-  ).forEach((childName) => {
-    errors.push(`Composition child "${childName}" is duplicated.`);
-  });
+  errors.push(...validateDuplicateLocalCompositionMetadata(schema));
 
   return {
     errors,
@@ -149,6 +133,11 @@ type CompositionChildMetadataShapeDiagnosticCode =
 
 type CompositionChildLocalSlotReferenceDiagnosticCode =
   "SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT";
+
+type DuplicateLocalCompositionMetadataDiagnosticCode =
+  | "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE"
+  | "SCHEMA_COMPOSITION_PART_DUPLICATE"
+  | "SCHEMA_COMPOSITION_CHILD_DUPLICATE";
 
 function validateSchemaPresence(
   schema: ComponentSchema,
@@ -629,20 +618,109 @@ function createCompositionChildLocalSlotReferenceDiagnostic({
   });
 }
 
-function findDuplicates(values: readonly string[]) {
-  const seen = new Set<string>();
-  const duplicates = new Set<string>();
+function validateDuplicateLocalCompositionMetadata(
+  schema: ComponentSchema
+): string[] {
+  const diagnostics: DiagnosticEnvelope<DuplicateLocalCompositionMetadataDiagnosticCode>[] =
+    [];
 
-  values.forEach((value) => {
-    if (seen.has(value)) {
-      duplicates.add(value);
+  collectDuplicateLocalCompositionMetadataDiagnostics({
+    code: "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+    diagnostics,
+    message: (slot) => `Composition slot relation "${slot}" is duplicated.`,
+    path: (index) =>
+      createDiagnosticPath("composition", "slotRelations", index, "slot"),
+    sequenceOffset: 0,
+    values:
+      schema.composition?.slotRelations?.map((relation) => relation.slot) ?? []
+  });
+  collectDuplicateLocalCompositionMetadataDiagnostics({
+    code: "SCHEMA_COMPOSITION_PART_DUPLICATE",
+    diagnostics,
+    message: (partName) => `Composition part "${partName}" is duplicated.`,
+    path: (index) =>
+      createDiagnosticPath("composition", "parts", index, "name"),
+    sequenceOffset: 100,
+    values: schema.composition?.parts?.map((part) => part.name) ?? []
+  });
+  collectDuplicateLocalCompositionMetadataDiagnostics({
+    code: "SCHEMA_COMPOSITION_CHILD_DUPLICATE",
+    diagnostics,
+    message: (childName) => `Composition child "${childName}" is duplicated.`,
+    path: (index) =>
+      createDiagnosticPath("composition", "children", index, "name"),
+    sequenceOffset: 200,
+    values: schema.composition?.children?.map((child) => child.name) ?? []
+  });
+
+  return formatDiagnosticsAsLegacyStrings(diagnostics);
+}
+
+function collectDuplicateLocalCompositionMetadataDiagnostics({
+  code,
+  diagnostics,
+  message,
+  path,
+  sequenceOffset,
+  values
+}: {
+  readonly code: DuplicateLocalCompositionMetadataDiagnosticCode;
+  readonly diagnostics: DiagnosticEnvelope<DuplicateLocalCompositionMetadataDiagnosticCode>[];
+  readonly message: (value: string) => string;
+  readonly path: (index: number) => ReturnType<typeof createDiagnosticPath>;
+  readonly sequenceOffset: number;
+  readonly values: readonly string[];
+}): void {
+  const seen = new Set<string>();
+  const duplicated = new Set<string>();
+
+  values.forEach((value, index) => {
+    if (!seen.has(value)) {
+      seen.add(value);
       return;
     }
 
-    seen.add(value);
-  });
+    if (duplicated.has(value)) {
+      return;
+    }
 
-  return [...duplicates];
+    duplicated.add(value);
+    diagnostics.push(
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code,
+        message: message(value),
+        path: path(index),
+        sequence: sequenceOffset + duplicated.size - 1
+      })
+    );
+  });
+}
+
+function createDuplicateLocalCompositionMetadataDiagnostic({
+  code,
+  message,
+  path,
+  sequence
+}: {
+  readonly code: DuplicateLocalCompositionMetadataDiagnosticCode;
+  readonly message: string;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+  readonly sequence: number;
+}): DiagnosticEnvelope<DuplicateLocalCompositionMetadataDiagnosticCode> {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order: {
+      bucket: 6,
+      sequence
+    },
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
 }
 
 function hasRegistryComponent(

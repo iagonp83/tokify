@@ -599,6 +599,186 @@ describe("validateComponent composition metadata", () => {
     expect(result).not.toHaveProperty("warnings");
   });
 
+  it("keeps structured duplicate local composition metadata diagnostics legacy-compatible", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      name: " ",
+      slots: [
+        ...baseSchema.slots,
+        {
+          name: "footer",
+          required: false,
+          role: "content"
+        }
+      ],
+      states: [{ name: "hover" }],
+      tokenBindings: [
+        {
+          conditions: {
+            state: "focus",
+            tone: "primary",
+            size: "xl",
+            emphasis: "strong"
+          },
+          slot: "missingTokenSlot",
+          target: "background",
+          token: "semantic.color.accent"
+        }
+      ],
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: []
+        },
+        {
+          default: "lg",
+          name: "size",
+          options: ["sm", "md"]
+        }
+      ],
+      composition: {
+        children: [
+          {
+            component: " ",
+            name: " ",
+            slot: "missingChildSlot"
+          },
+          {
+            component: "Badge",
+            name: " leading.name ",
+            slot: "root"
+          },
+          {
+            component: "Badge",
+            name: "badge",
+            slot: "root"
+          },
+          {
+            component: "Field",
+            name: "field",
+            slot: "content"
+          },
+          {
+            component: "Badge",
+            name: "badge",
+            slot: "icon"
+          },
+          {
+            component: "Field",
+            name: "field",
+            slot: "footer"
+          }
+        ],
+        parts: [
+          {
+            name: "label",
+            slot: "missingPartSlot"
+          },
+          {
+            name: "body",
+            slot: "root"
+          },
+          {
+            name: "iconPart",
+            slot: "icon"
+          },
+          {
+            name: "body",
+            slot: "content"
+          },
+          {
+            name: "footerPart",
+            slot: "footer"
+          },
+          {
+            name: "iconPart",
+            slot: "root"
+          },
+          {
+            name: "footerPart",
+            slot: "content"
+          }
+        ],
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "missingRelationSlot"
+          },
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "root",
+            slot: "icon"
+          },
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "root",
+            slot: "footer"
+          },
+          {
+            parentSlot: "root",
+            slot: "icon"
+          },
+          {
+            parentSlot: "root",
+            slot: "footer"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: [
+        "Component name is required.",
+        'Component requires a "default" state.',
+        'Variant axis "tone" requires at least one option.',
+        'Variant axis "size" default "lg" must be one of its options.',
+        'Token binding "background" references unknown slot "missingTokenSlot".',
+        'Token binding "background" references unknown state "focus".',
+        'Token binding "background" references unknown tone option "primary".',
+        'Token binding "background" references unknown size option "xl".',
+        'Token binding "background" references unknown variant axis "emphasis".',
+        'Composition slot relation references unknown slot "missingRelationSlot".',
+        'Composition part "label" references unknown slot "missingPartSlot".',
+        "Composition child name is required.",
+        "Composition child requires a component reference.",
+        'Composition child " " references unknown slot "missingChildSlot".',
+        'Composition slot relation "content" is duplicated.',
+        'Composition slot relation "icon" is duplicated.',
+        'Composition slot relation "footer" is duplicated.',
+        'Composition part "body" is duplicated.',
+        'Composition part "iconPart" is duplicated.',
+        'Composition part "footerPart" is duplicated.',
+        'Composition child "badge" is duplicated.',
+        'Composition child "field" is duplicated.'
+      ],
+      valid: false
+    });
+    expect(Array.isArray(result.errors)).toBe(true);
+    expect(result.errors.every((error) => typeof error === "string")).toBe(true);
+    expect(
+      result.errors.some((error) => error.toLowerCase().includes("warning"))
+    ).toBe(false);
+    expect(
+      result.errors.some(
+        (error) =>
+          error.includes("METADATA_CHILD_NAME") ||
+          error.includes("PATH_CHILD_NAME") ||
+          error.includes("starts with whitespace") ||
+          error.includes("ends with whitespace") ||
+          error.includes("reserved instance-path")
+      )
+    ).toBe(false);
+    expect(result).not.toHaveProperty("diagnostics");
+    expect(result).not.toHaveProperty("warnings");
+  });
+
   it("keeps structured presence diagnostics legacy-compatible", () => {
     const result = validateComponent({
       ...baseSchema,
