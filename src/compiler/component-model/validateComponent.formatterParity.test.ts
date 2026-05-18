@@ -36,6 +36,11 @@ type CompositionChildMetadataShapeDiagnosticCode =
 type CompositionChildLocalSlotReferenceDiagnosticCode =
   "SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT";
 
+type DuplicateLocalCompositionMetadataDiagnosticCode =
+  | "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE"
+  | "SCHEMA_COMPOSITION_PART_DUPLICATE"
+  | "SCHEMA_COMPOSITION_CHILD_DUPLICATE";
+
 const baseSchema = {
   editable: {
     fields: ["variants"],
@@ -217,6 +222,30 @@ function createCompositionChildLocalSlotReferenceDiagnostic({
   path
 }: {
   readonly code: CompositionChildLocalSlotReferenceDiagnosticCode;
+  readonly message: string;
+  readonly order: DiagnosticOrder;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+}): DiagnosticEnvelope {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order,
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
+}
+
+function createDuplicateLocalCompositionMetadataDiagnostic({
+  code,
+  message,
+  order,
+  path
+}: {
+  readonly code: DuplicateLocalCompositionMetadataDiagnosticCode;
   readonly message: string;
   readonly order: DiagnosticOrder;
   readonly path: ReturnType<typeof createDiagnosticPath>;
@@ -2747,6 +2776,701 @@ describe("validateComponent composition child local slot reference diagnostic fo
     expect(diagnostics).toEqual(diagnosticsBeforeFormat);
     expect(firstChildDiagnostic).toEqual(firstChildDiagnosticBeforeFormat);
     expect(secondChildDiagnostic).toEqual(secondChildDiagnosticBeforeFormat);
+  });
+});
+
+describe("validateComponent duplicate local composition metadata diagnostic formatter parity", () => {
+  it("formats duplicate composition metadata diagnostics to the current legacy strings", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      slots: [
+        ...baseSchema.slots,
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        }
+      ],
+      composition: {
+        children: [
+          {
+            component: "Icon",
+            name: "adornment",
+            slot: "root"
+          },
+          {
+            component: "Badge",
+            name: "adornment",
+            slot: "content"
+          }
+        ],
+        parts: [
+          {
+            name: "body",
+            slot: "root"
+          },
+          {
+            name: "body",
+            slot: "content"
+          }
+        ],
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "root",
+            slot: "content"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+        message: legacyErrors[0],
+        order: {
+          bucket: 6,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 1, "slot")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_PART_DUPLICATE",
+        message: legacyErrors[1],
+        order: {
+          bucket: 6,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "parts", 1, "name")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_DUPLICATE",
+        message: legacyErrors[2],
+        order: {
+          bucket: 6,
+          sequence: 2
+        },
+        path: createDiagnosticPath("composition", "children", 1, "name")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      'Composition slot relation "content" is duplicated.',
+      'Composition part "body" is duplicated.',
+      'Composition child "adornment" is duplicated.'
+    ]);
+    expect(structuredDiagnostics).toMatchObject([
+      {
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+        layer: diagnosticLayers.schema,
+        order: {
+          bucket: 6,
+          sequence: 0
+        },
+        path: ["composition", "slotRelations", 1, "slot"],
+        severity: diagnosticSeverities.error,
+        source: {
+          name: "validateComponent"
+        }
+      },
+      {
+        code: "SCHEMA_COMPOSITION_PART_DUPLICATE",
+        layer: diagnosticLayers.schema,
+        order: {
+          bucket: 6,
+          sequence: 1
+        },
+        path: ["composition", "parts", 1, "name"],
+        severity: diagnosticSeverities.error,
+        source: {
+          name: "validateComponent"
+        }
+      },
+      {
+        code: "SCHEMA_COMPOSITION_CHILD_DUPLICATE",
+        layer: diagnosticLayers.schema,
+        order: {
+          bucket: 6,
+          sequence: 2
+        },
+        path: ["composition", "children", 1, "name"],
+        severity: diagnosticSeverities.error,
+        source: {
+          name: "validateComponent"
+        }
+      }
+    ]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("preserves migrated-family ordering before duplicate composition metadata diagnostics", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      name: " ",
+      slots: [
+        ...baseSchema.slots,
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        }
+      ],
+      states: [{ name: "hover" }],
+      tokenBindings: [
+        {
+          slot: "missingTokenSlot",
+          target: "background",
+          token: "semantic.color.accent"
+        }
+      ],
+      variants: [
+        {
+          default: "primary",
+          name: "tone",
+          options: []
+        },
+        {
+          default: "lg",
+          name: "size",
+          options: ["sm", "md"]
+        }
+      ],
+      composition: {
+        children: [
+          {
+            component: " ",
+            name: " ",
+            slot: "missingChildSlot"
+          },
+          {
+            component: "Icon",
+            name: "adornment",
+            slot: "root"
+          },
+          {
+            component: "Badge",
+            name: "adornment",
+            slot: "content"
+          }
+        ],
+        parts: [
+          {
+            name: "label",
+            slot: "missingPartSlot"
+          },
+          {
+            name: "body",
+            slot: "root"
+          },
+          {
+            name: "body",
+            slot: "content"
+          }
+        ],
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "missingRelationSlot"
+          },
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "root",
+            slot: "content"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createPresenceDiagnostic({
+        code: "SCHEMA_COMPONENT_NAME_REQUIRED",
+        message: legacyErrors[0],
+        order: {
+          bucket: -1,
+          sequence: 0
+        },
+        path: createDiagnosticPath("name")
+      }),
+      createPresenceDiagnostic({
+        code: "SCHEMA_DEFAULT_STATE_REQUIRED",
+        message: legacyErrors[1],
+        order: {
+          bucket: -1,
+          sequence: 2
+        },
+        path: createDiagnosticPath("states")
+      }),
+      createVariantDiagnostic({
+        code: "SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS",
+        message: legacyErrors[2],
+        order: {
+          bucket: 0,
+          sequence: 0
+        },
+        path: createDiagnosticPath("variants", 0, "options")
+      }),
+      createVariantDiagnostic({
+        code: "SCHEMA_VARIANT_AXIS_INVALID_DEFAULT",
+        message: legacyErrors[3],
+        order: {
+          bucket: 0,
+          sequence: 3
+        },
+        path: createDiagnosticPath("variants", 1, "default")
+      }),
+      createTokenBindingDiagnostic({
+        code: "SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT",
+        message: legacyErrors[4],
+        order: {
+          bucket: 1,
+          sequence: 0
+        },
+        path: createDiagnosticPath("tokenBindings", 0, "slot")
+      }),
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+        message: legacyErrors[5],
+        order: {
+          bucket: 2,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 0, "slot")
+      }),
+      createCompositionPartDiagnostic({
+        code: "SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT",
+        message: legacyErrors[6],
+        order: {
+          bucket: 3,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "parts", 0, "slot")
+      }),
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED",
+        message: legacyErrors[7],
+        order: {
+          bucket: 4,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "children", 0, "name")
+      }),
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED",
+        message: legacyErrors[8],
+        order: {
+          bucket: 4,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "children", 0, "component")
+      }),
+      createCompositionChildLocalSlotReferenceDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT",
+        message: legacyErrors[9],
+        order: {
+          bucket: 5,
+          sequence: 2
+        },
+        path: createDiagnosticPath("composition", "children", 0, "slot")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+        message: legacyErrors[10],
+        order: {
+          bucket: 6,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 2, "slot")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_PART_DUPLICATE",
+        message: legacyErrors[11],
+        order: {
+          bucket: 6,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "parts", 2, "name")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_DUPLICATE",
+        message: legacyErrors[12],
+        order: {
+          bucket: 6,
+          sequence: 2
+        },
+        path: createDiagnosticPath("composition", "children", 2, "name")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      "Component name is required.",
+      'Component requires a "default" state.',
+      'Variant axis "tone" requires at least one option.',
+      'Variant axis "size" default "lg" must be one of its options.',
+      'Token binding "background" references unknown slot "missingTokenSlot".',
+      'Composition slot relation references unknown slot "missingRelationSlot".',
+      'Composition part "label" references unknown slot "missingPartSlot".',
+      "Composition child name is required.",
+      "Composition child requires a component reference.",
+      'Composition child " " references unknown slot "missingChildSlot".',
+      'Composition slot relation "content" is duplicated.',
+      'Composition part "body" is duplicated.',
+      'Composition child "adornment" is duplicated.'
+    ]);
+    expect(structuredDiagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "SCHEMA_COMPONENT_NAME_REQUIRED",
+      "SCHEMA_DEFAULT_STATE_REQUIRED",
+      "SCHEMA_VARIANT_AXIS_EMPTY_OPTIONS",
+      "SCHEMA_VARIANT_AXIS_INVALID_DEFAULT",
+      "SCHEMA_TOKEN_BINDING_UNKNOWN_SLOT",
+      "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT",
+      "SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT",
+      "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED",
+      "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED",
+      "SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT",
+      "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+      "SCHEMA_COMPOSITION_PART_DUPLICATE",
+      "SCHEMA_COMPOSITION_CHILD_DUPLICATE"
+    ]);
+    expect(
+      structuredDiagnostics.map((diagnostic) => diagnostic.order.bucket)
+    ).toEqual([-1, -1, 0, 0, 1, 2, 3, 4, 4, 5, 6, 6, 6]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("preserves duplicate family order and first repeated value discovery order", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      slots: [
+        ...baseSchema.slots,
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        },
+        {
+          name: "icon",
+          required: false,
+          role: "icon"
+        },
+        {
+          name: "footer",
+          required: false,
+          role: "content"
+        }
+      ],
+      composition: {
+        children: [
+          {
+            component: "Badge",
+            name: "badge",
+            slot: "root"
+          },
+          {
+            component: "Field",
+            name: "field",
+            slot: "content"
+          },
+          {
+            component: "Badge",
+            name: "badge",
+            slot: "icon"
+          },
+          {
+            component: "Caption",
+            name: "caption",
+            slot: "footer"
+          },
+          {
+            component: "Field",
+            name: "field",
+            slot: "root"
+          },
+          {
+            component: "Caption",
+            name: "caption",
+            slot: "content"
+          }
+        ],
+        parts: [
+          {
+            name: "body",
+            slot: "root"
+          },
+          {
+            name: "iconPart",
+            slot: "icon"
+          },
+          {
+            name: "body",
+            slot: "content"
+          },
+          {
+            name: "footerPart",
+            slot: "footer"
+          },
+          {
+            name: "iconPart",
+            slot: "root"
+          },
+          {
+            name: "footerPart",
+            slot: "content"
+          }
+        ],
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "root",
+            slot: "icon"
+          },
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "root",
+            slot: "footer"
+          },
+          {
+            parentSlot: "root",
+            slot: "icon"
+          },
+          {
+            parentSlot: "root",
+            slot: "footer"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+        message: legacyErrors[0],
+        order: {
+          bucket: 6,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 2, "slot")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+        message: legacyErrors[1],
+        order: {
+          bucket: 6,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 4, "slot")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+        message: legacyErrors[2],
+        order: {
+          bucket: 6,
+          sequence: 2
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 5, "slot")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_PART_DUPLICATE",
+        message: legacyErrors[3],
+        order: {
+          bucket: 6,
+          sequence: 100
+        },
+        path: createDiagnosticPath("composition", "parts", 2, "name")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_PART_DUPLICATE",
+        message: legacyErrors[4],
+        order: {
+          bucket: 6,
+          sequence: 101
+        },
+        path: createDiagnosticPath("composition", "parts", 4, "name")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_PART_DUPLICATE",
+        message: legacyErrors[5],
+        order: {
+          bucket: 6,
+          sequence: 102
+        },
+        path: createDiagnosticPath("composition", "parts", 5, "name")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_DUPLICATE",
+        message: legacyErrors[6],
+        order: {
+          bucket: 6,
+          sequence: 200
+        },
+        path: createDiagnosticPath("composition", "children", 2, "name")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_DUPLICATE",
+        message: legacyErrors[7],
+        order: {
+          bucket: 6,
+          sequence: 201
+        },
+        path: createDiagnosticPath("composition", "children", 4, "name")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_DUPLICATE",
+        message: legacyErrors[8],
+        order: {
+          bucket: 6,
+          sequence: 202
+        },
+        path: createDiagnosticPath("composition", "children", 5, "name")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      'Composition slot relation "content" is duplicated.',
+      'Composition slot relation "icon" is duplicated.',
+      'Composition slot relation "footer" is duplicated.',
+      'Composition part "body" is duplicated.',
+      'Composition part "iconPart" is duplicated.',
+      'Composition part "footerPart" is duplicated.',
+      'Composition child "badge" is duplicated.',
+      'Composition child "field" is duplicated.',
+      'Composition child "caption" is duplicated.'
+    ]);
+    expect(structuredDiagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+      "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+      "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+      "SCHEMA_COMPOSITION_PART_DUPLICATE",
+      "SCHEMA_COMPOSITION_PART_DUPLICATE",
+      "SCHEMA_COMPOSITION_PART_DUPLICATE",
+      "SCHEMA_COMPOSITION_CHILD_DUPLICATE",
+      "SCHEMA_COMPOSITION_CHILD_DUPLICATE",
+      "SCHEMA_COMPOSITION_CHILD_DUPLICATE"
+    ]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("formats duplicate diagnostic lists in input order without sorting", () => {
+    const structuredDiagnostics = [
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_DUPLICATE",
+        message: 'Composition child "badge" is duplicated.',
+        order: {
+          bucket: 6,
+          sequence: 2
+        },
+        path: createDiagnosticPath("composition", "children", 1, "name")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+        message: 'Composition slot relation "content" is duplicated.',
+        order: {
+          bucket: 6,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations", 1, "slot")
+      }),
+      createDuplicateLocalCompositionMetadataDiagnostic({
+        code: "SCHEMA_COMPOSITION_PART_DUPLICATE",
+        message: 'Composition part "body" is duplicated.',
+        order: {
+          bucket: 6,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "parts", 1, "name")
+      })
+    ];
+
+    expect(
+      structuredDiagnostics.map((diagnostic) => diagnostic.order.sequence)
+    ).toEqual([2, 0, 1]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual([
+      'Composition child "badge" is duplicated.',
+      'Composition slot relation "content" is duplicated.',
+      'Composition part "body" is duplicated.'
+    ]);
+  });
+
+  it("does not mutate duplicate diagnostic fixtures while formatting", () => {
+    const slotRelationDiagnostic = createDuplicateLocalCompositionMetadataDiagnostic({
+      code: "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE",
+      message: 'Composition slot relation "content" is duplicated.',
+      order: {
+        bucket: 6,
+        sequence: 0
+      },
+      path: createDiagnosticPath("composition", "slotRelations", 1, "slot")
+    });
+    const partDiagnostic = createDuplicateLocalCompositionMetadataDiagnostic({
+      code: "SCHEMA_COMPOSITION_PART_DUPLICATE",
+      message: 'Composition part "body" is duplicated.',
+      order: {
+        bucket: 6,
+        sequence: 1
+      },
+      path: createDiagnosticPath("composition", "parts", 1, "name")
+    });
+    const childDiagnostic = createDuplicateLocalCompositionMetadataDiagnostic({
+      code: "SCHEMA_COMPOSITION_CHILD_DUPLICATE",
+      message: 'Composition child "badge" is duplicated.',
+      order: {
+        bucket: 6,
+        sequence: 2
+      },
+      path: createDiagnosticPath("composition", "children", 1, "name")
+    });
+    const diagnostics = [childDiagnostic, slotRelationDiagnostic, partDiagnostic];
+    const diagnosticsBeforeFormat = [...diagnostics];
+    const slotRelationDiagnosticBeforeFormat = {
+      ...slotRelationDiagnostic,
+      order: { ...slotRelationDiagnostic.order },
+      path: [...slotRelationDiagnostic.path],
+      source: { ...slotRelationDiagnostic.source }
+    };
+    const partDiagnosticBeforeFormat = {
+      ...partDiagnostic,
+      order: { ...partDiagnostic.order },
+      path: [...partDiagnostic.path],
+      source: { ...partDiagnostic.source }
+    };
+    const childDiagnosticBeforeFormat = {
+      ...childDiagnostic,
+      order: { ...childDiagnostic.order },
+      path: [...childDiagnostic.path],
+      source: { ...childDiagnostic.source }
+    };
+
+    const formatted = formatDiagnosticsAsLegacyStrings(diagnostics);
+
+    expect(formatted).toEqual([
+      'Composition child "badge" is duplicated.',
+      'Composition slot relation "content" is duplicated.',
+      'Composition part "body" is duplicated.'
+    ]);
+    expect(formatted).not.toBe(diagnostics);
+    expect(diagnostics).toEqual(diagnosticsBeforeFormat);
+    expect(slotRelationDiagnostic).toEqual(
+      slotRelationDiagnosticBeforeFormat
+    );
+    expect(partDiagnostic).toEqual(partDiagnosticBeforeFormat);
+    expect(childDiagnostic).toEqual(childDiagnosticBeforeFormat);
   });
 });
 
