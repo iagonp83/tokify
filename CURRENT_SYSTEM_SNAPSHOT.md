@@ -641,6 +641,12 @@ The migrated composition slot relation topology codes are:
 - `SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT`
 - `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
 
+The Diagnostics Surface Audit and Schema-Local Closure Snapshot confirms that
+there are no remaining schema-local direct legacy string diagnostic
+construction paths inside `validateComponent`. The schema-local
+`validateComponent` migration is closed for the currently implemented
+schema-local rule families.
+
 The helpers are module-private and validator-local. They create
 `DiagnosticEnvelope` objects for those rules, immediately format them through
 `legacyDiagnosticFormatter`, and return legacy `string[]` diagnostics to the
@@ -648,7 +654,23 @@ existing `validateComponent` error flow. No top-level structured diagnostics
 array was introduced in `validateComponent`, no global formatter wiring was
 added, and `aggregateDiagnostics` is not used by the validator.
 
-`validateComponent` still publicly returns legacy `string[]` diagnostics.
+The remaining direct legacy string construction paths inside
+`validateComponent` are the optional registry-backed composition child
+component reference checks:
+
+- `Composition child "{childName}" cannot reference parent component
+  "{schemaName}".`
+- `Composition child "{childName}" references unknown component
+  "{componentName}".`
+
+Those registry-backed checks remain opt-in, legacy-compatible, and outside the
+closed schema-local slice. The separate component-type graph validator still
+owns graph diagnostics. Child-name hygiene diagnostics remain isolated,
+structured warning helpers and are not wired into validation flows.
+`aggregateDiagnostics` remains coordinator/foundation only.
+`validateComponent` still publicly returns legacy `string[]` diagnostics, and
+no structured public validation API exists.
+
 Existing top-level schema presence, variant-axis, token binding, and
 composition slot relation local reference, composition part local reference,
 composition child metadata shape, composition child local slot reference,
@@ -1675,12 +1697,14 @@ planning or architecture audits before implementation:
   child metadata shape, composition child local slot reference, duplicate
   local composition metadata, and composition slot relation topology
   checkpoints
-- validator-local structured diagnostic migration beyond the closed
-  validateComponent top-level schema presence, variant-axis, token binding, and
-  composition slot relation local reference, composition part local reference,
-  composition child metadata shape, composition child local slot reference,
-  duplicate local composition metadata, and composition slot relation
-  topology rule families
+- optional registry-backed `validateComponent` child component reference
+  diagnostic migration beyond the closed schema-local top-level schema
+  presence, variant-axis, token binding, composition slot relation local
+  reference, composition part local reference, composition child metadata
+  shape, composition child local slot reference, duplicate local composition
+  metadata, and composition slot relation topology rule families
+- component graph validator diagnostic migration as a separate graph-focused
+  phase
 - future slot relation cycle path normalization or public rendering changes,
   which remain higher-risk because of traversal order, first-discovered cycle
   paths, duplicate interaction, invalid reference skipping, and deterministic
@@ -1794,11 +1818,13 @@ structured migration checkpoints are closed for the self-parent topology rule
 family. The validateComponent composition slot relation cycle formatter parity
 and tenth internal structured migration checkpoints are closed for the cycle
 topology rule family. Future work should proceed through additional
-rule-family parity and validator-local migration slices for remaining
-registry-backed or other deferred families, with broader `validateComponent`
-migration and optional structured public APIs kept for later explicit phases.
-Opt-in warning collection, migration reporting, and optional strict mode remain
-later phases after compatibility boundaries are proven.
+rule-family parity only for explicitly chosen non-schema-local surfaces, such
+as the optional registry-backed `validateComponent` child component reference
+checks or the separate component graph validator. Broader `validateComponent`
+migration, warning wiring, aggregate reporting, and optional structured public
+APIs remain later explicit phases. Opt-in warning collection, migration
+reporting, and optional strict mode remain later phases after compatibility
+boundaries are proven.
 
 The pure authored-name-based component-type graph validator checkpoint is
 closed. Future work should continue with small metadata-only phases or dedicated

@@ -67,6 +67,10 @@ Current public validator behavior remains legacy-compatible:
 - the migrated composition slot relation topology codes are
   `SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT` and
   `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
+- there are currently no remaining schema-local direct legacy string diagnostic
+  construction paths inside `validateComponent`; the remaining direct legacy
+  string construction in `validateComponent` is limited to the optional
+  registry-backed composition child component reference checks
 - the component graph validator returns its current legacy string diagnostics
 - warning diagnostics remain opt-in and non-blocking
 - aggregate diagnostics remains coordinator-only
@@ -206,8 +210,10 @@ structured at the time of the inventory. Since then, the top-level schema
 presence, variant-axis, token binding, composition slot relation local
 reference, composition part local reference, composition child metadata shape,
 composition child local slot reference, duplicate local composition metadata,
-and composition slot relation topology slices have
-closed. The current remaining inventory starts after the closed entries below.
+and composition slot relation topology slices have closed. The current direct
+legacy string inventory inside `validateComponent` is limited to optional
+registry-backed child component reference checks. The former schema-local cycle
+entry is retained below only as closed historical context.
 This documentation checkpoint did not change validator behavior, public APIs,
 graph validation, warning collection, aggregate diagnostics, runtime, resolver,
 import/export, `PreviewCanvas`, or adapters.
@@ -668,6 +674,12 @@ Rollback boundaries used below:
 - Recommended migration priority: deferred; do not include in the next
   schema-local slice
 
+### Closed Schema-Local Legacy Inventory
+
+The following item was previously tracked as remaining schema-local legacy
+string output. It is now internally migrated and is no longer a remaining
+direct legacy string construction path inside `validateComponent`.
+
 #### Composition Slot Relation Cycle
 
 - Current legacy message:
@@ -1025,14 +1037,15 @@ Closed phase:
 
 Recommended future phases:
 
-1. **Additional formatter parity tests**: prove envelope-to-string rendering
-   matches current legacy strings exactly for the next target rule family.
-2. **Additional validator-local internal structured migrations**: migrate one
-   rule family at a time while preserving each validator's public return shape
-   and legacy strings.
-3. **Optional structured public APIs later**: after validator-local parity and
-   compatibility are proven, consider additive structured diagnostic access
-   without removing legacy behavior.
+1. **Audit-only closure checkpoint**: treat the schema-local
+   `validateComponent` structured migration as closed unless new schema-local
+   rules are added.
+2. **Optional registry-backed validateComponent checkpoint**: if explicitly
+   chosen later, add formatter parity for the opt-in registry-backed child
+   component reference checks before any internal migration.
+3. **Dedicated non-schema checkpoints**: keep component graph diagnostics,
+   warning wiring, aggregate reporting, and structured public validation APIs
+   in separate explicit phases.
 
 Each phase should be independently reversible. Do not combine message rewrites,
 rule changes, public API changes, and representation migration in one phase.
