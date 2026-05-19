@@ -26,7 +26,8 @@ type TokenBindingDiagnosticCode =
 type CompositionSlotRelationDiagnosticCode =
   | "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT"
   | "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT"
-  | "SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT";
+  | "SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT"
+  | "SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE";
 
 type CompositionPartDiagnosticCode = "SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT";
 
@@ -1316,6 +1317,220 @@ describe("validateComponent composition slot relation diagnostic formatter parit
     expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual([
       'Composition slot relation "content" cannot reference itself as parent.',
       'Composition slot relation "content" cannot reference itself as parent.'
+    ]);
+  });
+
+  it("formats simple composition slot relation cycle diagnostics to the current legacy string", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      slots: [
+        ...baseSchema.slots,
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        }
+      ],
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "content",
+            slot: "root"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE",
+        message: legacyErrors[0],
+        order: {
+          bucket: 6,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      "Composition slot relations contain a cycle: root -> content -> root."
+    ]);
+    expect(structuredDiagnostics[0]).toMatchObject({
+      code: "SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE",
+      layer: diagnosticLayers.schema,
+      path: ["composition", "slotRelations"],
+      severity: diagnosticSeverities.error,
+      source: {
+        name: "validateComponent"
+      }
+    });
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("formats multi-node composition slot relation cycle diagnostics to the current legacy string", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      slots: [
+        ...baseSchema.slots,
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        },
+        {
+          name: "icon",
+          required: false,
+          role: "icon"
+        }
+      ],
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "content",
+            slot: "icon"
+          },
+          {
+            parentSlot: "icon",
+            slot: "root"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE",
+        message: legacyErrors[0],
+        order: {
+          bucket: 6,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "slotRelations")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      "Composition slot relations contain a cycle: root -> content -> icon -> root."
+    ]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("formats multiple composition slot relation cycle diagnostics in input order", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      slots: [
+        ...baseSchema.slots,
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        },
+        {
+          name: "icon",
+          required: false,
+          role: "icon"
+        },
+        {
+          name: "footer",
+          required: false,
+          role: "content"
+        },
+        {
+          name: "label",
+          required: false,
+          role: "label"
+        }
+      ],
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "content",
+            slot: "icon"
+          },
+          {
+            parentSlot: "icon",
+            slot: "root"
+          },
+          {
+            parentSlot: "footer",
+            slot: "label"
+          },
+          {
+            parentSlot: "label",
+            slot: "footer"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = legacyErrors.map((message, index) =>
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE",
+        message,
+        order: {
+          bucket: 6,
+          sequence: index
+        },
+        path: createDiagnosticPath("composition", "slotRelations")
+      })
+    );
+
+    expect(legacyErrors).toEqual([
+      "Composition slot relations contain a cycle: root -> content -> icon -> root.",
+      "Composition slot relations contain a cycle: footer -> label -> footer."
+    ]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("preserves composition slot relation cycle formatter output order without sorting", () => {
+    const footerCycleDiagnostic = createCompositionSlotRelationDiagnostic({
+      code: "SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE",
+      message:
+        "Composition slot relations contain a cycle: footer -> label -> footer.",
+      order: {
+        bucket: 6,
+        sequence: 1
+      },
+      path: createDiagnosticPath("composition", "slotRelations")
+    });
+    const rootCycleDiagnostic = createCompositionSlotRelationDiagnostic({
+      code: "SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE",
+      message:
+        "Composition slot relations contain a cycle: root -> content -> icon -> root.",
+      order: {
+        bucket: 6,
+        sequence: 0
+      },
+      path: createDiagnosticPath("composition", "slotRelations")
+    });
+
+    expect(
+      formatDiagnosticsAsLegacyStrings([
+        footerCycleDiagnostic,
+        rootCycleDiagnostic
+      ])
+    ).toEqual([
+      "Composition slot relations contain a cycle: footer -> label -> footer.",
+      "Composition slot relations contain a cycle: root -> content -> icon -> root."
     ]);
   });
 
