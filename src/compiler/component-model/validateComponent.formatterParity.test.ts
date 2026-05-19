@@ -25,7 +25,8 @@ type TokenBindingDiagnosticCode =
 
 type CompositionSlotRelationDiagnosticCode =
   | "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_SLOT"
-  | "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT";
+  | "SCHEMA_COMPOSITION_SLOT_RELATION_UNKNOWN_PARENT_SLOT"
+  | "SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT";
 
 type CompositionPartDiagnosticCode = "SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT";
 
@@ -1214,6 +1215,108 @@ describe("validateComponent composition slot relation diagnostic formatter parit
     expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
       legacyErrors
     );
+  });
+
+  it("formats composition slot relation self-parent diagnostics to the current legacy string", () => {
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      slots: [
+        ...baseSchema.slots,
+        {
+          name: "content",
+          required: true,
+          role: "content"
+        }
+      ],
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "content",
+            slot: "content"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema).errors;
+    const structuredDiagnostics = [
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT",
+        message: legacyErrors[0],
+        order: {
+          bucket: 6,
+          sequence: 0
+        },
+        path: createDiagnosticPath(
+          "composition",
+          "slotRelations",
+          0,
+          "parentSlot"
+        )
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      'Composition slot relation "content" cannot reference itself as parent.'
+    ]);
+    expect(structuredDiagnostics[0]).toMatchObject({
+      code: "SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT",
+      layer: diagnosticLayers.schema,
+      order: {
+        bucket: 6,
+        sequence: 0
+      },
+      path: ["composition", "slotRelations", 0, "parentSlot"],
+      severity: diagnosticSeverities.error,
+      source: {
+        name: "validateComponent"
+      }
+    });
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("preserves duplicate self-parent formatter output in input order", () => {
+    const structuredDiagnostics = [
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT",
+        message:
+          'Composition slot relation "content" cannot reference itself as parent.',
+        order: {
+          bucket: 6,
+          sequence: 0
+        },
+        path: createDiagnosticPath(
+          "composition",
+          "slotRelations",
+          0,
+          "parentSlot"
+        )
+      }),
+      createCompositionSlotRelationDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT",
+        message:
+          'Composition slot relation "content" cannot reference itself as parent.',
+        order: {
+          bucket: 6,
+          sequence: 1
+        },
+        path: createDiagnosticPath(
+          "composition",
+          "slotRelations",
+          1,
+          "parentSlot"
+        )
+      })
+    ];
+
+    expect(
+      structuredDiagnostics.map((diagnostic) => diagnostic.order.sequence)
+    ).toEqual([0, 1]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual([
+      'Composition slot relation "content" cannot reference itself as parent.',
+      'Composition slot relation "content" cannot reference itself as parent.'
+    ]);
   });
 
   it("preserves migrated-family ordering before composition slot relation diagnostics", () => {
