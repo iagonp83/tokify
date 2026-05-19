@@ -1245,6 +1245,52 @@ describe("validateComponent composition metadata", () => {
     });
   });
 
+  it("preserves relation-order-dependent cycle path starts", () => {
+    const rootFirstResult = validateComponent({
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "content",
+            slot: "root"
+          }
+        ]
+      }
+    });
+    const contentFirstResult = validateComponent({
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "content",
+            slot: "root"
+          },
+          {
+            parentSlot: "root",
+            slot: "content"
+          }
+        ]
+      }
+    });
+
+    expect(rootFirstResult).toEqual({
+      errors: [
+        "Composition slot relations contain a cycle: root -> content -> root."
+      ],
+      valid: false
+    });
+    expect(contentFirstResult).toEqual({
+      errors: [
+        "Composition slot relations contain a cycle: content -> root -> content."
+      ],
+      valid: false
+    });
+  });
+
   it("rejects multi-node slot relation cycles", () => {
     const result = validateComponent({
       ...baseSchema,
@@ -1269,6 +1315,101 @@ describe("validateComponent composition metadata", () => {
     expect(result).toEqual({
       errors: [
         "Composition slot relations contain a cycle: root -> content -> icon -> root."
+      ],
+      valid: false
+    });
+  });
+
+  it("uses the first duplicate slot relation for cycle traversal", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "icon",
+            slot: "content"
+          },
+          {
+            parentSlot: "content",
+            slot: "root"
+          },
+          {
+            parentSlot: "content",
+            slot: "icon"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: [
+        "Composition slot relations contain a cycle: root -> content -> root.",
+        'Composition slot relation "content" is duplicated.'
+      ],
+      valid: false
+    });
+  });
+
+  it("keeps unknown slot relation references from suppressing valid cycle diagnostics", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "missingParent",
+            slot: "missingRelationSlot"
+          },
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "content",
+            slot: "root"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: [
+        'Composition slot relation references unknown slot "missingRelationSlot".',
+        'Composition slot relation references unknown parent slot "missingParent".',
+        "Composition slot relations contain a cycle: root -> content -> root."
+      ],
+      valid: false
+    });
+  });
+
+  it("keeps self-parent slot relation diagnostics before separate cycle diagnostics", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "icon",
+            slot: "icon"
+          },
+          {
+            parentSlot: "root",
+            slot: "content"
+          },
+          {
+            parentSlot: "content",
+            slot: "root"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: [
+        'Composition slot relation "icon" cannot reference itself as parent.',
+        "Composition slot relations contain a cycle: root -> content -> root."
       ],
       valid: false
     });
