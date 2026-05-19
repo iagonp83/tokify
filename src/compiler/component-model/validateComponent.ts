@@ -139,6 +139,9 @@ type DuplicateLocalCompositionMetadataDiagnosticCode =
   | "SCHEMA_COMPOSITION_PART_DUPLICATE"
   | "SCHEMA_COMPOSITION_CHILD_DUPLICATE";
 
+type CompositionSlotRelationTopologyDiagnosticCode =
+  "SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT";
+
 function validateSchemaPresence(
   schema: ComponentSchema,
   slotNames: ReadonlySet<string>,
@@ -738,7 +741,9 @@ function validateSlotRelationTopology(
   const relationSlots = new Set<string>();
   const relations: { parentSlot: string; slot: string }[] = [];
 
-  for (const relation of schema.composition?.slotRelations ?? []) {
+  for (const [relationIndex, relation] of (
+    schema.composition?.slotRelations ?? []
+  ).entries()) {
     const parentSlot = relation.parentSlot ?? "root";
 
     if (!slotNames.has(relation.slot) || !slotNames.has(parentSlot)) {
@@ -747,7 +752,7 @@ function validateSlotRelationTopology(
 
     if (relation.slot === parentSlot) {
       errors.push(
-        `Composition slot relation "${relation.slot}" cannot reference itself as parent.`
+        ...validateCompositionSlotRelationSelfParent(relation, relationIndex)
       );
       continue;
     }
@@ -768,6 +773,55 @@ function validateSlotRelationTopology(
   });
 
   return errors;
+}
+
+function validateCompositionSlotRelationSelfParent(
+  relation: ComponentCompositionSlotRelation,
+  relationIndex: number
+): string[] {
+  const diagnostics: DiagnosticEnvelope<CompositionSlotRelationTopologyDiagnosticCode>[] =
+    [
+      createCompositionSlotRelationTopologyDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT",
+        message: `Composition slot relation "${relation.slot}" cannot reference itself as parent.`,
+        path: createDiagnosticPath(
+          "composition",
+          "slotRelations",
+          relationIndex,
+          "parentSlot"
+        ),
+        sequence: relationIndex
+      })
+    ];
+
+  return formatDiagnosticsAsLegacyStrings(diagnostics);
+}
+
+function createCompositionSlotRelationTopologyDiagnostic({
+  code,
+  message,
+  path,
+  sequence
+}: {
+  readonly code: CompositionSlotRelationTopologyDiagnosticCode;
+  readonly message: string;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+  readonly sequence: number;
+}): DiagnosticEnvelope<CompositionSlotRelationTopologyDiagnosticCode> {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order: {
+      bucket: 6,
+      sequence
+    },
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
 }
 
 function findSlotRelationCycles(

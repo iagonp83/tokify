@@ -1193,6 +1193,33 @@ describe("validateComponent composition metadata", () => {
     });
   });
 
+  it("preserves duplicate slot relation self-reference diagnostics before duplicate diagnostics", () => {
+    const result = validateComponent({
+      ...baseSchema,
+      composition: {
+        slotRelations: [
+          {
+            parentSlot: "content",
+            slot: "content"
+          },
+          {
+            parentSlot: "content",
+            slot: "content"
+          }
+        ]
+      }
+    });
+
+    expect(result).toEqual({
+      errors: [
+        'Composition slot relation "content" cannot reference itself as parent.',
+        'Composition slot relation "content" cannot reference itself as parent.',
+        'Composition slot relation "content" is duplicated.'
+      ],
+      valid: false
+    });
+  });
+
   it("rejects simple slot relation cycles", () => {
     const result = validateComponent({
       ...baseSchema,
