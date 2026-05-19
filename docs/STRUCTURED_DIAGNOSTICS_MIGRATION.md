@@ -10,25 +10,27 @@ diagnostics, token binding diagnostics, composition slot relation local
 reference diagnostics, composition part local reference diagnostics, and
 composition child metadata shape diagnostics, composition child local slot
 reference diagnostics, duplicate local composition metadata diagnostics, and
-composition slot relation topology diagnostics only. This plan still does not
-introduce broad validator migration, global validator wiring, public validation
-APIs, runtime behavior, resolver behavior, `runtimePlan` behavior, runtime
-emission, import/export behavior, `PreviewCanvas` behavior, canonical IDs,
-child instance IDs, instance paths, path-derived runtime variables, strict
+composition slot relation topology diagnostics, plus optional registry-backed
+composition child component reference diagnostics only. This plan still does
+not introduce broad validator migration, global validator wiring, public
+validation APIs, runtime behavior, resolver behavior, `runtimePlan` behavior,
+runtime emission, import/export behavior, `PreviewCanvas` behavior, canonical
+IDs, child instance IDs, instance paths, path-derived runtime variables, strict
 mode, or blocking warnings.
 
 ## Current Boundary
 
 Current public validator behavior remains legacy-compatible:
 
-- `validateComponent` returns its current legacy string diagnostics
+- `validateComponent` returns its current legacy `string[]` diagnostics
 - `validateComponent` internally migrates only its top-level schema presence
   diagnostics, variant-axis diagnostics, token binding diagnostics,
   composition slot relation local reference diagnostics, composition part local
   reference diagnostics, composition child metadata shape diagnostics,
   composition child local slot reference diagnostics, duplicate local
-  composition metadata diagnostics, and composition slot relation topology
-  diagnostics through validator-local helpers
+  composition metadata diagnostics, composition slot relation topology
+  diagnostics, and optional registry-backed composition child component
+  reference diagnostics through validator-local helpers
 - the current internally migrated `validateComponent` families are:
   1. top-level schema presence diagnostics
   2. variant-axis diagnostics
@@ -39,6 +41,8 @@ Current public validator behavior remains legacy-compatible:
   7. composition child local slot reference diagnostics
   8. duplicate local composition metadata diagnostics
   9. composition slot relation topology diagnostics
+  10. optional registry-backed composition child component reference
+      diagnostics
 - the migrated top-level schema presence codes are
   `SCHEMA_COMPONENT_NAME_REQUIRED`, `SCHEMA_ROOT_SLOT_REQUIRED`, and
   `SCHEMA_DEFAULT_STATE_REQUIRED`
@@ -67,13 +71,19 @@ Current public validator behavior remains legacy-compatible:
 - the migrated composition slot relation topology codes are
   `SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT` and
   `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
-- there are currently no remaining schema-local direct legacy string diagnostic
-  construction paths inside `validateComponent`; the remaining direct legacy
-  string construction in `validateComponent` is limited to the optional
-  registry-backed composition child component reference checks
-- the component graph validator returns its current legacy string diagnostics
+- the migrated optional registry-backed composition child component reference
+  codes are `REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE` and
+  `REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT`
+- there are currently no remaining direct legacy string diagnostic
+  construction paths inside `validateComponent`
+- optional registry-backed diagnostics remain opt-in through
+  `validateComponent(schema, { registry })`; `validateComponent(schema)` does
+  not emit them
+- the component graph validator remains separate and returns its current
+  legacy string diagnostics; it is not migrated by this checkpoint
 - warning diagnostics remain opt-in and non-blocking
-- aggregate diagnostics remains coordinator-only
+- aggregate diagnostics remains coordinator-only and is not used inside
+  `validateComponent`
 - the legacy formatter is used only by local validateComponent compatibility
   helpers and is not globally wired into validators or public validation APIs
 
@@ -143,13 +153,15 @@ and returns `[]` for empty input.
 
 Validators own rule production for their domains.
 
-`validateComponent` owns schema-local correctness rules only. Its current
+`validateComponent` owns schema-local correctness rules and its optional
+registry-backed composition child component reference rules only. Its current
 internally structured rule families are top-level schema presence validation,
-variant-axis validation, token binding validation, and composition slot relation
-local reference validation, composition part local reference validation, and
+variant-axis validation, token binding validation, composition slot relation
+local reference validation, composition part local reference validation,
 composition child metadata shape validation, composition child local slot
-reference validation, duplicate local composition metadata validation, and
-composition slot relation topology validation. The local helpers create
+reference validation, duplicate local composition metadata validation,
+composition slot relation topology validation, and optional registry-backed
+composition child component reference validation. The local helpers create
 structured envelopes for only:
 
 - `SCHEMA_COMPONENT_NAME_REQUIRED`
@@ -172,18 +184,21 @@ structured envelopes for only:
 - `SCHEMA_COMPOSITION_CHILD_DUPLICATE`
 - `SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT`
 - `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
+- `REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE`
+- `REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT`
 
 They immediately format those envelopes back to legacy strings and return
-`string[]` to the existing validator flow. Broader `validateComponent`
-structured diagnostics may eventually cover already-supported optional
-registry-backed child reference checks. The migrated cycle diagnostic preserves
-its traversal-sensitive legacy output, including first-discovered cycle path
-text, authored relation order sensitivity, duplicate relation interaction,
-invalid local reference skipping before traversal, self-parent exclusion from
-the cycle graph, duplicate-slot pruning, and `createCycleKey` duplicate cycle
-suppression. `validateComponent` must not own graph traversal, child-name
-hygiene warnings, canonical readiness, resolver behavior, runtime behavior,
-import/export behavior, or adapter behavior.
+`string[]` to the existing validator flow. The optional registry-backed child
+component reference diagnostics remain gated by
+`validateComponent(schema, { registry })`; `validateComponent(schema)` does
+not emit them. The migrated cycle diagnostic preserves its traversal-sensitive
+legacy output, including first-discovered cycle path text, authored relation
+order sensitivity, duplicate relation interaction, invalid local reference
+skipping before traversal, self-parent exclusion from the cycle graph,
+duplicate-slot pruning, and `createCycleKey` duplicate cycle suppression.
+`validateComponent` must not own graph traversal, child-name hygiene warnings,
+canonical readiness, resolver behavior, runtime behavior, import/export
+behavior, or adapter behavior.
 
 The component graph validator owns component-type graph rules only. Its
 structured diagnostics may eventually cover unknown component references,
@@ -210,10 +225,11 @@ structured at the time of the inventory. Since then, the top-level schema
 presence, variant-axis, token binding, composition slot relation local
 reference, composition part local reference, composition child metadata shape,
 composition child local slot reference, duplicate local composition metadata,
-and composition slot relation topology slices have closed. The current direct
-legacy string inventory inside `validateComponent` is limited to optional
-registry-backed child component reference checks. The former schema-local cycle
-entry is retained below only as closed historical context.
+composition slot relation topology, and optional registry-backed child
+component reference slices have closed. There are no remaining direct legacy
+string diagnostic construction paths inside `validateComponent`. The former
+schema-local cycle and optional registry-backed entries are retained below only
+as closed historical context.
 This documentation checkpoint did not change validator behavior, public APIs,
 graph validation, warning collection, aggregate diagnostics, runtime, resolver,
 import/export, `PreviewCanvas`, or adapters.
@@ -241,6 +257,8 @@ legacy migration slices:
 - `SCHEMA_COMPOSITION_CHILD_DUPLICATE`
 - `SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT`
 - `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
+- `REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE`
+- `REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT`
 
 Current legacy ordering in `validateComponent` is:
 
@@ -254,8 +272,9 @@ Current legacy ordering in `validateComponent` is:
    `parts` array order
 6. composition child metadata shape checks, already internally structured, in
    `children` array order
-7. optional registry-backed child component reference checks, legacy-compatible
-   and in `children` array order when enabled
+7. optional registry-backed child component reference checks, already
+   internally structured, legacy-compatible, and in `children` array order when
+   enabled through `validateComponent(schema, { registry })`
 8. composition child local slot reference checks, already internally
    structured, in `children` array order
 9. slot relation topology checks, internally structured, with self-reference
@@ -624,18 +643,23 @@ Rollback boundaries used below:
 - `DiagnosticCode`: `SCHEMA_COMPOSITION_CHILD_DUPLICATE`
 - Migration status: closed
 
-### Remaining Legacy Diagnostic Inventory
+### Closed Optional Registry-Backed Legacy Inventory
+
+The following items were previously tracked as remaining direct legacy string
+construction paths inside `validateComponent`. They are now internally
+migrated through a validator-local optional registry-backed helper and are no
+longer remaining legacy construction paths.
 
 #### Registry-Backed Composition Child Self-Reference
 
 - Current legacy message:
   `Composition child "{childName}" cannot reference parent component "{schemaName}".`
-- Current location/branch: `validateComponent.ts:122`, optional
-  `options.registry && child.component.trim()` branch where
-  `child.component === schema.name`
+- Current location/branch: validator-local optional registry-backed helper
+  branch where `child.component === schema.name`
 - Current deterministic ordering position: after blank child name and blank
-  child component checks for the same child, before unknown registry component
-  and before the same child's unknown-slot diagnostic
+  child component checks for the same child, mutually exclusive with the
+  unknown registry component diagnostic, and before the same child's
+  unknown-slot diagnostic
 - Rule family: optional registry-backed composition child component references
 - Purely schema-local: no
 - Depends on registry: yes
@@ -645,18 +669,16 @@ Rollback boundaries used below:
   also exists in the separate component-type graph validator with different
   wording
 - Rollback boundary: registry branch rollback
-- Parity test difficulty: medium
-- Candidate `DiagnosticCode`: `REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE`
-- Recommended migration priority: deferred; do not include in the next
-  schema-local slice
+- Parity test difficulty: medium; parity coverage is closed
+- `DiagnosticCode`: `REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE`
+- Migration status: closed
 
 #### Registry-Backed Composition Child Unknown Component
 
 - Current legacy message:
   `Composition child "{childName}" references unknown component "{componentName}".`
-- Current location/branch: `validateComponent.ts:127`, optional
-  `options.registry && child.component.trim()` branch where
-  `!hasRegistryComponent(options.registry, child.component)`
+- Current location/branch: validator-local optional registry-backed helper
+  branch where `!hasRegistryComponent(registry, child.component)`
 - Current deterministic ordering position: after blank child name and blank
   child component checks for the same child, mutually exclusive with the
   registry-backed self-reference diagnostic, and before the same child's
@@ -669,10 +691,9 @@ Rollback boundaries used below:
 - Message stability risk: medium, because a related unknown component rule also
   exists in the separate component-type graph validator with different wording
 - Rollback boundary: registry branch rollback
-- Parity test difficulty: medium
-- Candidate `DiagnosticCode`: `REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT`
-- Recommended migration priority: deferred; do not include in the next
-  schema-local slice
+- Parity test difficulty: medium; parity coverage is closed
+- `DiagnosticCode`: `REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT`
+- Migration status: closed
 
 ### Closed Schema-Local Legacy Inventory
 
@@ -1034,18 +1055,27 @@ Closed phase:
   legacy strings through `legacyDiagnosticFormatter`, while preserving existing
   traversal, path text, invalid-reference skipping, self-parent exclusion,
   duplicate-slot pruning, and `createCycleKey` duplicate suppression behavior.
+- **Optional registry-backed validateComponent formatter parity tests**:
+  byte-for-byte parity is proven for child component self-reference and unknown
+  component diagnostics, opt-in registry behavior, same-child ordering around
+  child metadata and child slot diagnostics, child array order, blank component
+  reference ownership, mutually exclusive branches, formatter non-sorting, and
+  formatter non-mutation.
+- **Optional registry-backed validateComponent internal structured
+  migration**: `validateComponent` optional registry-backed composition child
+  component reference diagnostics now create `DiagnosticEnvelope` values
+  internally and immediately format them back to legacy strings through
+  `legacyDiagnosticFormatter`, while preserving the public `string[]` return
+  shape and opt-in `validateComponent(schema, { registry })` behavior.
 
 Recommended future phases:
 
 1. **Audit-only closure checkpoint**: treat the schema-local
-   `validateComponent` structured migration as closed unless new schema-local
-   rules are added.
-2. **Optional registry-backed validateComponent checkpoint**: if explicitly
-   chosen later, add formatter parity for the opt-in registry-backed child
-   component reference checks before any internal migration.
-3. **Dedicated non-schema checkpoints**: keep component graph diagnostics,
-   warning wiring, aggregate reporting, and structured public validation APIs
-   in separate explicit phases.
+   and optional registry-backed `validateComponent` structured migration as
+   closed unless new `validateComponent` rule families are added.
+2. **Dedicated non-validateComponent checkpoints**: keep component graph
+   diagnostics, warning wiring, aggregate reporting, and structured public
+   validation APIs in separate explicit phases.
 
 Each phase should be independently reversible. Do not combine message rewrites,
 rule changes, public API changes, and representation migration in one phase.
@@ -1109,7 +1139,9 @@ top-level schema presence, variant-axis, token binding, composition slot
 relation local reference, composition part local reference, and composition
 child metadata shape, composition child local slot reference, duplicate
 local composition metadata, and composition slot relation topology
-validator-local migrations, this migration plan does not introduce:
+validator-local migrations, plus the optional registry-backed composition
+child component reference validator-local migration, this migration plan does
+not introduce:
 
 - broad validator migration
 - global validator wiring

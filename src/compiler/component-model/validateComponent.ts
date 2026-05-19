@@ -76,15 +76,14 @@ export function validateComponent(
     );
 
     if (options.registry && child.component.trim()) {
-      if (child.component === schema.name) {
-        errors.push(
-          `Composition child "${child.name}" cannot reference parent component "${schema.name}".`
-        );
-      } else if (!hasRegistryComponent(options.registry, child.component)) {
-        errors.push(
-          `Composition child "${child.name}" references unknown component "${child.component}".`
-        );
-      }
+      errors.push(
+        ...validateCompositionChildRegistryBackedReference(
+          child,
+          childIndex,
+          schema.name,
+          options.registry
+        )
+      );
     }
 
     errors.push(
@@ -130,6 +129,10 @@ type CompositionPartDiagnosticCode = "SCHEMA_COMPOSITION_PART_UNKNOWN_SLOT";
 type CompositionChildMetadataShapeDiagnosticCode =
   | "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED"
   | "SCHEMA_COMPOSITION_CHILD_COMPONENT_REQUIRED";
+
+type CompositionChildRegistryBackedReferenceDiagnosticCode =
+  | "REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE"
+  | "REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT";
 
 type CompositionChildLocalSlotReferenceDiagnosticCode =
   "SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT";
@@ -563,6 +566,75 @@ function createCompositionChildMetadataShapeDiagnostic({
     message,
     order: {
       bucket: 4,
+      sequence
+    },
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
+}
+
+function validateCompositionChildRegistryBackedReference(
+  child: ComponentCompositionChild,
+  childIndex: number,
+  schemaName: string,
+  registry: ComponentRegistry
+): string[] {
+  const diagnostics: DiagnosticEnvelope<CompositionChildRegistryBackedReferenceDiagnosticCode>[] =
+    [];
+
+  if (child.component === schemaName) {
+    diagnostics.push(
+      createCompositionChildRegistryBackedReferenceDiagnostic({
+        code: "REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE",
+        message: `Composition child "${child.name}" cannot reference parent component "${schemaName}".`,
+        path: createDiagnosticPath(
+          "composition",
+          "children",
+          childIndex,
+          "component"
+        ),
+        sequence: childIndex * 3 + 1
+      })
+    );
+  } else if (!hasRegistryComponent(registry, child.component)) {
+    diagnostics.push(
+      createCompositionChildRegistryBackedReferenceDiagnostic({
+        code: "REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT",
+        message: `Composition child "${child.name}" references unknown component "${child.component}".`,
+        path: createDiagnosticPath(
+          "composition",
+          "children",
+          childIndex,
+          "component"
+        ),
+        sequence: childIndex * 3 + 1
+      })
+    );
+  }
+
+  return formatDiagnosticsAsLegacyStrings(diagnostics);
+}
+
+function createCompositionChildRegistryBackedReferenceDiagnostic({
+  code,
+  message,
+  path,
+  sequence
+}: {
+  readonly code: CompositionChildRegistryBackedReferenceDiagnosticCode;
+  readonly message: string;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+  readonly sequence: number;
+}): DiagnosticEnvelope<CompositionChildRegistryBackedReferenceDiagnosticCode> {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order: {
+      bucket: 5,
       sequence
     },
     path,
