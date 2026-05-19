@@ -140,7 +140,8 @@ type DuplicateLocalCompositionMetadataDiagnosticCode =
   | "SCHEMA_COMPOSITION_CHILD_DUPLICATE";
 
 type CompositionSlotRelationTopologyDiagnosticCode =
-  "SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT";
+  | "SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT"
+  | "SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE";
 
 function validateSchemaPresence(
   schema: ComponentSchema,
@@ -768,8 +769,8 @@ function validateSlotRelationTopology(
     });
   }
 
-  findSlotRelationCycles(relations).forEach((cycle) => {
-    errors.push(`Composition slot relations contain a cycle: ${cycle}.`);
+  findSlotRelationCycles(relations).forEach((cycle, cycleIndex) => {
+    errors.push(...validateCompositionSlotRelationCycle(cycle, cycleIndex));
   });
 
   return errors;
@@ -791,6 +792,23 @@ function validateCompositionSlotRelationSelfParent(
           "parentSlot"
         ),
         sequence: relationIndex
+      })
+    ];
+
+  return formatDiagnosticsAsLegacyStrings(diagnostics);
+}
+
+function validateCompositionSlotRelationCycle(
+  cyclePath: string,
+  cycleIndex: number
+): string[] {
+  const diagnostics: DiagnosticEnvelope<CompositionSlotRelationTopologyDiagnosticCode>[] =
+    [
+      createCompositionSlotRelationTopologyDiagnostic({
+        code: "SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE",
+        message: `Composition slot relations contain a cycle: ${cyclePath}.`,
+        path: createDiagnosticPath("composition", "slotRelations"),
+        sequence: cycleIndex
       })
     ];
 
