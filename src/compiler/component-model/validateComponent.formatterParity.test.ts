@@ -10,6 +10,7 @@ import {
 } from "../diagnostics/diagnosticContract";
 import { formatDiagnosticsAsLegacyStrings } from "../diagnostics/legacyDiagnosticFormatter";
 import type { ComponentSchema, ComponentVariantAxis } from "./component.types";
+import { createComponentRegistry } from "./componentRegistry";
 import { validateComponent } from "./validateComponent";
 
 type PresenceDiagnosticCode =
@@ -37,6 +38,10 @@ type CompositionChildMetadataShapeDiagnosticCode =
 
 type CompositionChildLocalSlotReferenceDiagnosticCode =
   "SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT";
+
+type CompositionChildRegistryBackedReferenceDiagnosticCode =
+  | "REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE"
+  | "REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT";
 
 type DuplicateLocalCompositionMetadataDiagnosticCode =
   | "SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE"
@@ -224,6 +229,30 @@ function createCompositionChildLocalSlotReferenceDiagnostic({
   path
 }: {
   readonly code: CompositionChildLocalSlotReferenceDiagnosticCode;
+  readonly message: string;
+  readonly order: DiagnosticOrder;
+  readonly path: ReturnType<typeof createDiagnosticPath>;
+}): DiagnosticEnvelope {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.schema,
+    message,
+    order,
+    path,
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponent"
+    }
+  });
+}
+
+function createCompositionChildRegistryBackedReferenceDiagnostic({
+  code,
+  message,
+  order,
+  path
+}: {
+  readonly code: CompositionChildRegistryBackedReferenceDiagnosticCode;
   readonly message: string;
   readonly order: DiagnosticOrder;
   readonly path: ReturnType<typeof createDiagnosticPath>;
@@ -2685,6 +2714,354 @@ describe("validateComponent composition child metadata shape diagnostic formatte
     expect(diagnostics).toEqual(diagnosticsBeforeFormat);
     expect(nameDiagnostic).toEqual(nameDiagnosticBeforeFormat);
     expect(componentDiagnostic).toEqual(componentDiagnosticBeforeFormat);
+  });
+});
+
+describe("validateComponent registry-backed composition child reference diagnostic formatter parity", () => {
+  it("formats direct child self-reference diagnostics to the current legacy string when registry is provided", () => {
+    const registry = createComponentRegistry([baseSchema]);
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        children: [
+          {
+            component: "VariantParityComponent",
+            name: "self",
+            slot: "root"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema, { registry }).errors;
+    const structuredDiagnostics = [
+      createCompositionChildRegistryBackedReferenceDiagnostic({
+        code: "REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE",
+        message: legacyErrors[0],
+        order: {
+          bucket: 5,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "children", 0, "component")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      'Composition child "self" cannot reference parent component "VariantParityComponent".'
+    ]);
+    expect(structuredDiagnostics[0]).toMatchObject({
+      code: "REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE",
+      layer: diagnosticLayers.schema,
+      order: {
+        bucket: 5,
+        sequence: 1
+      },
+      path: ["composition", "children", 0, "component"],
+      severity: diagnosticSeverities.error,
+      source: {
+        name: "validateComponent"
+      }
+    });
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("formats unknown child component diagnostics to the current legacy string when registry is provided", () => {
+    const registry = createComponentRegistry([baseSchema]);
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        children: [
+          {
+            component: "Badge",
+            name: "badge",
+            slot: "root"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema, { registry }).errors;
+    const structuredDiagnostics = [
+      createCompositionChildRegistryBackedReferenceDiagnostic({
+        code: "REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT",
+        message: legacyErrors[0],
+        order: {
+          bucket: 5,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "children", 0, "component")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      'Composition child "badge" references unknown component "Badge".'
+    ]);
+    expect(structuredDiagnostics[0]).toMatchObject({
+      code: "REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT",
+      layer: diagnosticLayers.schema,
+      order: {
+        bucket: 5,
+        sequence: 1
+      },
+      path: ["composition", "children", 0, "component"],
+      severity: diagnosticSeverities.error,
+      source: {
+        name: "validateComponent"
+      }
+    });
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("keeps registry-backed child component diagnostics opt-in to registry validation", () => {
+    const registry = createComponentRegistry([baseSchema]);
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        children: [
+          {
+            component: "VariantParityComponent",
+            name: "self",
+            slot: "root"
+          },
+          {
+            component: "Badge",
+            name: "badge",
+            slot: "root"
+          }
+        ]
+      }
+    };
+
+    expect(validateComponent(schema)).toEqual({
+      errors: [],
+      valid: true
+    });
+    expect(validateComponent(schema, { registry })).toEqual({
+      errors: [
+        'Composition child "self" cannot reference parent component "VariantParityComponent".',
+        'Composition child "badge" references unknown component "Badge".'
+      ],
+      valid: false
+    });
+  });
+
+  it("preserves same-child ordering around registry-backed diagnostics and child array order", () => {
+    const registry = createComponentRegistry([baseSchema]);
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        children: [
+          {
+            component: "Badge",
+            name: " ",
+            slot: "firstMissingSlot"
+          },
+          {
+            component: "VariantParityComponent",
+            name: "self",
+            slot: "secondMissingSlot"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema, { registry }).errors;
+    const structuredDiagnostics = [
+      createCompositionChildMetadataShapeDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED",
+        message: legacyErrors[0],
+        order: {
+          bucket: 4,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "children", 0, "name")
+      }),
+      createCompositionChildRegistryBackedReferenceDiagnostic({
+        code: "REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT",
+        message: legacyErrors[1],
+        order: {
+          bucket: 5,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "children", 0, "component")
+      }),
+      createCompositionChildLocalSlotReferenceDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT",
+        message: legacyErrors[2],
+        order: {
+          bucket: 5,
+          sequence: 2
+        },
+        path: createDiagnosticPath("composition", "children", 0, "slot")
+      }),
+      createCompositionChildRegistryBackedReferenceDiagnostic({
+        code: "REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE",
+        message: legacyErrors[3],
+        order: {
+          bucket: 5,
+          sequence: 4
+        },
+        path: createDiagnosticPath("composition", "children", 1, "component")
+      }),
+      createCompositionChildLocalSlotReferenceDiagnostic({
+        code: "SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT",
+        message: legacyErrors[4],
+        order: {
+          bucket: 5,
+          sequence: 5
+        },
+        path: createDiagnosticPath("composition", "children", 1, "slot")
+      })
+    ];
+
+    expect(legacyErrors).toEqual([
+      "Composition child name is required.",
+      'Composition child " " references unknown component "Badge".',
+      'Composition child " " references unknown slot "firstMissingSlot".',
+      'Composition child "self" cannot reference parent component "VariantParityComponent".',
+      'Composition child "self" references unknown slot "secondMissingSlot".'
+    ]);
+    expect(structuredDiagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "SCHEMA_COMPOSITION_CHILD_NAME_REQUIRED",
+      "REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT",
+      "SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT",
+      "REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE",
+      "SCHEMA_COMPOSITION_CHILD_UNKNOWN_SLOT"
+    ]);
+    expect(
+      structuredDiagnostics.map((diagnostic) => diagnostic.order.sequence)
+    ).toEqual([0, 1, 2, 4, 5]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual(
+      legacyErrors
+    );
+  });
+
+  it("keeps self-reference, unknown-component, and blank-component branches mutually exclusive", () => {
+    const registry = createComponentRegistry([baseSchema]);
+    const schema: ComponentSchema = {
+      ...baseSchema,
+      composition: {
+        children: [
+          {
+            component: "VariantParityComponent",
+            name: "self",
+            slot: "root"
+          },
+          {
+            component: "Badge",
+            name: "badge",
+            slot: "root"
+          },
+          {
+            component: " ",
+            name: "blank",
+            slot: "root"
+          }
+        ]
+      }
+    };
+    const legacyErrors = validateComponent(schema, { registry }).errors;
+
+    expect(legacyErrors).toEqual([
+      'Composition child "self" cannot reference parent component "VariantParityComponent".',
+      'Composition child "badge" references unknown component "Badge".',
+      'Composition child "blank" requires a component reference.'
+    ]);
+    expect(legacyErrors).not.toContain(
+      'Composition child "self" references unknown component "VariantParityComponent".'
+    );
+    expect(legacyErrors).not.toContain(
+      'Composition child "blank" references unknown component " ".'
+    );
+    expect(legacyErrors).not.toContain(
+      'Composition child "blank" cannot reference parent component "VariantParityComponent".'
+    );
+  });
+
+  it("formats registry-backed child component diagnostic lists in input order without sorting", () => {
+    const structuredDiagnostics = [
+      createCompositionChildRegistryBackedReferenceDiagnostic({
+        code: "REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT",
+        message: 'Composition child "badge" references unknown component "Badge".',
+        order: {
+          bucket: 5,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "children", 1, "component")
+      }),
+      createCompositionChildRegistryBackedReferenceDiagnostic({
+        code: "REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE",
+        message:
+          'Composition child "self" cannot reference parent component "VariantParityComponent".',
+        order: {
+          bucket: 5,
+          sequence: 0
+        },
+        path: createDiagnosticPath("composition", "children", 0, "component")
+      })
+    ];
+
+    expect(
+      structuredDiagnostics.map((diagnostic) => diagnostic.order.sequence)
+    ).toEqual([1, 0]);
+    expect(formatDiagnosticsAsLegacyStrings(structuredDiagnostics)).toEqual([
+      'Composition child "badge" references unknown component "Badge".',
+      'Composition child "self" cannot reference parent component "VariantParityComponent".'
+    ]);
+  });
+
+  it("does not mutate registry-backed child component diagnostic fixtures while formatting", () => {
+    const selfReferenceDiagnostic = createCompositionChildRegistryBackedReferenceDiagnostic({
+      code: "REGISTRY_COMPOSITION_CHILD_SELF_REFERENCE",
+      message:
+        'Composition child "self" cannot reference parent component "VariantParityComponent".',
+      order: {
+        bucket: 5,
+        sequence: 0
+      },
+      path: createDiagnosticPath("composition", "children", 0, "component")
+    });
+    const unknownComponentDiagnostic =
+      createCompositionChildRegistryBackedReferenceDiagnostic({
+        code: "REGISTRY_COMPOSITION_CHILD_UNKNOWN_COMPONENT",
+        message:
+          'Composition child "badge" references unknown component "Badge".',
+        order: {
+          bucket: 5,
+          sequence: 1
+        },
+        path: createDiagnosticPath("composition", "children", 1, "component")
+      });
+    const diagnostics = [unknownComponentDiagnostic, selfReferenceDiagnostic];
+    const diagnosticsBeforeFormat = [...diagnostics];
+    const selfReferenceDiagnosticBeforeFormat = {
+      ...selfReferenceDiagnostic,
+      order: { ...selfReferenceDiagnostic.order },
+      path: [...selfReferenceDiagnostic.path],
+      source: { ...selfReferenceDiagnostic.source }
+    };
+    const unknownComponentDiagnosticBeforeFormat = {
+      ...unknownComponentDiagnostic,
+      order: { ...unknownComponentDiagnostic.order },
+      path: [...unknownComponentDiagnostic.path],
+      source: { ...unknownComponentDiagnostic.source }
+    };
+
+    const formatted = formatDiagnosticsAsLegacyStrings(diagnostics);
+
+    expect(formatted).toEqual([
+      'Composition child "badge" references unknown component "Badge".',
+      'Composition child "self" cannot reference parent component "VariantParityComponent".'
+    ]);
+    expect(formatted).not.toBe(diagnostics);
+    expect(diagnostics).toEqual(diagnosticsBeforeFormat);
+    expect(selfReferenceDiagnostic).toEqual(
+      selfReferenceDiagnosticBeforeFormat
+    );
+    expect(unknownComponentDiagnostic).toEqual(
+      unknownComponentDiagnosticBeforeFormat
+    );
   });
 });
 
