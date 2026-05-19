@@ -10,13 +10,12 @@ diagnostics, token binding diagnostics, composition slot relation local
 reference diagnostics, composition part local reference diagnostics, and
 composition child metadata shape diagnostics, composition child local slot
 reference diagnostics, duplicate local composition metadata diagnostics, and
-composition slot relation self-parent topology diagnostics only. This plan
-still does not introduce broad validator
-migration, global validator wiring, public validation APIs, runtime behavior,
-resolver behavior, `runtimePlan` behavior, runtime emission, import/export
-behavior, `PreviewCanvas` behavior, canonical IDs, child instance IDs,
-instance paths, path-derived runtime variables, strict mode, or blocking
-warnings.
+composition slot relation topology diagnostics only. This plan still does not
+introduce broad validator migration, global validator wiring, public validation
+APIs, runtime behavior, resolver behavior, `runtimePlan` behavior, runtime
+emission, import/export behavior, `PreviewCanvas` behavior, canonical IDs,
+child instance IDs, instance paths, path-derived runtime variables, strict
+mode, or blocking warnings.
 
 ## Current Boundary
 
@@ -28,8 +27,8 @@ Current public validator behavior remains legacy-compatible:
   composition slot relation local reference diagnostics, composition part local
   reference diagnostics, composition child metadata shape diagnostics,
   composition child local slot reference diagnostics, duplicate local
-  composition metadata diagnostics, and composition slot relation self-parent
-  topology diagnostics through validator-local helpers
+  composition metadata diagnostics, and composition slot relation topology
+  diagnostics through validator-local helpers
 - the current internally migrated `validateComponent` families are:
   1. top-level schema presence diagnostics
   2. variant-axis diagnostics
@@ -39,7 +38,7 @@ Current public validator behavior remains legacy-compatible:
   6. composition child metadata shape diagnostics
   7. composition child local slot reference diagnostics
   8. duplicate local composition metadata diagnostics
-  9. composition slot relation self-parent topology diagnostics
+  9. composition slot relation topology diagnostics
 - the migrated top-level schema presence codes are
   `SCHEMA_COMPONENT_NAME_REQUIRED`, `SCHEMA_ROOT_SLOT_REQUIRED`, and
   `SCHEMA_DEFAULT_STATE_REQUIRED`
@@ -65,9 +64,9 @@ Current public validator behavior remains legacy-compatible:
   `SCHEMA_COMPOSITION_SLOT_RELATION_DUPLICATE`,
   `SCHEMA_COMPOSITION_PART_DUPLICATE`, and
   `SCHEMA_COMPOSITION_CHILD_DUPLICATE`
-- the migrated composition slot relation topology code is
-  `SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT` only;
-  `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE` remains unmigrated and deferred
+- the migrated composition slot relation topology codes are
+  `SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT` and
+  `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
 - the component graph validator returns its current legacy string diagnostics
 - warning diagnostics remain opt-in and non-blocking
 - aggregate diagnostics remains coordinator-only
@@ -146,8 +145,8 @@ variant-axis validation, token binding validation, and composition slot relation
 local reference validation, composition part local reference validation, and
 composition child metadata shape validation, composition child local slot
 reference validation, duplicate local composition metadata validation, and
-composition slot relation self-parent topology validation. The local helpers
-create structured envelopes for only:
+composition slot relation topology validation. The local helpers create
+structured envelopes for only:
 
 - `SCHEMA_COMPONENT_NAME_REQUIRED`
 - `SCHEMA_ROOT_SLOT_REQUIRED`
@@ -168,17 +167,19 @@ create structured envelopes for only:
 - `SCHEMA_COMPOSITION_PART_DUPLICATE`
 - `SCHEMA_COMPOSITION_CHILD_DUPLICATE`
 - `SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT`
+- `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
 
 They immediately format those envelopes back to legacy strings and return
 `string[]` to the existing validator flow. Broader `validateComponent`
-structured diagnostics may eventually cover the remaining slot relation cycle
-topology diagnostic and already-supported optional registry-backed child
-reference checks. The cycle diagnostic remains deferred because its legacy
-message is sensitive to traversal order, first-discovered cycle path text,
-duplicate relation interaction, invalid local reference skipping before
-traversal, and deterministic ordering. `validateComponent` must not own graph
-traversal, child-name hygiene warnings, canonical readiness, resolver behavior,
-runtime behavior, import/export behavior, or adapter behavior.
+structured diagnostics may eventually cover already-supported optional
+registry-backed child reference checks. The migrated cycle diagnostic preserves
+its traversal-sensitive legacy output, including first-discovered cycle path
+text, authored relation order sensitivity, duplicate relation interaction,
+invalid local reference skipping before traversal, self-parent exclusion from
+the cycle graph, duplicate-slot pruning, and `createCycleKey` duplicate cycle
+suppression. `validateComponent` must not own graph traversal, child-name
+hygiene warnings, canonical readiness, resolver behavior, runtime behavior,
+import/export behavior, or adapter behavior.
 
 The component graph validator owns component-type graph rules only. Its
 structured diagnostics may eventually cover unknown component references,
@@ -205,7 +206,7 @@ structured at the time of the inventory. Since then, the top-level schema
 presence, variant-axis, token binding, composition slot relation local
 reference, composition part local reference, composition child metadata shape,
 composition child local slot reference, duplicate local composition metadata,
-and composition slot relation self-parent topology slices have
+and composition slot relation topology slices have
 closed. The current remaining inventory starts after the closed entries below.
 This documentation checkpoint did not change validator behavior, public APIs,
 graph validation, warning collection, aggregate diagnostics, runtime, resolver,
@@ -233,6 +234,7 @@ legacy migration slices:
 - `SCHEMA_COMPOSITION_PART_DUPLICATE`
 - `SCHEMA_COMPOSITION_CHILD_DUPLICATE`
 - `SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT`
+- `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
 
 Current legacy ordering in `validateComponent` is:
 
@@ -250,8 +252,8 @@ Current legacy ordering in `validateComponent` is:
    and in `children` array order when enabled
 8. composition child local slot reference checks, already internally
    structured, in `children` array order
-9. slot relation topology checks, with self-reference diagnostics already
-   internally structured and discovered before legacy cycle diagnostics
+9. slot relation topology checks, internally structured, with self-reference
+   diagnostics discovered before cycle diagnostics
 10. duplicate `slotRelations`, duplicate `parts`, and duplicate `children`
    checks, already internally structured, each in first repeated value
    discovery order
@@ -670,7 +672,7 @@ Rollback boundaries used below:
 
 - Current legacy message:
   `Composition slot relations contain a cycle: {cyclePath}.`
-- Current location/branch: `validateComponent.ts:287`,
+- Current location/branch: validator-local topology helper called from
   `findSlotRelationCycles(relations).forEach(...)`
 - Current deterministic ordering position: after topology self-parent
   diagnostics and before duplicate metadata diagnostics; cycle ordering follows
@@ -688,10 +690,10 @@ Rollback boundaries used below:
   traversal, and deterministic ordering expectations
 - Rollback boundary: topology helper rollback
 - Parity test difficulty: high
-- Candidate `DiagnosticCode`: `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
-- Recommended migration priority: P3, defer until simpler schema-local families
-  are migrated
-- Migration status: deferred; remains legacy/plain-string
+- `DiagnosticCode`: `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
+- Recommended migration priority: closed after formatter parity and internal
+  validator-local migration
+- Migration status: internally migrated; public output remains legacy `string[]`
 
 ### Closed Presence Structured Slice
 
@@ -842,12 +844,13 @@ The migrated helper preserves duplicate family ordering of slot relations
 before parts before children, and preserves first repeated value discovery
 order within each duplicate family.
 
-### Closed Composition Slot Relation Self-Parent Structured Slice
+### Closed Composition Slot Relation Topology Structured Slices
 
-The ninth validator-local internal structured migration is now closed. The
-migrated composition slot relation topology family is:
+The ninth and tenth validator-local internal structured migrations are now
+closed. The migrated composition slot relation topology family is:
 
 - `SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT`
+- `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
 
 This closed slice preserves the current public `string[]` return shape, avoids
 a top-level structured diagnostics array, avoids `aggregateDiagnostics`, avoids
@@ -857,15 +860,15 @@ integration, and does not touch runtime, resolver, import/export,
 
 Composition slot relation self-parent diagnostics remain ordered after direct
 composition child diagnostics and before slot relation cycle diagnostics and
-duplicate metadata diagnostics. The migrated helper preserves the exact legacy
-message, the skip behavior when the relation slot or effective parent slot is
-unknown, the continue-before-cycle-graph behavior, and duplicate self-parent
-emission before later duplicate slot relation diagnostics.
-
-`SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE` remains unmigrated and deferred. Cycle
-diagnostics are higher-risk because output depends on traversal order,
-first-discovered cycle path text, duplicate relation interaction, invalid local
-reference skipping before traversal, and deterministic ordering expectations.
+duplicate metadata diagnostics. Composition slot relation cycle diagnostics
+remain ordered after self-parent topology diagnostics and before duplicate
+metadata diagnostics. The migrated helpers preserve the exact legacy messages,
+the skip behavior when the relation slot or effective parent slot is unknown,
+the continue-before-cycle-graph behavior, self-parent exclusion from the cycle
+graph, duplicate self-parent emission before later duplicate slot relation
+diagnostics, first-discovered cycle path text, authored relation order
+sensitivity, duplicate-slot pruning, and `createCycleKey` duplicate cycle
+suppression.
 
 ## Normalization, Formatting, Rendering
 
@@ -1009,6 +1012,16 @@ Closed phase:
   `validateComponent` composition slot relation self-parent diagnostics now
   create `DiagnosticEnvelope` values internally and immediately format them
   back to legacy strings through `legacyDiagnosticFormatter`.
+- **Composition slot relation cycle formatter parity tests for
+  validateComponent**: byte-for-byte parity is proven for simple cycle,
+  multi-node cycle, multiple cycle, and formatter input-order preservation
+  legacy strings.
+- **Tenth validator-local internal structured migration**:
+  `validateComponent` composition slot relation cycle diagnostics now create
+  `DiagnosticEnvelope` values internally and immediately format them back to
+  legacy strings through `legacyDiagnosticFormatter`, while preserving existing
+  traversal, path text, invalid-reference skipping, self-parent exclusion,
+  duplicate-slot pruning, and `createCycleKey` duplicate suppression behavior.
 
 Recommended future phases:
 
@@ -1081,9 +1094,9 @@ Avoid:
 Beyond the isolated formatter foundation and the closed `validateComponent`
 top-level schema presence, variant-axis, token binding, composition slot
 relation local reference, composition part local reference, and composition
-child metadata shape, composition child local slot reference, and duplicate
-local composition metadata validator-local migrations, this migration plan does
-not introduce:
+child metadata shape, composition child local slot reference, duplicate
+local composition metadata, and composition slot relation topology
+validator-local migrations, this migration plan does not introduce:
 
 - broad validator migration
 - global validator wiring

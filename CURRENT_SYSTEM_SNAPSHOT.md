@@ -72,6 +72,9 @@ Current stabilized areas:
   Checkpoint
 - Ninth Internal Structured Validator Migration: validateComponent composition
   slot relation self-parent diagnostics
+- ValidateComponent Composition Slot Relation Cycle Formatter Parity Checkpoint
+- Tenth Internal Structured Validator Migration: validateComponent composition
+  slot relation cycle diagnostics
 - Component Registry Foundation Commit 1
 - Registry-backed Composition Metadata Validation Commit 2
 - Graph Validator Planning documentation boundary
@@ -130,11 +133,13 @@ Automated regression tests cover:
   metadata diagnostics
 - formatter parity coverage for validateComponent composition slot relation
   self-parent diagnostics
+- formatter parity coverage for validateComponent composition slot relation
+  cycle diagnostics
 - validator-local structured migration coverage for validateComponent
   top-level schema presence, variant-axis, token binding, and composition slot
   relation local reference, composition part local reference, and composition
   child metadata shape, composition child local slot reference, duplicate local
-  composition metadata, and composition slot relation self-parent diagnostics
+  composition metadata, and composition slot relation topology diagnostics
   while preserving public legacy strings
 
 ## Component Model Structure
@@ -564,7 +569,7 @@ validator-local compatibility bridges inside `validateComponent` for the
 top-level schema presence, variant-axis, token binding, and composition slot
 relation local reference, composition part local reference, and composition
 child metadata shape, composition child local slot reference, duplicate local
-composition metadata, and composition slot relation self-parent rule families.
+composition metadata, and composition slot relation topology rule families.
 It is not globally wired into validators, public validation APIs, warning
 collection, aggregate diagnostics, runtime, resolver, import/export,
 `PreviewCanvas`, schemas, UI, generated files, or adapters.
@@ -575,7 +580,7 @@ diagnostics, token binding diagnostics, composition slot relation local
 reference diagnostics, composition part local reference diagnostics, and
 composition child metadata shape diagnostics, composition child local slot
 reference diagnostics, duplicate local composition metadata diagnostics, and
-composition slot relation self-parent diagnostics.
+composition slot relation topology diagnostics.
 
 The current internally migrated `validateComponent` families are:
 
@@ -587,7 +592,7 @@ The current internally migrated `validateComponent` families are:
 6. composition child metadata shape diagnostics
 7. composition child local slot reference diagnostics
 8. duplicate local composition metadata diagnostics
-9. composition slot relation self-parent diagnostics
+9. composition slot relation topology diagnostics
 
 The migrated top-level schema presence codes are:
 
@@ -631,13 +636,9 @@ The migrated duplicate local composition metadata codes are:
 - `SCHEMA_COMPOSITION_PART_DUPLICATE`
 - `SCHEMA_COMPOSITION_CHILD_DUPLICATE`
 
-The migrated composition slot relation self-parent topology code is:
+The migrated composition slot relation topology codes are:
 
 - `SCHEMA_COMPOSITION_SLOT_RELATION_SELF_PARENT`
-
-The composition slot relation cycle diagnostic remains legacy/plain-string and
-deferred:
-
 - `SCHEMA_COMPOSITION_SLOT_RELATION_CYCLE`
 
 The helpers are module-private and validator-local. They create
@@ -652,7 +653,7 @@ Existing top-level schema presence, variant-axis, token binding, and
 composition slot relation local reference, composition part local reference,
 composition child metadata shape, composition child local slot reference,
 duplicate local composition metadata, and composition slot relation
-self-parent legacy message text and ordering are preserved. Variant-axis
+topology legacy message text and ordering are preserved. Variant-axis
 empty-options short-circuit behavior, token binding authored array order,
 condition entry order, unknown variant-axis early-return behavior, `undefined`
 condition skip behavior, `slotRelations` array order, same-relation
@@ -662,14 +663,17 @@ ordering, both named and unnamed missing-component message shapes, same-child
 metadata-before-unknown-slot ordering, duplicate family ordering, first
 repeated value discovery order within each duplicate family, self-parent
 skipping when the relation slot or effective parent slot is unknown,
-self-parent continue-before-cycle-graph behavior, and duplicate self-parent
-emission before later duplicate slot relation diagnostics are preserved. The
-component graph validator remains component-type-only and backward-compatible,
-registry-backed checks remain legacy-compatible, warning collection remains
-opt-in and inactive in validation flows, aggregate diagnostics remain
-coordinator-only, public validation APIs remain unchanged, and no runtime,
-resolver, import/export, `PreviewCanvas`, UI, generated-file, or adapter
-behavior changed.
+self-parent continue-before-cycle-graph behavior, duplicate self-parent
+emission before later duplicate slot relation diagnostics, first-discovered
+cycle path text, authored relation order sensitivity, invalid local reference
+skipping before cycle graph construction, self-parent exclusion from the cycle
+graph, duplicate-slot pruning inside topology traversal, and `createCycleKey`
+duplicate cycle suppression are preserved. The component graph validator
+remains component-type-only and backward-compatible, registry-backed checks
+remain legacy-compatible, warning collection remains opt-in and inactive in
+validation flows, aggregate diagnostics remain coordinator-only, public
+validation APIs remain unchanged, and no runtime, resolver, import/export,
+`PreviewCanvas`, UI, generated-file, or adapter behavior changed.
 
 Current severity values are `error`, `warning`, and `info`. Severity does not
 imply runtime behavior. Warnings are non-blocking by default and are emitted
@@ -692,11 +696,12 @@ validation APIs remain valid.
 Future diagnostic producers should avoid incidental traversal dependencies and
 provide explicit ordering metadata for `sortDiagnostics`. Numeric path indexes
 sort numerically in the current diagnostic contract. Graph cycle diagnostics
-should eventually normalize cycle paths deterministically. The remaining
-`validateComponent` slot relation cycle diagnostic is still unmigrated and
-higher-risk because output depends on traversal order, first-discovered cycle
-path text, duplicate relation interaction, invalid local reference skipping
-before traversal, and deterministic ordering expectations.
+should eventually normalize cycle paths deterministically. The internally
+migrated `validateComponent` slot relation cycle diagnostic intentionally
+preserves the current traversal-sensitive legacy output, including
+first-discovered cycle path text, authored relation order sensitivity,
+duplicate relation interaction, invalid local reference skipping before
+traversal, and duplicate cycle suppression.
 
 Structured diagnostics should be additive when introduced. Current string
 diagnostics must remain backward-compatible, existing tests should not break
@@ -746,7 +751,7 @@ diagnostics, composition slot relation local reference diagnostics,
 composition part local reference diagnostics, and composition child metadata
 shape diagnostics, composition child local slot reference diagnostics,
 duplicate local composition metadata diagnostics, and composition slot relation
-self-parent diagnostics.
+self-parent and cycle diagnostics.
 The first validator-local internal structured migration is closed for the
 variant-axis rule family, the second validator-local internal structured
 migration is closed for the top-level schema presence rule family, the third
@@ -762,7 +767,9 @@ validator-local internal structured migration is closed for the duplicate
 local composition metadata rule family. The validateComponent composition slot
 relation self-parent formatter parity and ninth internal structured migration
 checkpoints are closed for the self-parent topology rule family. The
-validateComponent structured slice
+validateComponent composition slot relation cycle formatter parity and tenth
+internal structured migration checkpoints are closed for the cycle topology
+rule family. The validateComponent structured slice
 inventory checkpoint is closed as a documentation-only map of the remaining
 legacy string diagnostics, their ordering, dependencies, rollback boundaries,
 parity-test difficulty, candidate codes, and recommended priorities. Broader
@@ -1666,17 +1673,18 @@ planning or architecture audits before implementation:
   top-level schema presence, variant-axis, token binding, and composition slot
   relation local reference, composition part local reference, and composition
   child metadata shape, composition child local slot reference, duplicate
-  local composition metadata, and composition slot relation self-parent
+  local composition metadata, and composition slot relation topology
   checkpoints
 - validator-local structured diagnostic migration beyond the closed
   validateComponent top-level schema presence, variant-axis, token binding, and
   composition slot relation local reference, composition part local reference,
   composition child metadata shape, composition child local slot reference,
   duplicate local composition metadata, and composition slot relation
-  self-parent rule families
-- slot relation cycle diagnostics, which remain higher-risk because of
-  traversal order, first-discovered cycle paths, duplicate interaction,
-  invalid reference skipping, and deterministic ordering expectations
+  topology rule families
+- future slot relation cycle path normalization or public rendering changes,
+  which remain higher-risk because of traversal order, first-discovered cycle
+  paths, duplicate interaction, invalid reference skipping, and deterministic
+  ordering expectations
 - aggregate diagnostics reporting beyond pure coordination
 - optional strict mode policy for child naming
 - migration tooling before hard child naming errors
@@ -1712,8 +1720,8 @@ planning or architecture audits before implementation:
 - No diagnostic wiring into validators beyond the closed validateComponent
   top-level schema presence, variant-axis, token binding, and composition slot
   relation local reference, composition part local reference, and composition
-  child metadata shape, composition child local slot reference, and duplicate
-  local composition metadata helpers.
+  child metadata shape, composition child local slot reference, duplicate
+  local composition metadata, and composition slot relation topology helpers.
 - No aggregate diagnostics behavior beyond pure coordination.
 - No string-to-envelope diagnostic migration.
 - No global formatter wiring into validators or public validation APIs.
@@ -1783,12 +1791,14 @@ parity and eighth internal structured migration checkpoints are closed for the
 duplicate local composition metadata rule family. The validateComponent
 composition slot relation self-parent formatter parity and ninth internal
 structured migration checkpoints are closed for the self-parent topology rule
-family. Future work should proceed through additional rule-family parity and
-validator-local migration slices, with slot relation cycle diagnostics kept as
-a higher-risk deferred target and broader `validateComponent` migration and
-optional structured public APIs kept for later explicit phases. Opt-in warning
-collection, migration reporting, and optional strict mode remain later phases
-after compatibility boundaries are proven.
+family. The validateComponent composition slot relation cycle formatter parity
+and tenth internal structured migration checkpoints are closed for the cycle
+topology rule family. Future work should proceed through additional
+rule-family parity and validator-local migration slices for remaining
+registry-backed or other deferred families, with broader `validateComponent`
+migration and optional structured public APIs kept for later explicit phases.
+Opt-in warning collection, migration reporting, and optional strict mode remain
+later phases after compatibility boundaries are proven.
 
 The pure authored-name-based component-type graph validator checkpoint is
 closed. Future work should continue with small metadata-only phases or dedicated
