@@ -79,8 +79,9 @@ Current public validator behavior remains legacy-compatible:
 - optional registry-backed diagnostics remain opt-in through
   `validateComponent(schema, { registry })`; `validateComponent(schema)` does
   not emit them
-- the component graph validator remains separate and returns its current
-  legacy string diagnostics; it is not migrated by this checkpoint
+- the component graph validator remains separate and returns its current legacy
+  diagnostic object shape with legacy message strings; it is not migrated by
+  this checkpoint
 - warning diagnostics remain opt-in and non-blocking
 - aggregate diagnostics remains coordinator-only and is not used inside
   `validateComponent`
