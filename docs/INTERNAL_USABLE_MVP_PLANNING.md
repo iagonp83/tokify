@@ -326,6 +326,21 @@ orchestration point while staying read-only. It also gives later slices a
 natural home for import errors and export readiness details without widening
 compiler contracts.
 
+## Slice A Implementation Status
+
+Slice A is now implemented and closed as a read-only product-compiler flow
+status panel for the existing Button/Input path.
+
+The implementation reports token state availability, Button/Input schema
+validation, registry authored-name validation, component-type graph validation,
+Button/Input resolution, Button/Input runtime emission, preview availability,
+and CSS/JSON token export availability. It does not change runtime, resolver,
+import/export, validators, graph validation, registry behavior, diagnostics
+behavior, adapters, `PreviewCanvas` behavior, or public APIs.
+
+The implementation does not activate component code generation, adapters,
+warnings, strict mode, aggregate diagnostics, or structured public diagnostics.
+
 ## Exit Criteria
 
 This planning checkpoint is complete when:

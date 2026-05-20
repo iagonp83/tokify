@@ -86,6 +86,7 @@ Current stabilized areas:
 - Component Graph Validator Internal Structured Migration Planning Checkpoint
 - Component Graph Unknown/Direct Self Internal Structured Migration
 - Component Graph Cycle Internal Structured Migration
+- Product-Compiler Flow Status Panel Slice A
 
 Automated regression tests cover:
 
@@ -151,6 +152,12 @@ Automated regression tests cover:
   composition metadata, composition slot relation topology, and optional
   registry-backed composition child component reference diagnostics while
   preserving public legacy strings
+- design-generator product/compiler flow status view-model coverage for token
+  state, schema validation, registry validation, graph validation, resolution,
+  runtime emission, preview availability, and CSS/JSON token export availability
+- read-only compiler flow status panel rendering coverage that keeps component
+  generation, adapters, warnings, strict mode, aggregate diagnostics, and
+  structured public diagnostics explicitly inactive
 
 ## Component Model Structure
 
@@ -1723,6 +1730,48 @@ The preview does not consume root transition shorthand variables with
 PreviewCanvas avoids mixing transition shorthand and longhands in React inline
 styles.
 
+## Product-Compiler Flow Status Panel
+
+Product-Compiler Flow Status Panel Slice A is closed.
+
+The status surface is a read-only, feature-local design-generator layer
+implemented by:
+
+```txt
+src/features/design-generator/compilerFlowStatus.ts
+src/features/design-generator/components/CompilerFlowStatusPanel.tsx
+```
+
+`DesignGenerator.tsx` only creates the status view model from the current
+`DesignState` and renders the panel. Existing editor controls, import/export
+handlers, `PreviewCanvas`, token inspection, preset storage, and preview state
+behavior remain unchanged.
+
+The status view model reports the current Button/Input product-compiler flow:
+
+- token state availability
+- Button schema validation
+- Input schema validation
+- registry authored-name validation
+- component-type graph validation
+- Button resolution
+- Input resolution
+- Button runtime emission
+- Input runtime emission
+- preview availability
+- CSS token export availability
+- JSON token export availability
+
+The panel adapts current helper outputs only for display. It does not change
+runtime, resolver, import/export, validators, graph validation, registry
+behavior, diagnostics behavior, adapters, `PreviewCanvas`, or public APIs. It
+does not call `aggregateDiagnostics`, does not activate warnings or strict
+mode, and does not introduce a structured public diagnostics API.
+
+Panel copy explicitly keeps current export as token export only. Component code
+generation and adapters are not active. Warnings, strict mode, aggregate
+diagnostics, and structured public diagnostics remain inactive.
+
 ## Export Architecture
 
 CSS export is handled by:
@@ -1923,3 +1972,10 @@ migration checkpoints are closed. Future work should continue with small
 metadata-only phases or dedicated architecture audits before any canonical
 identity, instance tree, resolver, runtime, `PreviewCanvas`, import/export, or
 adapter behavior changes.
+
+The Product-Compiler Flow Status Panel Slice A checkpoint is closed as a
+read-only internal status surface for the existing Button/Input flow. Future
+internal usable MVP work should proceed through separate focused slices, such
+as import error feedback or export readiness clarification, without widening
+runtime, resolver, import/export, validators, graph validation, registry,
+diagnostics, adapter, `PreviewCanvas`, or public API contracts.
