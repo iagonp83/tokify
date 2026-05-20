@@ -33,6 +33,11 @@ type DirectSelfReferenceDiagnostic = Extract<
   { type: "direct-self-reference" }
 >;
 
+type ComponentTypeCycleDiagnostic = Extract<
+  ComponentTypeGraphDiagnostic,
+  { type: "component-type-cycle" }
+>;
+
 type GraphObjectAdapterParityDiagnostic =
   | UnknownChildDiagnostic
   | DirectSelfReferenceDiagnostic;
@@ -47,6 +52,12 @@ type DirectSelfReferenceFixture = {
   readonly envelope: DiagnosticEnvelope<"GRAPH_DIRECT_SELF_REFERENCE">;
   readonly kind: "direct-self-reference";
   readonly legacyFields: Omit<DirectSelfReferenceDiagnostic, "message" | "type">;
+};
+
+type ComponentTypeCycleFixture = {
+  readonly envelope: DiagnosticEnvelope<"GRAPH_COMPONENT_TYPE_CYCLE">;
+  readonly kind: "component-type-cycle";
+  readonly legacyFields: Omit<ComponentTypeCycleDiagnostic, "message" | "type">;
 };
 
 type GraphObjectAdapterParityFixture =
@@ -154,6 +165,82 @@ function collectGraphObjectAdapterParityFixtures(
   return fixtures;
 }
 
+function collectComponentTypeCycleParityFixtures(
+  registry: ComponentRegistry
+): ComponentTypeCycleFixture[] {
+  const graph = createTestComponentTypeDependencyGraph(registry);
+  const fixtures: ComponentTypeCycleFixture[] = [];
+  const reportedCycles = new Set<string>();
+
+  const visit = (componentName: ComponentName, path: readonly ComponentName[]) => {
+    const cycleStartIndex = path.indexOf(componentName);
+
+    if (cycleStartIndex >= 0) {
+      const cyclePath = [...path.slice(cycleStartIndex), componentName];
+      const cycleKey = createTestCycleKey(cyclePath);
+
+      if (!reportedCycles.has(cycleKey)) {
+        reportedCycles.add(cycleKey);
+        fixtures.push(
+          createComponentTypeCycleFixture({
+            cyclePath,
+            sequence: fixtures.length
+          })
+        );
+      }
+
+      return;
+    }
+
+    for (const dependency of graph.get(componentName) ?? []) {
+      visit(dependency, [...path, componentName]);
+    }
+  };
+
+  registry.entries.forEach((entry) => {
+    visit(entry.authoredName, []);
+  });
+
+  return fixtures;
+}
+
+function createTestComponentTypeDependencyGraph(
+  registry: ComponentRegistry
+): ReadonlyMap<ComponentName, readonly ComponentName[]> {
+  const knownComponentNames = new Set(
+    registry.entries.map((entry) => entry.authoredName)
+  );
+  const graph = new Map<ComponentName, ComponentName[]>();
+
+  registry.entries.forEach((entry) => {
+    const dependencies = graph.get(entry.authoredName) ?? [];
+
+    for (const child of entry.schema.composition?.children ?? []) {
+      const referencedComponent = child.component;
+
+      if (!referencedComponent.trim()) {
+        continue;
+      }
+
+      if (!knownComponentNames.has(referencedComponent)) {
+        continue;
+      }
+
+      if (referencedComponent === entry.authoredName) {
+        continue;
+      }
+
+      if (!dependencies.includes(referencedComponent)) {
+        dependencies.push(referencedComponent);
+      }
+    }
+
+    graph.set(entry.authoredName, dependencies);
+  });
+
+  return graph;
+}
+
 function createUnknownChildComponentFixture({
   childIndex,
   childName,
@@ -219,6 +306,25 @@ function createDirectSelfReferenceFixture({
   };
 }
 
+function createComponentTypeCycleFixture({
+  cyclePath,
+  sequence
+}: {
+  readonly cyclePath: readonly ComponentName[];
+  readonly sequence: number;
+}): ComponentTypeCycleFixture {
+  return {
+    envelope: createGraphComponentTypeCycleDiagnosticEnvelope({
+      cyclePath,
+      sequence
+    }),
+    kind: "component-type-cycle",
+    legacyFields: {
+      cyclePath
+    }
+  };
+}
+
 function createGraphDiagnosticEnvelope<Code extends GraphObjectAdapterParityCode>({
   childIndex,
   code,
@@ -256,10 +362,41 @@ function createGraphDiagnosticEnvelope<Code extends GraphObjectAdapterParityCode
   });
 }
 
+function createGraphComponentTypeCycleDiagnosticEnvelope({
+  cyclePath,
+  sequence
+}: {
+  readonly cyclePath: readonly ComponentName[];
+  readonly sequence: number;
+}): DiagnosticEnvelope<"GRAPH_COMPONENT_TYPE_CYCLE"> {
+  return createDiagnostic({
+    code: "GRAPH_COMPONENT_TYPE_CYCLE",
+    layer: diagnosticLayers.graph,
+    message: `Component type dependency graph contains a cycle: ${cyclePath.join(
+      " -> "
+    )}.`,
+    order: {
+      bucket: 1,
+      sequence
+    },
+    path: createDiagnosticPath("entries"),
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponentTypeGraph"
+    }
+  });
+}
+
 function adaptGraphObjectAdapterParityFixtures(
   fixtures: readonly GraphObjectAdapterParityFixture[]
 ): GraphObjectAdapterParityDiagnostic[] {
   return fixtures.map(adaptGraphObjectAdapterParityFixture);
+}
+
+function adaptComponentTypeCycleParityFixtures(
+  fixtures: readonly ComponentTypeCycleFixture[]
+): ComponentTypeCycleDiagnostic[] {
+  return fixtures.map(adaptComponentTypeCycleParityFixture);
 }
 
 function adaptGraphObjectAdapterParityFixture(
@@ -285,6 +422,34 @@ function adaptGraphObjectAdapterParityFixture(
         type: "direct-self-reference"
       };
   }
+}
+
+function adaptComponentTypeCycleParityFixture(
+  fixture: ComponentTypeCycleFixture
+): ComponentTypeCycleDiagnostic {
+  return {
+    cyclePath: fixture.legacyFields.cyclePath,
+    message: fixture.envelope.message,
+    type: "component-type-cycle"
+  };
+}
+
+function isComponentTypeCycleDiagnostic(
+  diagnostic: ComponentTypeGraphDiagnostic
+): diagnostic is ComponentTypeCycleDiagnostic {
+  return diagnostic.type === "component-type-cycle";
+}
+
+function createTestCycleKey(cyclePath: readonly ComponentName[]) {
+  const nodes = cyclePath.slice(0, -1);
+  const rotations = nodes.map((_, index) => [
+    ...nodes.slice(index),
+    ...nodes.slice(0, index)
+  ]);
+
+  return rotations
+    .map((rotation) => rotation.join("\u0000"))
+    .sort()[0];
 }
 
 function expectGraphEnvelopeMetadata(
@@ -317,6 +482,26 @@ function expectGraphEnvelopeMetadata(
       childIndex,
       "component"
     ],
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponentTypeGraph"
+    }
+  });
+  expect(fixture.envelope).not.toHaveProperty("suggestions");
+}
+
+function expectComponentTypeCycleEnvelopeMetadata(
+  fixture: ComponentTypeCycleFixture,
+  { sequence }: { readonly sequence: number }
+) {
+  expect(fixture.envelope).toMatchObject({
+    code: "GRAPH_COMPONENT_TYPE_CYCLE",
+    layer: diagnosticLayers.graph,
+    order: {
+      bucket: 1,
+      sequence
+    },
+    path: ["entries"],
     severity: diagnosticSeverities.error,
     source: {
       name: "validateComponentTypeGraph"
@@ -399,6 +584,335 @@ describe("validateComponentTypeGraph planned legacy object adapter parity", () =
     expect(adaptedDiagnostics).toStrictEqual(currentResult.diagnostics);
     expect(JSON.stringify(adaptedDiagnostics)).toBe(
       JSON.stringify(currentResult.diagnostics)
+    );
+  });
+
+  it("maps component-type cycle envelopes to the current legacy object byte-for-byte", () => {
+    const registry = createComponentRegistry([
+      createTestSchema("Button", ["Input"]),
+      createTestSchema("Input", ["Button"])
+    ]);
+    const fixtures = collectComponentTypeCycleParityFixtures(registry);
+    const adaptedDiagnostics = adaptComponentTypeCycleParityFixtures(fixtures);
+    const currentResult = validateComponentTypeGraph(registry);
+    const cyclePath = adaptedDiagnostics[0].cyclePath;
+
+    expect(fixtures).toHaveLength(1);
+    expectComponentTypeCycleEnvelopeMetadata(fixtures[0], {
+      sequence: 0
+    });
+    expect(adaptedDiagnostics).toEqual([
+      {
+        cyclePath: ["Button", "Input", "Button"],
+        message:
+          "Component type dependency graph contains a cycle: Button -> Input -> Button.",
+        type: "component-type-cycle"
+      }
+    ]);
+    expect(Object.keys(adaptedDiagnostics[0]).sort()).toEqual([
+      "cyclePath",
+      "message",
+      "type"
+    ]);
+    expect(cyclePath).toStrictEqual(["Button", "Input", "Button"]);
+    expect(cyclePath[cyclePath.length - 1]).toBe(cyclePath[0]);
+    expect(adaptedDiagnostics).toStrictEqual(currentResult.diagnostics);
+    expect(JSON.stringify(adaptedDiagnostics)).toBe(
+      JSON.stringify(currentResult.diagnostics)
+    );
+  });
+
+  it("preserves registry entry order when selecting first-discovered cycle path text", () => {
+    const cases = [
+      {
+        expectedCyclePath: ["Button", "Input", "Button"],
+        expectedMessage:
+          "Component type dependency graph contains a cycle: Button -> Input -> Button.",
+        registry: createComponentRegistry([
+          createTestSchema("Button", ["Input"]),
+          createTestSchema("Input", ["Button"])
+        ])
+      },
+      {
+        expectedCyclePath: ["Input", "Button", "Input"],
+        expectedMessage:
+          "Component type dependency graph contains a cycle: Input -> Button -> Input.",
+        registry: createComponentRegistry([
+          createTestSchema("Input", ["Button"]),
+          createTestSchema("Button", ["Input"])
+        ])
+      }
+    ];
+
+    cases.forEach(({ expectedCyclePath, expectedMessage, registry }) => {
+      const fixtures = collectComponentTypeCycleParityFixtures(registry);
+      const adaptedDiagnostics = adaptComponentTypeCycleParityFixtures(fixtures);
+      const currentCycleDiagnostics = validateComponentTypeGraph(
+        registry
+      ).diagnostics.filter(isComponentTypeCycleDiagnostic);
+
+      expect(fixtures.map((fixture) => fixture.envelope.order.sequence)).toEqual(
+        [0]
+      );
+      expect(adaptedDiagnostics).toStrictEqual(currentCycleDiagnostics);
+      expect(adaptedDiagnostics.map((diagnostic) => diagnostic.cyclePath)).toEqual(
+        [expectedCyclePath]
+      );
+      expect(adaptedDiagnostics.map((diagnostic) => diagnostic.message)).toEqual([
+        expectedMessage
+      ]);
+    });
+  });
+
+  it("preserves dependency order when discovering component-type cycle diagnostics", () => {
+    const cases = [
+      {
+        expectedDiagnostics: [
+          {
+            cyclePath: ["Button", "Input", "Button"],
+            message:
+              "Component type dependency graph contains a cycle: Button -> Input -> Button.",
+            type: "component-type-cycle"
+          },
+          {
+            cyclePath: ["Button", "Icon", "Button"],
+            message:
+              "Component type dependency graph contains a cycle: Button -> Icon -> Button.",
+            type: "component-type-cycle"
+          }
+        ],
+        registry: createComponentRegistry([
+          createTestSchema("Button", [
+            {
+              component: "Input",
+              name: "input"
+            },
+            {
+              component: "Icon",
+              name: "icon"
+            }
+          ]),
+          createTestSchema("Input", ["Button"]),
+          createTestSchema("Icon", ["Button"])
+        ])
+      },
+      {
+        expectedDiagnostics: [
+          {
+            cyclePath: ["Button", "Icon", "Button"],
+            message:
+              "Component type dependency graph contains a cycle: Button -> Icon -> Button.",
+            type: "component-type-cycle"
+          },
+          {
+            cyclePath: ["Button", "Input", "Button"],
+            message:
+              "Component type dependency graph contains a cycle: Button -> Input -> Button.",
+            type: "component-type-cycle"
+          }
+        ],
+        registry: createComponentRegistry([
+          createTestSchema("Button", [
+            {
+              component: "Icon",
+              name: "icon"
+            },
+            {
+              component: "Input",
+              name: "input"
+            }
+          ]),
+          createTestSchema("Input", ["Button"]),
+          createTestSchema("Icon", ["Button"])
+        ])
+      }
+    ];
+
+    cases.forEach(({ expectedDiagnostics, registry }) => {
+      const fixtures = collectComponentTypeCycleParityFixtures(registry);
+      const adaptedDiagnostics = adaptComponentTypeCycleParityFixtures(fixtures);
+      const currentCycleDiagnostics = validateComponentTypeGraph(
+        registry
+      ).diagnostics.filter(isComponentTypeCycleDiagnostic);
+
+      expect(fixtures.map((fixture) => fixture.envelope.order.sequence)).toEqual(
+        [0, 1]
+      );
+      expect(adaptedDiagnostics).toStrictEqual(expectedDiagnostics);
+      expect(adaptedDiagnostics).toStrictEqual(currentCycleDiagnostics);
+    });
+  });
+
+  it("keeps duplicate dependency edges from duplicating component-type cycle reports", () => {
+    const registry = createComponentRegistry([
+      createTestSchema("Button", [
+        {
+          component: "Input",
+          name: "primaryInput"
+        },
+        {
+          component: "Input",
+          name: "secondaryInput"
+        }
+      ]),
+      createTestSchema("Input", ["Button"])
+    ]);
+    const fixtures = collectComponentTypeCycleParityFixtures(registry);
+    const adaptedDiagnostics = adaptComponentTypeCycleParityFixtures(fixtures);
+    const currentResult = validateComponentTypeGraph(registry);
+
+    expect(fixtures).toHaveLength(1);
+    expect(adaptedDiagnostics).toEqual([
+      {
+        cyclePath: ["Button", "Input", "Button"],
+        message:
+          "Component type dependency graph contains a cycle: Button -> Input -> Button.",
+        type: "component-type-cycle"
+      }
+    ]);
+    expect(adaptedDiagnostics).toStrictEqual(currentResult.diagnostics);
+  });
+
+  it("suppresses rotated duplicate component-type cycle reports with the current cycle key", () => {
+    const registry = createComponentRegistry([
+      createTestSchema("Button", ["Input"]),
+      createTestSchema("Input", ["Icon"]),
+      createTestSchema("Icon", ["Button"])
+    ]);
+    const fixtures = collectComponentTypeCycleParityFixtures(registry);
+    const adaptedDiagnostics = adaptComponentTypeCycleParityFixtures(fixtures);
+    const currentResult = validateComponentTypeGraph(registry);
+
+    expect(fixtures).toHaveLength(1);
+    expect(adaptedDiagnostics.map((diagnostic) => diagnostic.cyclePath)).toEqual([
+      ["Button", "Input", "Icon", "Button"]
+    ]);
+    expect(adaptedDiagnostics).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          cyclePath: ["Input", "Icon", "Button", "Input"]
+        }),
+        expect.objectContaining({
+          cyclePath: ["Icon", "Button", "Input", "Icon"]
+        })
+      ])
+    );
+    expect(adaptedDiagnostics).toStrictEqual(currentResult.diagnostics);
+  });
+
+  it("preserves multiple independent component-type cycles in current discovery order", () => {
+    const registry = createComponentRegistry([
+      createTestSchema("Button", ["Input"]),
+      createTestSchema("Input", ["Button"]),
+      createTestSchema("Menu", ["Tooltip"]),
+      createTestSchema("Tooltip", ["Menu"])
+    ]);
+    const fixtures = collectComponentTypeCycleParityFixtures(registry);
+    const adaptedDiagnostics = adaptComponentTypeCycleParityFixtures(fixtures);
+    const currentResult = validateComponentTypeGraph(registry);
+
+    expect(fixtures.map((fixture) => fixture.envelope.order.sequence)).toEqual([
+      0,
+      1
+    ]);
+    expect(adaptedDiagnostics).toEqual([
+      {
+        cyclePath: ["Button", "Input", "Button"],
+        message:
+          "Component type dependency graph contains a cycle: Button -> Input -> Button.",
+        type: "component-type-cycle"
+      },
+      {
+        cyclePath: ["Menu", "Tooltip", "Menu"],
+        message:
+          "Component type dependency graph contains a cycle: Menu -> Tooltip -> Menu.",
+        type: "component-type-cycle"
+      }
+    ]);
+    expect(adaptedDiagnostics).toStrictEqual(currentResult.diagnostics);
+  });
+
+  it("keeps unknown references excluded from component-type cycle traversal parity", () => {
+    const registry = createComponentRegistry([
+      createTestSchema("Button", [
+        {
+          component: "Input ",
+          name: "input"
+        }
+      ]),
+      createTestSchema("Input", ["Button"])
+    ]);
+    const fixtures = collectComponentTypeCycleParityFixtures(registry);
+    const adaptedDiagnostics = adaptComponentTypeCycleParityFixtures(fixtures);
+    const currentResult = validateComponentTypeGraph(registry);
+
+    expect(fixtures).toEqual([]);
+    expect(adaptedDiagnostics).toEqual([]);
+    expect(currentResult.diagnostics).toEqual([
+      {
+        childName: "input",
+        componentName: "Button",
+        message:
+          'Component type "Button" child "input" references unknown component "Input ".',
+        referencedComponent: "Input ",
+        type: "unknown-child-component"
+      }
+    ]);
+    expect(
+      currentResult.diagnostics.filter(isComponentTypeCycleDiagnostic)
+    ).toEqual([]);
+  });
+
+  it("keeps direct self-references excluded from component-type cycle traversal parity", () => {
+    const registry = createComponentRegistry([
+      createTestSchema("Button", [
+        {
+          component: "Button",
+          name: "self"
+        }
+      ])
+    ]);
+    const fixtures = collectComponentTypeCycleParityFixtures(registry);
+    const adaptedDiagnostics = adaptComponentTypeCycleParityFixtures(fixtures);
+    const currentResult = validateComponentTypeGraph(registry);
+
+    expect(fixtures).toEqual([]);
+    expect(adaptedDiagnostics).toEqual([]);
+    expect(currentResult.diagnostics).toEqual([
+      {
+        childName: "self",
+        componentName: "Button",
+        cyclePath: ["Button", "Button"],
+        message: 'Component type "Button" child "self" cannot reference itself.',
+        referencedComponent: "Button",
+        type: "direct-self-reference"
+      }
+    ]);
+    expect(
+      currentResult.diagnostics.filter(isComponentTypeCycleDiagnostic)
+    ).toEqual([]);
+  });
+
+  it("keeps component-type cycle public graph result shape as diagnostics plus valid", () => {
+    const registry = createComponentRegistry([
+      createTestSchema("Button", ["Input"]),
+      createTestSchema("Input", ["Button"])
+    ]);
+    const result = validateComponentTypeGraph(registry);
+
+    expect(Array.isArray(result)).toBe(false);
+    expect(Object.keys(result).sort()).toEqual(["diagnostics", "valid"]);
+    expect(result).not.toHaveProperty("errors");
+    expect(result).not.toHaveProperty("warnings");
+    expect(Array.isArray(result.diagnostics)).toBe(true);
+    expect(result.diagnostics.every((diagnostic) => typeof diagnostic !== "string"))
+      .toBe(true);
+    expect(typeof result.valid).toBe("boolean");
+    expect(result.valid).toBe(false);
+    expect(result.diagnostics).toStrictEqual(
+      adaptComponentTypeCycleParityFixtures(
+        collectComponentTypeCycleParityFixtures(registry)
+      )
     );
   });
 
