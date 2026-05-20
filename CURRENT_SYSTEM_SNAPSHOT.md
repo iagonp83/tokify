@@ -685,10 +685,12 @@ Those registry-backed checks remain opt-in through
 `validateComponent(schema, { registry })`, legacy-compatible, and outside the
 closed schema-local slice. `validateComponent(schema)` does not emit
 registry-backed diagnostics. The separate component-type graph validator still
-owns graph diagnostics and is not internally migrated here. Child-name hygiene
-diagnostics remain isolated, structured warning helpers and are not wired into
-validation flows. `aggregateDiagnostics` remains coordinator/foundation only
-and is not used inside `validateComponent`.
+owns graph diagnostics; its unknown child component and direct self-reference
+diagnostics are migrated separately through its own local legacy object bridge.
+Child-name hygiene diagnostics remain isolated, structured warning helpers and
+are not wired into validation flows. `aggregateDiagnostics` remains
+coordinator/foundation only and is not used inside `validateComponent` or graph
+validation.
 `validateComponent` still publicly returns legacy `string[]` diagnostics, and
 no structured public validation API exists.
 
@@ -917,38 +919,43 @@ The graph validator still publicly returns its legacy
 { diagnostics: ComponentTypeGraphDiagnostic[], valid: boolean }
 ```
 
-Those diagnostics are legacy objects, not legacy strings. Its internal
-structured migration should therefore use a validator-local
-`DiagnosticEnvelope -> legacy graph diagnostic object` compatibility bridge,
-not the `DiagnosticEnvelope -> legacy string` bridge used by
-`validateComponent`. The shared legacy string formatter should remain unchanged
-for this graph migration.
+Those diagnostics are legacy objects, not legacy strings. The graph validator
+now internally migrates only `GRAPH_UNKNOWN_CHILD_COMPONENT` and
+`GRAPH_DIRECT_SELF_REFERENCE` through validator-local/module-private helpers
+that create `DiagnosticEnvelope` objects and immediately adapt them back to the
+current legacy `ComponentTypeGraphDiagnostic` object shape.
 
-The planned graph codes are:
+The graph bridge is local to `componentGraphValidation` and is not the
+`DiagnosticEnvelope -> legacy string` bridge used by `validateComponent`. The
+shared legacy string formatter remains unchanged for this graph migration.
+Legacy graph object fields and legacy message strings are preserved. Direct
+self-reference diagnostics continue to expose
+`cyclePath: [componentName, componentName]`.
 
-- `GRAPH_UNKNOWN_CHILD_COMPONENT`
-- `GRAPH_DIRECT_SELF_REFERENCE`
-- `GRAPH_COMPONENT_TYPE_CYCLE`
+The graph codes are:
 
-Candidate envelope metadata uses `severity: error`, `layer: graph`, and
-`source.name: validateComponentTypeGraph`. Unknown-reference and direct
-self-reference paths should target the authored child component reference, such
-as `["entries", entryIndex, "schema", "composition", "children", childIndex,
-"component"]`. Indirect cycle diagnostics may use `["entries"]` because a cycle
-spans multiple registry entries. Suggestions are not planned.
+- `GRAPH_UNKNOWN_CHILD_COMPONENT` is internally migrated
+- `GRAPH_DIRECT_SELF_REFERENCE` is internally migrated
+- `GRAPH_COMPONENT_TYPE_CYCLE` is not internally migrated yet
 
-The recommended source migration order is unknown child component reference
-and direct self-reference first, then indirect component-type cycles after a
-cycle-specific parity checkpoint. Cycles are higher risk because public output
-depends on DFS order, first-discovered cycle path text, registry entry order,
-dependency order, duplicate dependency suppression, rotated duplicate cycle
-suppression through `createCycleKey`, direct self-reference exclusion from the
-cycle graph, and unknown reference exclusion from the cycle graph.
+Migrated unknown-reference and direct self-reference envelope metadata uses
+`severity: error`, `layer: graph`, `source.name: validateComponentTypeGraph`,
+no suggestions, order bucket `0`, and paths targeting the authored child
+component reference, such as `["entries", entryIndex, "schema", "composition",
+"children", childIndex, "component"]`. Indirect cycle diagnostics remain
+legacy objects only and are not internally migrated yet.
 
-The exact next recommended graph checkpoint is:
+DFS traversal and `createCycleKey` behavior remain unchanged. Indirect
+component-type cycles remain higher risk because public output depends on DFS
+order, first-discovered cycle path text, registry entry order, dependency
+order, duplicate dependency suppression, rotated duplicate cycle suppression
+through `createCycleKey`, direct self-reference exclusion from the cycle graph,
+and unknown reference exclusion from the cycle graph.
+
+Closed graph source migration checkpoint:
 
 ```txt
-Component Graph Unknown/Direct Self Legacy Object Adapter Parity Checkpoint
+Component Graph Unknown/Direct Self Internal Structured Migration
 ```
 
 The future instance tree remains a separate runtime/compiler concept. It should
@@ -1887,15 +1894,16 @@ and tenth internal structured migration checkpoints are closed for the cycle
 topology rule family. The optional registry-backed validateComponent
 composition child reference formatter parity and internal structured migration
 checkpoints are closed for the opt-in child component reference rule family.
-Future work should proceed through the dedicated Component Graph Unknown/Direct
-Self Legacy Object Adapter Parity Checkpoint before any graph validator source
-migration. Warning wiring, aggregate reporting, and optional structured public
-APIs remain later explicit phases. Opt-in warning collection, migration
-reporting, and optional strict mode remain later phases after compatibility
-boundaries are proven.
+The component graph unknown/direct-self object adapter parity and internal
+structured migration checkpoints are closed for the graph unknown child
+component and direct self-reference rule families only. Warning wiring,
+aggregate reporting, and optional structured public APIs remain later explicit
+phases. Opt-in warning collection, migration reporting, and optional strict mode
+remain later phases after compatibility boundaries are proven.
 
 The pure authored-name-based component-type graph validator checkpoint is
-closed. The graph structured migration planning checkpoint is documentation
-only. Future work should continue with small metadata-only phases or dedicated
-architecture audits before any canonical identity, instance tree, resolver,
-runtime, `PreviewCanvas`, import/export, or adapter behavior changes.
+closed. The graph structured migration planning checkpoint is closed, and
+indirect component-type cycle diagnostics remain unmigrated. Future work should
+continue with small metadata-only phases or dedicated architecture audits before
+any canonical identity, instance tree, resolver, runtime, `PreviewCanvas`,
+import/export, or adapter behavior changes.

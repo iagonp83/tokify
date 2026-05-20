@@ -1,3 +1,10 @@
+import {
+  createDiagnostic,
+  createDiagnosticPath,
+  diagnosticLayers,
+  diagnosticSeverities,
+  type DiagnosticEnvelope
+} from "../diagnostics/diagnosticContract";
 import type { ComponentName } from "./component.types";
 import type {
   ComponentRegistry,
@@ -36,6 +43,19 @@ type ComponentTypeDependencyGraph = ReadonlyMap<
   readonly ComponentName[]
 >;
 
+type GraphChildReferenceDiagnosticCode =
+  | "GRAPH_UNKNOWN_CHILD_COMPONENT"
+  | "GRAPH_DIRECT_SELF_REFERENCE";
+
+type GraphChildReferenceDiagnosticInput = {
+  readonly childIndex: number;
+  readonly childName: string;
+  readonly componentName: ComponentName;
+  readonly entryIndex: number;
+  readonly referencedComponent: ComponentName;
+  readonly sequence: number;
+};
+
 export function validateComponentTypeGraph(
   registry: ComponentRegistry
 ): ComponentTypeGraphValidationResult {
@@ -63,11 +83,14 @@ function buildComponentTypeDependencyGraph(
   diagnostics: ComponentTypeGraphDiagnostic[]
 ): ComponentTypeDependencyGraph {
   const graph = new Map<ComponentName, ComponentName[]>();
+  let childReferenceDiagnosticSequence = 0;
 
-  entries.forEach((entry) => {
+  entries.forEach((entry, entryIndex) => {
     const dependencies = graph.get(entry.authoredName) ?? [];
 
-    for (const child of entry.schema.composition?.children ?? []) {
+    for (const [childIndex, child] of (
+      entry.schema.composition?.children ?? []
+    ).entries()) {
       const referencedComponent = child.component;
 
       if (!referencedComponent.trim()) {
@@ -75,25 +98,32 @@ function buildComponentTypeDependencyGraph(
       }
 
       if (!knownComponentNames.has(referencedComponent)) {
-        diagnostics.push({
-          childName: child.name,
-          componentName: entry.authoredName,
-          message: `Component type "${entry.authoredName}" child "${child.name}" references unknown component "${referencedComponent}".`,
-          referencedComponent,
-          type: "unknown-child-component"
-        });
+        diagnostics.push(
+          createUnknownChildComponentDiagnostic({
+            childIndex,
+            childName: child.name,
+            componentName: entry.authoredName,
+            entryIndex,
+            referencedComponent,
+            sequence: childReferenceDiagnosticSequence
+          })
+        );
+        childReferenceDiagnosticSequence += 1;
         continue;
       }
 
       if (referencedComponent === entry.authoredName) {
-        diagnostics.push({
-          childName: child.name,
-          componentName: entry.authoredName,
-          cyclePath: [entry.authoredName, referencedComponent],
-          message: `Component type "${entry.authoredName}" child "${child.name}" cannot reference itself.`,
-          referencedComponent,
-          type: "direct-self-reference"
-        });
+        diagnostics.push(
+          createDirectSelfReferenceDiagnostic({
+            childIndex,
+            childName: child.name,
+            componentName: entry.authoredName,
+            entryIndex,
+            referencedComponent,
+            sequence: childReferenceDiagnosticSequence
+          })
+        );
+        childReferenceDiagnosticSequence += 1;
         continue;
       }
 
@@ -106,6 +136,100 @@ function buildComponentTypeDependencyGraph(
   });
 
   return graph;
+}
+
+function createUnknownChildComponentDiagnostic(
+  input: GraphChildReferenceDiagnosticInput
+): ComponentTypeGraphDiagnostic {
+  const envelope = createGraphChildReferenceDiagnosticEnvelope({
+    childIndex: input.childIndex,
+    code: "GRAPH_UNKNOWN_CHILD_COMPONENT",
+    entryIndex: input.entryIndex,
+    message: `Component type "${input.componentName}" child "${input.childName}" references unknown component "${input.referencedComponent}".`,
+    sequence: input.sequence
+  });
+
+  return adaptUnknownChildComponentDiagnostic(envelope, input);
+}
+
+function createDirectSelfReferenceDiagnostic(
+  input: GraphChildReferenceDiagnosticInput
+): ComponentTypeGraphDiagnostic {
+  const envelope = createGraphChildReferenceDiagnosticEnvelope({
+    childIndex: input.childIndex,
+    code: "GRAPH_DIRECT_SELF_REFERENCE",
+    entryIndex: input.entryIndex,
+    message: `Component type "${input.componentName}" child "${input.childName}" cannot reference itself.`,
+    sequence: input.sequence
+  });
+
+  return adaptDirectSelfReferenceDiagnostic(envelope, input);
+}
+
+function createGraphChildReferenceDiagnosticEnvelope<
+  Code extends GraphChildReferenceDiagnosticCode
+>({
+  childIndex,
+  code,
+  entryIndex,
+  message,
+  sequence
+}: {
+  readonly childIndex: number;
+  readonly code: Code;
+  readonly entryIndex: number;
+  readonly message: string;
+  readonly sequence: number;
+}): DiagnosticEnvelope<Code> {
+  return createDiagnostic({
+    code,
+    layer: diagnosticLayers.graph,
+    message,
+    order: {
+      bucket: 0,
+      sequence
+    },
+    path: createDiagnosticPath(
+      "entries",
+      entryIndex,
+      "schema",
+      "composition",
+      "children",
+      childIndex,
+      "component"
+    ),
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponentTypeGraph"
+    }
+  });
+}
+
+function adaptUnknownChildComponentDiagnostic(
+  envelope: DiagnosticEnvelope<"GRAPH_UNKNOWN_CHILD_COMPONENT">,
+  input: GraphChildReferenceDiagnosticInput
+): ComponentTypeGraphDiagnostic {
+  return {
+    childName: input.childName,
+    componentName: input.componentName,
+    message: envelope.message,
+    referencedComponent: input.referencedComponent,
+    type: "unknown-child-component"
+  };
+}
+
+function adaptDirectSelfReferenceDiagnostic(
+  envelope: DiagnosticEnvelope<"GRAPH_DIRECT_SELF_REFERENCE">,
+  input: GraphChildReferenceDiagnosticInput
+): ComponentTypeGraphDiagnostic {
+  return {
+    childName: input.childName,
+    componentName: input.componentName,
+    cyclePath: [input.componentName, input.componentName],
+    message: envelope.message,
+    referencedComponent: input.referencedComponent,
+    type: "direct-self-reference"
+  };
 }
 
 function findIndirectCycleDiagnostics(
