@@ -83,6 +83,7 @@ Current stabilized areas:
 - Registry-backed Composition Metadata Validation Commit 2
 - Graph Validator Planning documentation boundary
 - Pure Component-Type Graph Validator Commit 1
+- Component Graph Validator Internal Structured Migration Planning Checkpoint
 
 Automated regression tests cover:
 
@@ -909,6 +910,47 @@ The validator returns diagnostics only. It currently detects:
 - direct self-reference
 - indirect component-type cycles
 
+The graph validator still publicly returns its legacy
+`ComponentTypeGraphValidationResult` shape:
+
+```txt
+{ diagnostics: ComponentTypeGraphDiagnostic[], valid: boolean }
+```
+
+Those diagnostics are legacy objects, not legacy strings. Its internal
+structured migration should therefore use a validator-local
+`DiagnosticEnvelope -> legacy graph diagnostic object` compatibility bridge,
+not the `DiagnosticEnvelope -> legacy string` bridge used by
+`validateComponent`. The shared legacy string formatter should remain unchanged
+for this graph migration.
+
+The planned graph codes are:
+
+- `GRAPH_UNKNOWN_CHILD_COMPONENT`
+- `GRAPH_DIRECT_SELF_REFERENCE`
+- `GRAPH_COMPONENT_TYPE_CYCLE`
+
+Candidate envelope metadata uses `severity: error`, `layer: graph`, and
+`source.name: validateComponentTypeGraph`. Unknown-reference and direct
+self-reference paths should target the authored child component reference, such
+as `["entries", entryIndex, "schema", "composition", "children", childIndex,
+"component"]`. Indirect cycle diagnostics may use `["entries"]` because a cycle
+spans multiple registry entries. Suggestions are not planned.
+
+The recommended source migration order is unknown child component reference
+and direct self-reference first, then indirect component-type cycles after a
+cycle-specific parity checkpoint. Cycles are higher risk because public output
+depends on DFS order, first-discovered cycle path text, registry entry order,
+dependency order, duplicate dependency suppression, rotated duplicate cycle
+suppression through `createCycleKey`, direct self-reference exclusion from the
+cycle graph, and unknown reference exclusion from the cycle graph.
+
+The exact next recommended graph checkpoint is:
+
+```txt
+Component Graph Unknown/Direct Self Legacy Object Adapter Parity Checkpoint
+```
+
 The future instance tree remains a separate runtime/compiler concept. It should
 describe parent instance to child instance relationships, with instance paths
 derived from child instance names. It is not implemented yet.
@@ -1727,8 +1769,8 @@ planning or architecture audits before implementation:
   child metadata shape, composition child local slot reference, duplicate
   local composition metadata, composition slot relation topology, and optional
   registry-backed child component reference checkpoints
-- component graph validator diagnostic migration as a separate graph-focused
-  phase
+- component graph validator source migration as a separate graph-focused phase
+  after graph legacy object adapter parity coverage
 - future slot relation cycle path normalization or public rendering changes,
   which remain higher-risk because of traversal order, first-discovered cycle
   paths, duplicate interaction, invalid reference skipping, and deterministic
@@ -1845,14 +1887,15 @@ and tenth internal structured migration checkpoints are closed for the cycle
 topology rule family. The optional registry-backed validateComponent
 composition child reference formatter parity and internal structured migration
 checkpoints are closed for the opt-in child component reference rule family.
-Future work should proceed through additional rule-family parity only for
-explicitly chosen non-validateComponent surfaces, such as the separate
-component graph validator. Warning wiring, aggregate reporting, and optional
-structured public APIs remain later explicit phases. Opt-in warning collection,
-migration reporting, and optional strict mode remain later phases after
-compatibility boundaries are proven.
+Future work should proceed through the dedicated Component Graph Unknown/Direct
+Self Legacy Object Adapter Parity Checkpoint before any graph validator source
+migration. Warning wiring, aggregate reporting, and optional structured public
+APIs remain later explicit phases. Opt-in warning collection, migration
+reporting, and optional strict mode remain later phases after compatibility
+boundaries are proven.
 
 The pure authored-name-based component-type graph validator checkpoint is
-closed. Future work should continue with small metadata-only phases or dedicated
+closed. The graph structured migration planning checkpoint is documentation
+only. Future work should continue with small metadata-only phases or dedicated
 architecture audits before any canonical identity, instance tree, resolver,
 runtime, `PreviewCanvas`, import/export, or adapter behavior changes.
