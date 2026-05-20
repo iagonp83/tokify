@@ -56,6 +56,11 @@ type GraphChildReferenceDiagnosticInput = {
   readonly sequence: number;
 };
 
+type GraphComponentTypeCycleDiagnosticInput = {
+  readonly cyclePath: readonly ComponentName[];
+  readonly sequence: number;
+};
+
 export function validateComponentTypeGraph(
   registry: ComponentRegistry
 ): ComponentTypeGraphValidationResult {
@@ -232,6 +237,47 @@ function adaptDirectSelfReferenceDiagnostic(
   };
 }
 
+function createComponentTypeCycleDiagnostic(
+  input: GraphComponentTypeCycleDiagnosticInput
+): ComponentTypeGraphDiagnostic {
+  const envelope = createGraphComponentTypeCycleDiagnosticEnvelope(input);
+
+  return adaptComponentTypeCycleDiagnostic(envelope, input);
+}
+
+function createGraphComponentTypeCycleDiagnosticEnvelope({
+  cyclePath,
+  sequence
+}: GraphComponentTypeCycleDiagnosticInput): DiagnosticEnvelope<"GRAPH_COMPONENT_TYPE_CYCLE"> {
+  return createDiagnostic({
+    code: "GRAPH_COMPONENT_TYPE_CYCLE",
+    layer: diagnosticLayers.graph,
+    message: `Component type dependency graph contains a cycle: ${cyclePath.join(
+      " -> "
+    )}.`,
+    order: {
+      bucket: 1,
+      sequence
+    },
+    path: createDiagnosticPath("entries"),
+    severity: diagnosticSeverities.error,
+    source: {
+      name: "validateComponentTypeGraph"
+    }
+  });
+}
+
+function adaptComponentTypeCycleDiagnostic(
+  envelope: DiagnosticEnvelope<"GRAPH_COMPONENT_TYPE_CYCLE">,
+  input: GraphComponentTypeCycleDiagnosticInput
+): ComponentTypeGraphDiagnostic {
+  return {
+    cyclePath: input.cyclePath,
+    message: envelope.message,
+    type: "component-type-cycle"
+  };
+}
+
 function findIndirectCycleDiagnostics(
   entries: readonly ComponentRegistryEntry[],
   graph: ComponentTypeDependencyGraph
@@ -248,13 +294,12 @@ function findIndirectCycleDiagnostics(
 
       if (!reportedCycles.has(cycleKey)) {
         reportedCycles.add(cycleKey);
-        diagnostics.push({
-          cyclePath,
-          message: `Component type dependency graph contains a cycle: ${cyclePath.join(
-            " -> "
-          )}.`,
-          type: "component-type-cycle"
-        });
+        diagnostics.push(
+          createComponentTypeCycleDiagnostic({
+            cyclePath,
+            sequence: diagnostics.length
+          })
+        );
       }
 
       return;

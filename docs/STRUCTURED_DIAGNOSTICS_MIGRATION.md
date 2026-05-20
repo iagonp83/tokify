@@ -80,10 +80,11 @@ Current public validator behavior remains legacy-compatible:
   `validateComponent(schema, { registry })`; `validateComponent(schema)` does
   not emit them
 - the component graph validator remains separate and returns its current legacy
-  diagnostic object shape with legacy message strings; only
-  `GRAPH_UNKNOWN_CHILD_COMPONENT` and `GRAPH_DIRECT_SELF_REFERENCE` are now
-  internally migrated through validator-local `DiagnosticEnvelope` helpers that
-  immediately adapt back to `ComponentTypeGraphDiagnostic`
+  diagnostic object shape with legacy message strings;
+  `GRAPH_UNKNOWN_CHILD_COMPONENT`, `GRAPH_DIRECT_SELF_REFERENCE`, and
+  `GRAPH_COMPONENT_TYPE_CYCLE` are now internally migrated through
+  validator-local `DiagnosticEnvelope` helpers that immediately adapt back to
+  `ComponentTypeGraphDiagnostic`
 - warning diagnostics remain opt-in and non-blocking
 - aggregate diagnostics remains coordinator-only and is not used inside
   `validateComponent` or `componentGraphValidation`
@@ -217,18 +218,22 @@ canonical readiness, resolver behavior, runtime behavior, import/export
 behavior, or adapter behavior.
 
 The component graph validator owns component-type graph rules only. Its
-structured diagnostics now cover unknown component references and direct
-self-reference; indirect component-type cycles are not internally migrated yet.
-It must not own schema shape checks, duplicate authored-name registry
-validation, child-name hygiene warnings, instance paths, canonical IDs, runtime
-behavior, resolver behavior, import/export behavior, or adapters.
+structured diagnostics now cover all current graph diagnostic families:
+unknown component references, direct self-reference, and indirect
+component-type cycles. It must not own schema shape checks, duplicate
+authored-name registry validation, child-name hygiene warnings, instance
+paths, canonical IDs, runtime behavior, resolver behavior, import/export
+behavior, or adapters.
 
 ## Component Graph Validator Structured Migration Plan
 
-The graph planning and unknown/direct-self object adapter parity checkpoints are
-closed. `componentGraphValidation` has internally migrated only
-`GRAPH_UNKNOWN_CHILD_COMPONENT` and `GRAPH_DIRECT_SELF_REFERENCE`; indirect
-component-type cycle diagnostics are not migrated yet.
+The graph planning, unknown/direct-self object adapter parity, and cycle object
+adapter parity checkpoints are closed. `componentGraphValidation` has
+internally migrated all current graph diagnostic families:
+
+- `GRAPH_UNKNOWN_CHILD_COMPONENT`
+- `GRAPH_DIRECT_SELF_REFERENCE`
+- `GRAPH_COMPONENT_TYPE_CYCLE`
 
 The active graph migration shape is a validator-local compatibility bridge.
 Module-private helpers in `componentGraphValidation.ts` create
@@ -253,13 +258,16 @@ The adapter does not reconstruct graph object fields from message strings,
 paths, suggestions, or source names. It builds both the envelope and the legacy
 object from the same typed inputs, preserving exact current messages and object
 fields. Direct self-reference diagnostics continue to expose
-`cyclePath: [componentName, componentName]`.
+`cyclePath: [componentName, componentName]`. Component-type cycle diagnostics
+continue to expose only `type`, `cyclePath`, and `message`, preserve the exact
+legacy message string, and preserve `cyclePath` exactly, including the closing
+repeated component.
 
 Graph diagnostic codes:
 
 - `GRAPH_UNKNOWN_CHILD_COMPONENT` is internally migrated
 - `GRAPH_DIRECT_SELF_REFERENCE` is internally migrated
-- `GRAPH_COMPONENT_TYPE_CYCLE` is not internally migrated yet
+- `GRAPH_COMPONENT_TYPE_CYCLE` is internally migrated
 
 Envelope metadata:
 
@@ -267,7 +275,7 @@ Envelope metadata:
 | --- | --- | --- | --- | --- | --- | --- |
 | unknown child component reference | `error` | `graph` | `validateComponentTypeGraph` | `["entries", entryIndex, "schema", "composition", "children", childIndex, "component"]` | bucket `0`, sequence by registry entry and child order | none |
 | direct component self-reference | `error` | `graph` | `validateComponentTypeGraph` | `["entries", entryIndex, "schema", "composition", "children", childIndex, "component"]` | bucket `0`, sequence by registry entry and child order | none |
-| indirect component-type cycle | not migrated yet | not migrated yet | not migrated yet | `["entries"]` remains the planned path | bucket `1`, sequence by first-discovered cycle order remains planned | none |
+| indirect component-type cycle | `error` | `graph` | `validateComponentTypeGraph` | `["entries"]` | bucket `1`, sequence by first-discovered cycle order | none |
 
 The exact numeric sequence formula can remain local implementation detail, but
 it should preserve the current traversal: registry entry order, child order
@@ -292,20 +300,21 @@ Slice state:
    migrated together, because they are emitted from the same child traversal
    branch and share ordering, path, severity, layer, source, and rollback
    boundaries.
-3. Add cycle-specific parity coverage that locks envelope metadata, legacy
-   object output, formatter/input order behavior if a local adapter exists,
-   DFS order, first-discovered cycle path text, registry entry order,
-   dependency order, duplicate dependency suppression, rotated duplicate cycle
-   suppression through `createCycleKey`, direct self-reference exclusion from
-   the cycle graph, and unknown reference exclusion from the cycle graph.
-4. Internally migrate indirect component-type cycle diagnostics only after the
-   cycle parity slice is explicit.
+3. Cycle-specific parity coverage is closed. It locks envelope metadata,
+   legacy object output, DFS order, first-discovered cycle path text, registry
+   entry order, dependency order, duplicate dependency suppression, rotated
+   duplicate cycle suppression through `createCycleKey`, direct self-reference
+   exclusion from the cycle graph, and unknown reference exclusion from the
+   cycle graph.
+4. Indirect component-type cycle diagnostics are internally migrated through a
+   module-private helper that creates a `DiagnosticEnvelope` and immediately
+   adapts the envelope plus typed cycle payload back to the current legacy
+   `ComponentTypeGraphDiagnostic` object shape.
 
 Current `componentGraphValidation.test.ts` coverage locks the public object
 shape and many traversal-sensitive behaviors. Graph object adapter parity
-coverage locks envelope metadata and object parity for the migrated
-unknown/direct-self families. Cycle-specific parity coverage is still required
-before migrating indirect component-type cycle diagnostics.
+coverage locks envelope metadata and object parity for all current graph
+families, including component-type cycle diagnostics.
 
 Risk table:
 
@@ -347,18 +356,22 @@ Explicitly out of scope for this graph migration:
 - public structured validation APIs
 - duplicate authored child-name validation
 
-Closed source migration checkpoint:
+Closed graph source migration checkpoints:
 
 ```txt
 Component Graph Unknown/Direct Self Internal Structured Migration
+Component Graph Cycle Internal Structured Migration
 ```
 
-That checkpoint migrated only unknown child component and direct self-reference
-diagnostics. It did not migrate indirect component-type cycle diagnostics, did
-not change DFS traversal, did not change `createCycleKey`, did not change
-`validateComponent`, did not wire warnings, did not add public structured
-validation APIs, and did not change runtime, resolver, `runtimePlan`,
-import/export, `PreviewCanvas`, UI, adapter, or generated-file behavior.
+Together these checkpoints migrated all current graph diagnostic families:
+unknown child component, direct self-reference, and indirect component-type
+cycle diagnostics. They did not change DFS traversal, first-discovered cycle
+path text, registry entry order, dependency order, duplicate dependency edge
+suppression, rotated duplicate cycle suppression through `createCycleKey`,
+cycle paths, legacy graph object fields, legacy message strings,
+`validateComponent`, warning wiring, public structured validation APIs,
+runtime, resolver, `runtimePlan`, import/export, `PreviewCanvas`, UI, adapter,
+or generated-file behavior.
 
 Warning producers own advisory warning rules only. For example,
 `collectChildNameHygieneDiagnostics(schema)` owns first-phase child-name

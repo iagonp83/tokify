@@ -686,7 +686,8 @@ Those registry-backed checks remain opt-in through
 closed schema-local slice. `validateComponent(schema)` does not emit
 registry-backed diagnostics. The separate component-type graph validator still
 owns graph diagnostics; its unknown child component and direct self-reference
-diagnostics are migrated separately through its own local legacy object bridge.
+diagnostics, plus indirect component-type cycle diagnostics, are migrated
+separately through its own local legacy object bridge.
 Child-name hygiene diagnostics remain isolated, structured warning helpers and
 are not wired into validation flows. `aggregateDiagnostics` remains
 coordinator/foundation only and is not used inside `validateComponent` or graph
@@ -920,42 +921,53 @@ The graph validator still publicly returns its legacy
 ```
 
 Those diagnostics are legacy objects, not legacy strings. The graph validator
-now internally migrates only `GRAPH_UNKNOWN_CHILD_COMPONENT` and
-`GRAPH_DIRECT_SELF_REFERENCE` through validator-local/module-private helpers
-that create `DiagnosticEnvelope` objects and immediately adapt them back to the
-current legacy `ComponentTypeGraphDiagnostic` object shape.
+now internally migrates all current graph diagnostic families through
+validator-local/module-private helpers:
+
+- `GRAPH_UNKNOWN_CHILD_COMPONENT`
+- `GRAPH_DIRECT_SELF_REFERENCE`
+- `GRAPH_COMPONENT_TYPE_CYCLE`
+
+The helpers create `DiagnosticEnvelope` objects and immediately adapt them
+back to the current legacy `ComponentTypeGraphDiagnostic` object shape.
+`GRAPH_COMPONENT_TYPE_CYCLE` uses the same local bridge shape and adapts the
+envelope plus typed cycle payload back to the legacy cycle object.
 
 The graph bridge is local to `componentGraphValidation` and is not the
 `DiagnosticEnvelope -> legacy string` bridge used by `validateComponent`. The
 shared legacy string formatter remains unchanged for this graph migration.
 Legacy graph object fields and legacy message strings are preserved. Direct
 self-reference diagnostics continue to expose
-`cyclePath: [componentName, componentName]`.
+`cyclePath: [componentName, componentName]`. Indirect cycle diagnostics
+continue to expose only `type`, `cyclePath`, and `message`, and `cyclePath`
+is preserved exactly, including the closing repeated component.
 
 The graph codes are:
 
 - `GRAPH_UNKNOWN_CHILD_COMPONENT` is internally migrated
 - `GRAPH_DIRECT_SELF_REFERENCE` is internally migrated
-- `GRAPH_COMPONENT_TYPE_CYCLE` is not internally migrated yet
+- `GRAPH_COMPONENT_TYPE_CYCLE` is internally migrated
 
 Migrated unknown-reference and direct self-reference envelope metadata uses
 `severity: error`, `layer: graph`, `source.name: validateComponentTypeGraph`,
 no suggestions, order bucket `0`, and paths targeting the authored child
 component reference, such as `["entries", entryIndex, "schema", "composition",
-"children", childIndex, "component"]`. Indirect cycle diagnostics remain
-legacy objects only and are not internally migrated yet.
+"children", childIndex, "component"]`. Migrated indirect cycle envelope
+metadata uses `severity: error`, `layer: graph`,
+`source.name: validateComponentTypeGraph`, path `["entries"]`, no suggestions,
+and order bucket `1` with sequence preserving first-discovered cycle order.
 
-DFS traversal and `createCycleKey` behavior remain unchanged. Indirect
-component-type cycles remain higher risk because public output depends on DFS
-order, first-discovered cycle path text, registry entry order, dependency
-order, duplicate dependency suppression, rotated duplicate cycle suppression
-through `createCycleKey`, direct self-reference exclusion from the cycle graph,
-and unknown reference exclusion from the cycle graph.
+DFS traversal and `createCycleKey` behavior remain unchanged. The migration
+preserves first-discovered cycle path text, registry entry order, dependency
+order, duplicate dependency edge suppression, rotated duplicate cycle
+suppression through `createCycleKey`, direct self-reference exclusion from the
+cycle graph, and unknown reference exclusion from the cycle graph.
 
 Closed graph source migration checkpoint:
 
 ```txt
 Component Graph Unknown/Direct Self Internal Structured Migration
+Component Graph Cycle Internal Structured Migration
 ```
 
 The future instance tree remains a separate runtime/compiler concept. It should
