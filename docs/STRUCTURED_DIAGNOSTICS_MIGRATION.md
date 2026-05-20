@@ -1236,12 +1236,13 @@ Closed phase:
 
 Recommended future phases:
 
-1. **Audit-only closure checkpoint**: treat the schema-local
-   and optional registry-backed `validateComponent` structured migration as
-   closed unless new `validateComponent` rule families are added.
-2. **Dedicated non-validateComponent checkpoints**: keep remaining component
-   graph cycle diagnostics, warning wiring, aggregate reporting, and structured
-   public validation APIs in separate explicit phases.
+1. **Audit-only closure checkpoint**: treat the schema-local and optional
+   registry-backed `validateComponent` structured migration, plus all current
+   `componentGraphValidation` diagnostic families, as closed unless new rule
+   families are added.
+2. **Dedicated follow-up checkpoints**: keep warning wiring, aggregate
+   reporting, structured public validation APIs, and any future graph or
+   validator rule families in separate explicit phases.
 
 Each phase should be independently reversible. Do not combine message rewrites,
 rule changes, public API changes, and representation migration in one phase.
@@ -1307,7 +1308,7 @@ child metadata shape, composition child local slot reference, duplicate local
 composition metadata, and composition slot relation topology validator-local
 migrations, plus the optional registry-backed composition child component
 reference validator-local migration and the closed graph unknown/direct-self
-internal migration, this migration plan does not introduce:
+and cycle internal migrations, this migration plan does not introduce:
 
 - broad validator migration
 - global validator wiring

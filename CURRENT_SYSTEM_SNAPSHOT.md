@@ -84,6 +84,8 @@ Current stabilized areas:
 - Graph Validator Planning documentation boundary
 - Pure Component-Type Graph Validator Commit 1
 - Component Graph Validator Internal Structured Migration Planning Checkpoint
+- Component Graph Unknown/Direct Self Internal Structured Migration
+- Component Graph Cycle Internal Structured Migration
 
 Automated regression tests cover:
 
@@ -829,8 +831,10 @@ inventory checkpoint is closed as a documentation-only map of former legacy
 string diagnostics, their ordering, dependencies, rollback boundaries,
 parity-test difficulty, candidate codes, and recommended priorities. There
 are no remaining direct legacy string diagnostic construction paths inside
-`validateComponent`. Graph validator migration, warning activation, aggregate
-reporting, and structured public APIs remain future work.
+`validateComponent`. Current graph validator diagnostic families are also
+internally migrated separately through the graph validator's local legacy
+object bridge. Warning activation, aggregate reporting, and structured public
+APIs remain future work.
 
 The migration plan does not introduce global diagnostic or formatter wiring
 into validators, public validation API changes, warning activation by default,
@@ -1788,8 +1792,8 @@ planning or architecture audits before implementation:
   child metadata shape, composition child local slot reference, duplicate
   local composition metadata, composition slot relation topology, and optional
   registry-backed child component reference checkpoints
-- component graph validator source migration as a separate graph-focused phase
-  after graph legacy object adapter parity coverage
+- future graph validator rule families or public graph diagnostic API changes,
+  which should remain separate graph-focused phases
 - future slot relation cycle path normalization or public rendering changes,
   which remain higher-risk because of traversal order, first-discovered cycle
   paths, duplicate interaction, invalid reference skipping, and deterministic
@@ -1906,16 +1910,16 @@ and tenth internal structured migration checkpoints are closed for the cycle
 topology rule family. The optional registry-backed validateComponent
 composition child reference formatter parity and internal structured migration
 checkpoints are closed for the opt-in child component reference rule family.
-The component graph unknown/direct-self object adapter parity and internal
-structured migration checkpoints are closed for the graph unknown child
-component and direct self-reference rule families only. Warning wiring,
-aggregate reporting, and optional structured public APIs remain later explicit
-phases. Opt-in warning collection, migration reporting, and optional strict mode
-remain later phases after compatibility boundaries are proven.
+The component graph unknown/direct-self object adapter parity, cycle object
+adapter parity, and internal structured migration checkpoints are closed for
+all current graph validator diagnostic families. Warning wiring, aggregate
+reporting, and optional structured public APIs remain later explicit phases.
+Opt-in warning collection, migration reporting, and optional strict mode remain
+later phases after compatibility boundaries are proven.
 
 The pure authored-name-based component-type graph validator checkpoint is
-closed. The graph structured migration planning checkpoint is closed, and
-indirect component-type cycle diagnostics remain unmigrated. Future work should
-continue with small metadata-only phases or dedicated architecture audits before
-any canonical identity, instance tree, resolver, runtime, `PreviewCanvas`,
-import/export, or adapter behavior changes.
+closed, and the graph structured migration planning plus current source
+migration checkpoints are closed. Future work should continue with small
+metadata-only phases or dedicated architecture audits before any canonical
+identity, instance tree, resolver, runtime, `PreviewCanvas`, import/export, or
+adapter behavior changes.
