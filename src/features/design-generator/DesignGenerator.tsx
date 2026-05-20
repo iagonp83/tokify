@@ -14,8 +14,10 @@ import { SliderField } from "../../components/SliderField";
 import type { ComponentVariantAxisName } from "../../compiler/component-model/component.types";
 import { downloadTextFile } from "../../lib/downloadTextFile";
 import { clamp } from "../../lib/number";
+import { CompilerFlowStatusPanel } from "./components/CompilerFlowStatusPanel";
 import { PreviewCanvas } from "./components/PreviewCanvas";
 import { TokenInspector } from "./components/TokenInspector";
+import { createCompilerFlowStatus } from "./compilerFlowStatus";
 import { exportCss } from "./export/exportCss";
 import { exportJson } from "./export/exportJson";
 import { parseDesignState } from "./import/importTokens";
@@ -169,6 +171,10 @@ export function DesignGenerator() {
     );
   };
   const tokens = useDesignTokens(designState);
+  const compilerFlowStatus = useMemo(
+    () => createCompilerFlowStatus(designState),
+    [designState]
+  );
 
   useEffect(() => {
     setUserPresets(loadUserPresets());
@@ -351,6 +357,8 @@ export function DesignGenerator() {
             value={designState.motion.presetId}
           />
         </ControlGroup>
+
+        <CompilerFlowStatusPanel status={compilerFlowStatus} />
 
         <ControlGroup title="Sistema visual">
           <SegmentedControl

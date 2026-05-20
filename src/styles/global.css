@@ -262,6 +262,123 @@ button {
   justify-self: start;
 }
 
+.compiler-flow-status {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dce3dc;
+  border-radius: 8px;
+  background: #fbfdfb;
+}
+
+.compiler-flow-status__header,
+.compiler-flow-status__item-heading {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.compiler-flow-status__header p,
+.compiler-flow-status__summary,
+.compiler-flow-status__constraints,
+.compiler-flow-status__section p,
+.compiler-flow-status__messages {
+  margin: 0;
+  color: #687169;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.compiler-flow-status__header p {
+  margin-bottom: 4px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.compiler-flow-status h2,
+.compiler-flow-status h3 {
+  margin: 0;
+  color: #171d19;
+}
+
+.compiler-flow-status h2 {
+  font-size: 0.98rem;
+}
+
+.compiler-flow-status h3 {
+  font-size: 0.82rem;
+}
+
+.compiler-flow-status__summary-badge,
+.compiler-flow-status__badge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.compiler-flow-status__summary-badge {
+  min-width: 48px;
+  padding: 4px 8px;
+  text-align: center;
+}
+
+.compiler-flow-status__summary-badge--ready,
+.compiler-flow-status__badge--ready {
+  color: #1f6b55;
+  background: #e4f4ec;
+}
+
+.compiler-flow-status__summary-badge--blocked,
+.compiler-flow-status__badge--blocked {
+  color: #9b3f55;
+  background: #f8e6eb;
+}
+
+.compiler-flow-status__constraints,
+.compiler-flow-status__section ul {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.compiler-flow-status__sections {
+  display: grid;
+  gap: 10px;
+}
+
+.compiler-flow-status__section {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #e3e9e3;
+}
+
+.compiler-flow-status__item {
+  display: grid;
+  gap: 4px;
+}
+
+.compiler-flow-status__item-heading span:first-child {
+  color: #171d19;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.compiler-flow-status__badge {
+  padding: 2px 7px;
+  font-size: 0.72rem;
+}
+
+.compiler-flow-status__messages {
+  display: grid;
+  gap: 4px;
+  padding-left: 12px;
+  list-style: disc;
+}
+
 .user-presets {
   display: grid;
   gap: 12px;
