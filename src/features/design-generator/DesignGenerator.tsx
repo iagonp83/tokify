@@ -15,6 +15,7 @@ import type { ComponentVariantAxisName } from "../../compiler/component-model/co
 import { downloadTextFile } from "../../lib/downloadTextFile";
 import { clamp } from "../../lib/number";
 import { CompilerFlowStatusPanel } from "./components/CompilerFlowStatusPanel";
+import { ExportReadinessNote } from "./components/ExportReadinessNote";
 import { PreviewCanvas } from "./components/PreviewCanvas";
 import { TokenInspector } from "./components/TokenInspector";
 import { createCompilerFlowStatus } from "./compilerFlowStatus";
@@ -554,6 +555,7 @@ export function DesignGenerator() {
               {importErrorMessage}
             </p>
           ) : null}
+          <ExportReadinessNote />
           <Button
             icon={<RotateCcw aria-hidden="true" size={18} />}
             onClick={() =>

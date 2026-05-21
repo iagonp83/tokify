@@ -462,6 +462,40 @@ button {
   line-height: 1.45;
 }
 
+.export-readiness-note {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #dce3dc;
+  border-radius: 7px;
+  background: #f8faf8;
+}
+
+.export-readiness-note h2,
+.export-readiness-note p,
+.export-readiness-note ul {
+  margin: 0;
+}
+
+.export-readiness-note h2 {
+  color: #171d19;
+  font-size: 0.9rem;
+}
+
+.export-readiness-note p,
+.export-readiness-note li {
+  color: #687169;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.export-readiness-note ul {
+  display: grid;
+  gap: 4px;
+  padding-left: 16px;
+}
+
 .button {
   display: inline-flex;
   align-items: center;
