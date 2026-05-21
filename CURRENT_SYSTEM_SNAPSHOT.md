@@ -87,6 +87,7 @@ Current stabilized areas:
 - Component Graph Unknown/Direct Self Internal Structured Migration
 - Component Graph Cycle Internal Structured Migration
 - Product-Compiler Flow Status Panel Slice A
+- Import Error Feedback Slice B
 
 Automated regression tests cover:
 
@@ -158,6 +159,8 @@ Automated regression tests cover:
 - read-only compiler flow status panel rendering coverage that keeps component
   generation, adapters, warnings, strict mode, aggregate diagnostics, and
   structured public diagnostics explicitly inactive
+- design-generator import feedback mapping for JSON parse failures, token
+  import failures, and file read failures
 
 ## Component Model Structure
 
@@ -1772,6 +1775,30 @@ Panel copy explicitly keeps current export as token export only. Component code
 generation and adapters are not active. Warnings, strict mode, aggregate
 diagnostics, and structured public diagnostics remain inactive.
 
+## Import Error Feedback
+
+Import Error Feedback Slice B is closed.
+
+Failed JSON import feedback is user-visible and local to the design-generator
+product UI. The UI maps JSON parse failures, token import failures, and file
+read failures to clear retryable messages through the feature-local helper:
+
+```txt
+src/features/design-generator/import/importFeedback.ts
+```
+
+The implementation does not change JSON import/export schemas, successful
+import behavior, import permissiveness, or authored-name handling. Successful
+imports still follow the existing parse, normalize, and `setDesignState` path.
+Failed imports do not mutate `DesignState`; they only set local feedback state
+and reset the file input so the same file can be retried.
+
+Import errors are not routed through compiler diagnostics. Slice B does not
+change runtime, resolver, validators, graph validation, registry behavior,
+diagnostics behavior, adapters, `PreviewCanvas`, or public APIs. It does not
+activate warning collection, aggregate diagnostics, strict mode, or structured
+public diagnostics.
+
 ## Export Architecture
 
 CSS export is handled by:
@@ -1806,6 +1833,8 @@ component values are treated as component overrides for backward compatibility.
 
 Composition metadata does not change import/export shapes yet.
 Runtime planning and emitted runtime variables are not exported or imported yet.
+Slice B only added product-local UI feedback for failed JSON imports; the
+import/export payload shapes remain unchanged.
 
 ## What Composition Is Not Yet
 
@@ -1974,8 +2003,10 @@ identity, instance tree, resolver, runtime, `PreviewCanvas`, import/export, or
 adapter behavior changes.
 
 The Product-Compiler Flow Status Panel Slice A checkpoint is closed as a
-read-only internal status surface for the existing Button/Input flow. Future
-internal usable MVP work should proceed through separate focused slices, such
-as import error feedback or export readiness clarification, without widening
-runtime, resolver, import/export, validators, graph validation, registry,
-diagnostics, adapter, `PreviewCanvas`, or public API contracts.
+read-only internal status surface for the existing Button/Input flow. The
+Import Error Feedback Slice B checkpoint is closed as a product-local UI
+feedback layer for failed JSON imports. Future internal usable MVP work should
+proceed through separate focused slices, such as export readiness
+clarification, without widening runtime, resolver, import/export, validators,
+graph validation, registry, diagnostics, adapter, `PreviewCanvas`, or public
+API contracts.

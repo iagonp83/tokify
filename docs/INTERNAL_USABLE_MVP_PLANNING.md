@@ -60,8 +60,9 @@ schema-local and optional registry-backed diagnostic families.
 `componentGraphValidation` returns `{ diagnostics, valid }` publicly and uses
 a local `DiagnosticEnvelope -> legacy graph diagnostic` bridge for all current
 graph diagnostics. The product UI does not surface schema validation, graph
-validation, import validation errors, or compiler diagnostics beyond console
-logging on failed JSON import.
+validation, or compiler diagnostics beyond the read-only compiler flow status
+panel. Failed JSON imports now show product-local retryable feedback without
+routing through compiler diagnostics.
 
 Current import/export is token-focused. CSS export emits `:root` variables and
 per-reference-component blocks for `card`, `toolbar`, and `panel`. JSON export
@@ -83,7 +84,6 @@ Current user-facing gaps:
 - no clear internal MVP workflow that says what a user should complete from
   start to finish
 - no validation panel or actionable diagnostic feedback in the UI
-- failed imports only log to the console
 - no visible compiler readiness status for the current Button/Input schemas
 - no schema, registry, or graph visibility for internal users
 - no export readiness explanation that separates token export from component
@@ -340,6 +340,22 @@ behavior, adapters, `PreviewCanvas` behavior, or public APIs.
 
 The implementation does not activate component code generation, adapters,
 warnings, strict mode, aggregate diagnostics, or structured public diagnostics.
+
+## Slice B Implementation Status
+
+Slice B is now implemented and closed as product-local failed JSON import
+feedback in the design-generator UI.
+
+The implementation keeps the successful import path unchanged, leaves
+import/export shapes unchanged, and does not make imports stricter. Failed
+imports do not mutate `DesignState`; they set local UI feedback and reset the
+file input so the same file can be retried.
+
+The implementation does not route import errors through compiler diagnostics
+and does not change runtime, resolver, validators, graph validation, registry
+behavior, diagnostics behavior, adapters, `PreviewCanvas` behavior, or public
+APIs. It does not activate warning collection, aggregate diagnostics, strict
+mode, or structured public diagnostics.
 
 ## Exit Criteria
 
