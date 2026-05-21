@@ -450,6 +450,18 @@ button {
   display: none;
 }
 
+.import-feedback {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #edc4cf;
+  border-radius: 7px;
+  color: #8a3348;
+  background: #fff3f5;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
 .button {
   display: inline-flex;
   align-items: center;

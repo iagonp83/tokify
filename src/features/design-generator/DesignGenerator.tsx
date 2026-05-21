@@ -20,6 +20,10 @@ import { TokenInspector } from "./components/TokenInspector";
 import { createCompilerFlowStatus } from "./compilerFlowStatus";
 import { exportCss } from "./export/exportCss";
 import { exportJson } from "./export/exportJson";
+import {
+  createImportErrorFeedback,
+  createImportReadErrorFeedback
+} from "./import/importFeedback";
 import { parseDesignState } from "./import/importTokens";
 import { accentOptions, designPresets, initialDesignState } from "./presets";
 import { designSystemProfiles } from "./profiles/profiles";
@@ -79,6 +83,9 @@ export function DesignGenerator() {
     useState<ComponentNamespace>(initialDesignState.component.kind);
   const [selectedProfileId, setSelectedProfileId] = useState("minimal");
   const [userPresets, setUserPresets] = useState<UserDesignPreset[]>([]);
+  const [importErrorMessage, setImportErrorMessage] = useState<string | null>(
+    null
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editingNamespaceTokens = resolveComponentNamespaceTokens(
     designState,
@@ -269,10 +276,18 @@ export function DesignGenerator() {
     fileInputRef.current?.click();
   };
 
+  const resetFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleImportFile = (file: File | undefined) => {
     if (!file) {
       return;
     }
+
+    setImportErrorMessage(null);
 
     const reader = new FileReader();
 
@@ -284,17 +299,19 @@ export function DesignGenerator() {
         );
 
         setDesignState(importedState);
+        setImportErrorMessage(null);
       } catch (error) {
         console.error("No se pudo importar tokens.json", error);
+        setImportErrorMessage(createImportErrorFeedback(error));
       } finally {
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
+        resetFileInput();
       }
     };
 
     reader.onerror = () => {
       console.error("No se pudo leer el archivo tokens.json", reader.error);
+      setImportErrorMessage(createImportReadErrorFeedback());
+      resetFileInput();
     };
 
     reader.readAsText(file);
@@ -532,6 +549,11 @@ export function DesignGenerator() {
             ref={fileInputRef}
             type="file"
           />
+          {importErrorMessage ? (
+            <p className="import-feedback" role="alert">
+              {importErrorMessage}
+            </p>
+          ) : null}
           <Button
             icon={<RotateCcw aria-hidden="true" size={18} />}
             onClick={() =>
