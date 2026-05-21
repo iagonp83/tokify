@@ -373,6 +373,107 @@ export output, import behavior, import/export shapes, runtime, resolver,
 validators, graph validation, registry behavior, diagnostics behavior,
 adapters, `PreviewCanvas` behavior, and public APIs unchanged.
 
+## Post Slice A-C Review
+
+After Slices A-C, the internal MVP flow is more inspectable but still not a
+complete guided workflow.
+
+Current flow:
+
+- Token editing remains the main authoring path. Users adjust profile, active
+  component skin, motion preset, accent color, layout tokens, motion duration,
+  and authored Button/Input namespace overrides through `DesignState`.
+- Button/Input preview remains the compiler-backed visual feedback path.
+  `PreviewCanvas` still resolves Button and Input, emits flat runtime
+  variables, and consumes them through the preview-local policy without
+  becoming a generalized component workbench.
+- The compiler flow status panel now makes the existing Button/Input path
+  visible: token availability, schema validation, registry validation,
+  component-type graph validation, resolution, runtime emission, preview
+  availability, and CSS/JSON token export availability.
+- Failed JSON import now produces product-local retryable UI feedback while
+  successful import behavior, permissiveness, and import/export shapes remain
+  unchanged.
+- Export readiness is now clarified beside the export controls. The UI states
+  that CSS/JSON exports are current token payload exports only.
+- CSS and JSON export helpers remain unchanged. They still export token data
+  only and still exclude generated component code, adapters, `runtimePlan`,
+  emitted runtime variables, graph diagnostics, and composition graph data.
+- Local presets remain lightweight `localStorage` persistence for saved
+  `DesignState`. There is still no workspace document model, autosave,
+  migration UI, or collaboration model.
+
+Improved since the original planning checkpoint:
+
+- Internal users can now see whether the built-in Button/Input compiler path
+  is currently ready instead of inferring readiness from the preview or
+  console.
+- Failed imports no longer fail silently from the product user's perspective;
+  the UI provides a retryable message without routing errors through compiler
+  diagnostics.
+- Export buttons are now framed as token exports only, reducing the risk that
+  users expect component generation, adapters, runtime planning data, or graph
+  diagnostics in the exported files.
+- The implementation slices established small product-local UI surfaces with
+  focused tests while preserving compiler and import/export contracts.
+
+Remaining user-facing gaps:
+
+- Workflow clarity is still partial. Users can see pieces of the flow, but the
+  app does not yet provide a short "what to do next" path for an internal MVP
+  session.
+- Save/load/recovery clarity remains thin. Local presets, import, export, and
+  reset exist, but their relationship to recovery, handoff, and durable project
+  state is not explained in the UI.
+- Validation actionability is limited. The status panel reports readiness, but
+  it is intentionally read-only and does not yet guide users from a failing
+  state to a corrective action.
+- Component workbench limits remain. Button/Input preview is useful, but users
+  still cannot author schemas, edit registry entries, inspect slots as a
+  first-class workbench, or treat PreviewCanvas as an adapter preview.
+- Export/code generation expectations are clearer but still constrained. The
+  UI now says token exports only, but there is still no code preview,
+  generated component output, or adapter output.
+- Visual hierarchy and noise risk have increased. The sidebar now includes
+  controls, compiler status, import feedback when present, export readiness
+  copy, and preset actions; adding more explanatory UI should be weighed
+  against scanability.
+
+Next-step candidates:
+
+- Slice D: Lightweight in-app workflow/checklist. This would make the internal
+  MVP path more explicit with the lowest architecture risk if it stays
+  read-only and local. Its main risk is adding another text surface to an
+  already dense sidebar.
+- Manual UI smoke/review checkpoint. This would validate hierarchy,
+  scanability, copy, responsive behavior, import retry, preset flow, and
+  export affordances without adding product surface. It is lowest risk and can
+  expose whether Slice D is still needed.
+- Save/load/preset clarity. This would improve a real workflow gap, but it
+  likely touches persistence copy and possibly preset UI behavior, so it should
+  follow a UI smoke review rather than precede one.
+- Component workbench clarity. This could explain Button/Input preview limits,
+  but it risks expanding compiler concepts in the UI before the hierarchy is
+  proven.
+- Pause UI and return to compiler/product architecture planning. This is
+  appropriate if the next goal is deeper compiler capability, but it would not
+  answer whether the current A-C product surface is usable as an internal MVP.
+
+Recommended next step:
+
+Run a manual UI smoke/review checkpoint before implementing Slice D or any
+additional UI. The checkpoint should inspect the current local app across
+desktop and narrow viewports, verify the A-C surfaces in context, and produce
+a short recommendation on whether the next implementation should be Slice D,
+save/load clarity, or a targeted hierarchy/copy cleanup.
+
+This recommended checkpoint should remain non-invasive: no runtime changes, no
+resolver changes, no import/export shape changes, no validator, graph,
+registry, or diagnostics behavior changes, no structured public diagnostics
+API, no warning activation, no aggregate reporting, no strict mode, no
+canonical IDs, no instance paths, no child runtime resolution, no component
+code generation, no adapters, and no `PreviewCanvas` redesign.
+
 ## Exit Criteria
 
 This planning checkpoint is complete when:
@@ -384,10 +485,11 @@ This planning checkpoint is complete when:
 - risks and dependencies are documented
 - candidate implementation slices are compared
 - exactly one first implementation slice is recommended
+- the post Slice A-C review recommends exactly one next checkpoint or slice
 - no source code, tests, runtime behavior, resolver behavior, import/export
   behavior, `PreviewCanvas`, UI behavior, adapters, validators, graph
   validation, diagnostics behavior, registry logic, or public APIs are changed
 - `git diff --check` passes
 
-Future implementation of the recommended first slice should have its own
-focused checkpoint, tests, and validation plan.
+Future implementation of the recommended next checkpoint or slice should have
+its own focused checkpoint, tests, and validation plan.
