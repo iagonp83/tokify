@@ -88,6 +88,7 @@ Current stabilized areas:
 - Component Graph Cycle Internal Structured Migration
 - Product-Compiler Flow Status Panel Slice A
 - Import Error Feedback Slice B
+- Export Readiness Clarification Slice C
 
 Automated regression tests cover:
 
@@ -161,6 +162,11 @@ Automated regression tests cover:
   structured public diagnostics explicitly inactive
 - design-generator import feedback mapping for JSON parse failures, token
   import failures, and file read failures
+- read-only export readiness note rendering coverage that keeps CSS/JSON
+  exports token-only and keeps generated component code, adapters,
+  runtimePlan, emitted runtime variables, graph diagnostics, composition graph
+  data, warnings, aggregate diagnostics, strict mode, and structured public
+  diagnostics inactive or unexported
 
 ## Component Model Structure
 
@@ -1799,6 +1805,30 @@ diagnostics behavior, adapters, `PreviewCanvas`, or public APIs. It does not
 activate warning collection, aggregate diagnostics, strict mode, or structured
 public diagnostics.
 
+## Export Readiness Clarification
+
+Export Readiness Clarification Slice C is closed.
+
+The export readiness note is a read-only, design-generator-local UI surface
+rendered near the existing CSS/JSON export controls:
+
+```txt
+src/features/design-generator/components/ExportReadinessNote.tsx
+```
+
+The note clarifies that current CSS and JSON exports include only the current
+token payloads. It explicitly states that generated component code, adapters,
+`runtimePlan`, emitted runtime variables, graph diagnostics, and composition
+graph data are not included. It also keeps warnings, aggregate diagnostics,
+strict mode, and structured public diagnostics inactive.
+
+The implementation does not call export helpers, import helpers, compiler
+helpers, diagnostics helpers, validators, graph validation, registry logic, or
+runtime/resolver APIs. It does not change CSS export output, JSON export
+output, import behavior, import/export shapes, runtime behavior, resolver
+behavior, validators, graph validation behavior, registry behavior,
+diagnostics behavior, adapters, `PreviewCanvas`, or public APIs.
+
 ## Export Architecture
 
 CSS export is handled by:
@@ -1835,6 +1865,9 @@ Composition metadata does not change import/export shapes yet.
 Runtime planning and emitted runtime variables are not exported or imported yet.
 Slice B only added product-local UI feedback for failed JSON imports; the
 import/export payload shapes remain unchanged.
+Slice C only added product-local UI clarification around current token export
+readiness; CSS/JSON export helper behavior and payload shapes remain
+unchanged.
 
 ## What Composition Is Not Yet
 
@@ -2005,8 +2038,9 @@ adapter behavior changes.
 The Product-Compiler Flow Status Panel Slice A checkpoint is closed as a
 read-only internal status surface for the existing Button/Input flow. The
 Import Error Feedback Slice B checkpoint is closed as a product-local UI
-feedback layer for failed JSON imports. Future internal usable MVP work should
-proceed through separate focused slices, such as export readiness
-clarification, without widening runtime, resolver, import/export, validators,
+feedback layer for failed JSON imports. The Export Readiness Clarification
+Slice C checkpoint is closed as a product-local read-only note around current
+token exports. Future internal usable MVP work should proceed through separate
+focused slices without widening runtime, resolver, import/export, validators,
 graph validation, registry, diagnostics, adapter, `PreviewCanvas`, or public
 API contracts.

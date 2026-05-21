@@ -72,6 +72,8 @@ component namespaces. Import parses the current JSON token shape back into
 `DesignState`, with backward-compatible support for older component groups.
 Import/export intentionally excludes `runtimePlan`, emitted runtime variables,
 composition graph fields, adapters, and generated component code.
+The product UI now includes a read-only export readiness note that clarifies
+current CSS/JSON exports are token payload exports only.
 
 Current persistence is local and lightweight. Built-in profiles and motion
 presets live in source. User presets are saved in `localStorage` under
@@ -86,8 +88,6 @@ Current user-facing gaps:
 - no validation panel or actionable diagnostic feedback in the UI
 - no visible compiler readiness status for the current Button/Input schemas
 - no schema, registry, or graph visibility for internal users
-- no export readiness explanation that separates token export from component
-  generation
 - no component-generation output, adapter output, or code preview
 - no persistent workspace/project document beyond local presets
 - no discoverable save/load/import recovery path for invalid or partial data
@@ -356,6 +356,22 @@ and does not change runtime, resolver, validators, graph validation, registry
 behavior, diagnostics behavior, adapters, `PreviewCanvas` behavior, or public
 APIs. It does not activate warning collection, aggregate diagnostics, strict
 mode, or structured public diagnostics.
+
+## Slice C Implementation Status
+
+Slice C is now implemented and closed as a read-only export readiness note in
+the design-generator UI.
+
+The implementation clarifies that current CSS/JSON exports are token payload
+exports only. It explicitly says generated component code and adapters are not
+included, and that `runtimePlan`, emitted runtime variables, graph diagnostics,
+and composition graph data are not exported.
+
+The implementation does not activate warnings, aggregate diagnostics, strict
+mode, or structured public diagnostics. It leaves CSS export output, JSON
+export output, import behavior, import/export shapes, runtime, resolver,
+validators, graph validation, registry behavior, diagnostics behavior,
+adapters, `PreviewCanvas` behavior, and public APIs unchanged.
 
 ## Exit Criteria
 
