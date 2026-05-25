@@ -65,7 +65,7 @@ button {
 .generator-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
   min-height: 100vh;
   padding: 24px;
   border-right: 1px solid #d9ded8;
@@ -264,11 +264,11 @@ button {
 
 .compiler-flow-status {
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 13px;
   border: 1px solid #dce3dc;
   border-radius: 8px;
-  background: #fbfdfb;
+  background: #f8faf8;
 }
 
 .compiler-flow-status__header,
@@ -286,7 +286,7 @@ button {
 .compiler-flow-status__messages {
   margin: 0;
   color: #687169;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   line-height: 1.45;
 }
 
@@ -304,7 +304,7 @@ button {
 }
 
 .compiler-flow-status h2 {
-  font-size: 0.98rem;
+  font-size: 0.92rem;
 }
 
 .compiler-flow-status h3 {
@@ -339,20 +339,25 @@ button {
 .compiler-flow-status__constraints,
 .compiler-flow-status__section ul {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   padding: 0;
   list-style: none;
 }
 
+.compiler-flow-status__constraints {
+  padding-top: 8px;
+  border-top: 1px solid #e7ece7;
+}
+
 .compiler-flow-status__sections {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .compiler-flow-status__section {
   display: grid;
-  gap: 8px;
-  padding-top: 10px;
+  gap: 6px;
+  padding-top: 8px;
   border-top: 1px solid #e3e9e3;
 }
 
@@ -439,11 +444,24 @@ button {
   color: #b03755;
 }
 
+.sidebar-action-group {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid #e3e9e3;
+}
+
+.sidebar-action-group__heading h2 {
+  margin: 0;
+  color: #171d19;
+  font-size: 0.98rem;
+}
+
 .sidebar-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-top: auto;
 }
 
 .file-input {
@@ -465,16 +483,15 @@ button {
 .export-readiness-note {
   display: grid;
   grid-column: 1 / -1;
-  gap: 8px;
-  padding: 12px;
+  gap: 6px;
+  padding: 10px 12px;
   border: 1px solid #dce3dc;
   border-radius: 7px;
   background: #f8faf8;
 }
 
 .export-readiness-note h2,
-.export-readiness-note p,
-.export-readiness-note ul {
+.export-readiness-note p {
   margin: 0;
 }
 
@@ -483,17 +500,14 @@ button {
   font-size: 0.9rem;
 }
 
-.export-readiness-note p,
-.export-readiness-note li {
+.export-readiness-note p {
   color: #687169;
   font-size: 0.82rem;
   line-height: 1.45;
 }
 
-.export-readiness-note ul {
-  display: grid;
-  gap: 4px;
-  padding-left: 16px;
+.export-readiness-note .export-readiness-note__boundary {
+  font-size: 0.78rem;
 }
 
 .button {

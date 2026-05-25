@@ -19,10 +19,12 @@ describe("CompilerFlowStatusPanel", () => {
     expect(markup).toContain("Preview availability");
     expect(markup).toContain("CSS token export");
     expect(markup).toContain("JSON token export");
-    expect(markup).toContain("Current export is token export only.");
-    expect(markup).toContain("Component code generation and adapters are not active.");
+    expect(markup).toContain("Compiler status");
+    expect(markup).toContain("Read-only Button/Input compiler flow.");
+    expect(markup).toContain("Exports remain token-only.");
+    expect(markup).toContain("Component generation and adapters remain inactive.");
     expect(markup).toContain(
-      "Warnings, strict mode, aggregate diagnostics, and structured public diagnostics are inactive."
+      "Warnings, strict mode, aggregate diagnostics, and structured public diagnostics remain inactive."
     );
   });
 });

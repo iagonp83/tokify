@@ -143,9 +143,9 @@ export function createCompilerFlowStatus(
 
   return {
     constraints: [
-      "Current export is token export only.",
-      "Component code generation and adapters are not active.",
-      "Warnings, strict mode, aggregate diagnostics, and structured public diagnostics are inactive."
+      "Exports remain token-only.",
+      "Component generation and adapters remain inactive.",
+      "Warnings, strict mode, aggregate diagnostics, and structured public diagnostics remain inactive."
     ],
     sections: [
       {
@@ -172,13 +172,12 @@ export function createCompilerFlowStatus(
         ]
       },
       {
-        title: "Token export only",
+        title: "Exports",
         items: [cssExportItem, jsonExportItem]
       }
     ],
-    summary:
-      "Read-only internal status for the current Button/Input product-compiler flow.",
-    title: "Internal compiler-flow status"
+    summary: "Read-only Button/Input compiler flow.",
+    title: "Compiler status"
   };
 }
 
@@ -250,7 +249,7 @@ function createTokenStateItem({
   }
 
   return createReadyItem({
-    detail: `Current DesignState produced ${Object.keys(tokenResult.value).length} flat token values for ${state.component.kind}.`,
+    detail: `${Object.keys(tokenResult.value).length} flat token values for ${state.component.kind}.`,
     id: "token-state",
     label: "Token state"
   });
@@ -284,7 +283,7 @@ function createValidationItem({
   }
 
   return createReadyItem({
-    detail: "Valid with current legacy validation output.",
+    detail: "Valid with legacy output.",
     id,
     label
   });
@@ -315,7 +314,7 @@ function createGraphValidationItem(
   }
 
   return createReadyItem({
-    detail: "Valid with current legacy graph diagnostics output.",
+    detail: "Valid with legacy graph output.",
     id: "component-type-graph-validation",
     label: "Component-type graph validation"
   });
@@ -358,7 +357,7 @@ function createResolutionItem({
   }
 
   return createReadyItem({
-    detail: `${result.value.schema.name} resolved for the default preview state.`,
+    detail: `${result.value.schema.name} resolved for default preview.`,
     id,
     label
   });
@@ -397,7 +396,7 @@ function createRuntimeEmissionItem({
   }
 
   return createReadyItem({
-    detail: `${Object.keys(result.value).length} flat runtime variables emitted for the default preview state.`,
+    detail: `${Object.keys(result.value).length} flat runtime variables for default preview.`,
     id,
     label
   });
@@ -420,7 +419,7 @@ function createPreviewAvailabilityItem(
   }
 
   return createReadyItem({
-    detail: "PreviewCanvas Button/Input path is available for the current design state.",
+    detail: "PreviewCanvas Button/Input path is available.",
     id: "preview-availability",
     label: "Preview availability"
   });
@@ -451,7 +450,7 @@ function createCssExportItem(
   }
 
   return createReadyItem({
-    detail: "Available for current flat CSS variables; token export only.",
+    detail: "Current flat CSS variables available; token-only.",
     id: "css-token-export",
     label: "CSS token export"
   });
@@ -485,7 +484,7 @@ function createJsonExportItem(
   }
 
   return createReadyItem({
-    detail: "Available for current token JSON shape only; no component code, adapters, runtimePlan, emitted variables, or graph fields.",
+    detail: "Current token JSON shape available; no component code, adapters, runtimePlan, emitted variables, or graph fields.",
     id: "json-token-export",
     label: "JSON token export"
   });

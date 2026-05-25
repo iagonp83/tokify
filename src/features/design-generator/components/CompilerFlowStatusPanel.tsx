@@ -33,7 +33,7 @@ export function CompilerFlowStatusPanel({
         </span>
       </div>
       <p className="compiler-flow-status__summary">{status.summary}</p>
-      <ul className="compiler-flow-status__constraints">
+      <ul className="compiler-flow-status__constraints" aria-label="Boundaries">
         {status.constraints.map((constraint) => (
           <li key={constraint}>{constraint}</li>
         ))}

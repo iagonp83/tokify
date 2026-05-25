@@ -353,11 +353,11 @@ export function DesignGenerator() {
         </div>
 
         <ControlGroup
-          description="Define el tipo de pieza y el caracter de movimiento."
-          title="Composicion"
+          description="Perfil, componente y movimiento."
+          title="Configuracion"
         >
           <SegmentedControl
-            label="Profile"
+            label="Perfil"
             onChange={applyProfile}
             options={profileOptions}
             value={selectedProfileId}
@@ -389,7 +389,7 @@ export function DesignGenerator() {
             <div className="component-override-status">
               <p>
                 {hasEditingNamespaceOverride
-                  ? `Override · ${overrideFieldCount} ${
+                  ? `Override - ${overrideFieldCount} ${
                       overrideFieldCount === 1 ? "field" : "fields"
                     }`
                   : "Reference"}
@@ -500,7 +500,7 @@ export function DesignGenerator() {
           </div>
         </ControlGroup>
 
-        <ControlGroup title="Mis presets">
+        <ControlGroup title="Presets">
           <div className="user-presets">
             <Button
               icon={<Save aria-hidden="true" size={18} />}
@@ -542,51 +542,59 @@ export function DesignGenerator() {
           </div>
         </ControlGroup>
 
-        <div className="sidebar-actions">
-          <input
-            accept="application/json"
-            className="file-input"
-            onChange={(event) => handleImportFile(event.target.files?.[0])}
-            ref={fileInputRef}
-            type="file"
-          />
-          {importErrorMessage ? (
-            <p className="import-feedback" role="alert">
-              {importErrorMessage}
-            </p>
-          ) : null}
-          <ExportReadinessNote />
-          <Button
-            icon={<RotateCcw aria-hidden="true" size={18} />}
-            onClick={() =>
-              setDesignState(getInitialStateForProfile(selectedProfileId))
-            }
-            variant="ghost"
-          >
-            Reiniciar
-          </Button>
-          <Button
-            icon={<Code2 aria-hidden="true" size={18} />}
-            onClick={handleExportCss}
-            variant="primary"
-          >
-            Export CSS
-          </Button>
-          <Button
-            icon={<Code2 aria-hidden="true" size={18} />}
-            onClick={handleExportJson}
-            variant="primary"
-          >
-            Export JSON
-          </Button>
-          <Button
-            icon={<FileInput aria-hidden="true" size={18} />}
-            onClick={handleImportJson}
-            variant="secondary"
-          >
-            Import JSON
-          </Button>
-        </div>
+        <section
+          aria-labelledby="import-export-title"
+          className="sidebar-action-group"
+        >
+          <div className="sidebar-action-group__heading">
+            <h2 id="import-export-title">Import / export</h2>
+          </div>
+          <div className="sidebar-actions">
+            <input
+              accept="application/json"
+              className="file-input"
+              onChange={(event) => handleImportFile(event.target.files?.[0])}
+              ref={fileInputRef}
+              type="file"
+            />
+            {importErrorMessage ? (
+              <p className="import-feedback" role="alert">
+                {importErrorMessage}
+              </p>
+            ) : null}
+            <ExportReadinessNote />
+            <Button
+              icon={<RotateCcw aria-hidden="true" size={18} />}
+              onClick={() =>
+                setDesignState(getInitialStateForProfile(selectedProfileId))
+              }
+              variant="ghost"
+            >
+              Reiniciar
+            </Button>
+            <Button
+              icon={<Code2 aria-hidden="true" size={18} />}
+              onClick={handleExportCss}
+              variant="primary"
+            >
+              Export CSS
+            </Button>
+            <Button
+              icon={<Code2 aria-hidden="true" size={18} />}
+              onClick={handleExportJson}
+              variant="primary"
+            >
+              Export JSON
+            </Button>
+            <Button
+              icon={<FileInput aria-hidden="true" size={18} />}
+              onClick={handleImportJson}
+              variant="secondary"
+            >
+              Import JSON
+            </Button>
+          </div>
+        </section>
       </aside>
 
       <section className="generator-stage" aria-label="Vista previa">

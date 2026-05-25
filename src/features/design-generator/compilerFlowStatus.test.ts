@@ -25,13 +25,13 @@ describe("createCompilerFlowStatus", () => {
     expect(Object.values(items).every((item) => item.status === "ready")).toBe(
       true
     );
-    expect(items["css-token-export"].detail).toContain("token export only");
+    expect(items["css-token-export"].detail).toContain("token-only");
     expect(items["json-token-export"].detail).toContain("no component code");
     expect(items["json-token-export"].detail).toContain("adapters");
     expect(status.constraints).toEqual([
-      "Current export is token export only.",
-      "Component code generation and adapters are not active.",
-      "Warnings, strict mode, aggregate diagnostics, and structured public diagnostics are inactive."
+      "Exports remain token-only.",
+      "Component generation and adapters remain inactive.",
+      "Warnings, strict mode, aggregate diagnostics, and structured public diagnostics remain inactive."
     ]);
   });
 
