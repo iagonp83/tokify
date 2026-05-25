@@ -492,6 +492,216 @@ diagnostics, structured public diagnostics, component generation, adapters,
 `runtimePlan` export, emitted runtime variable export, graph export, and
 composition graph export remain inactive or unintroduced.
 
+## Save / Load / Recovery Clarity Planning
+
+This checkpoint is documentation-only. It does not implement product features,
+change source code, change tests, change runtime behavior, change resolver
+behavior, change import/export helper behavior, change validator behavior,
+change graph validation behavior, change registry behavior, change diagnostics
+behavior, change adapters, change `PreviewCanvas`, or change public APIs.
+
+### Current Persistence And Recovery Inventory
+
+Current local preset behavior:
+
+- Built-in motion presets live in source and are applied as partial motion
+  overrides to the current `DesignState`.
+- User presets are loaded from `localStorage` on app mount under
+  `design-motion-lab:user-presets`.
+- A user preset stores `id`, `label`, `createdAt`, and the current
+  `DesignState`.
+- Saving a user preset prompts for a name, writes the preset to
+  `localStorage`, and updates the in-memory preset list.
+- Loading a user preset normalizes the saved `DesignState` with current
+  default `componentTokens` and `variantSelections`, then replaces the current
+  `DesignState`.
+- Deleting a user preset removes it from `localStorage` and updates the
+  in-memory preset list.
+- If no user presets exist, the UI shows the empty state
+  "No hay presets guardados."
+- Invalid or non-array stored preset data is ignored by the storage helper and
+  returns an empty preset list. Entries that fail the basic preset shape check
+  are filtered out.
+
+Current reset behavior:
+
+- The `Reiniciar` action replaces the current `DesignState` with the initial
+  state for the currently selected profile.
+- Reset does not delete local presets.
+- Reset does not write or remove exported files.
+- Reset does not create a recovery point, version history, or restore entry.
+- Reset is separate from JSON import and from local preset loading.
+
+Current CSS export behavior:
+
+- `Export CSS` downloads `tokens.css` and logs the same CSS text to the
+  console.
+- CSS export emits global `:root` token declarations and per-reference-kind
+  blocks for `card`, `toolbar`, and `panel`.
+- CSS export is token CSS only. It is not a workspace document and cannot be
+  imported by the current JSON import flow.
+- CSS export does not emit Button/Input namespace override blocks or JSON
+  `overrides` data.
+- CSS export does not include generated component code, adapters,
+  `runtimePlan`, emitted Button/Input runtime variables, graph diagnostics, or
+  composition graph data.
+
+Current JSON export behavior:
+
+- `Export JSON` downloads `tokens.json` and logs the same JSON text to the
+  console.
+- JSON export emits global color, state, layout, and motion token groups.
+- JSON export emits a backward-compatible resolved `components` section for
+  `card`, `toolbar`, and `panel`.
+- JSON export emits source-oriented `overrides` for reference component kinds
+  and authored namespaces when authored component token overrides exist.
+- JSON export is token payload export, not a full workspace document.
+- JSON export does not include selected profile, active component kind,
+  selected editing namespace, active sidebar UI state, generated component
+  code, adapters, `runtimePlan`, emitted runtime variables, graph diagnostics,
+  composition graph data, autosave state, version history, or collaboration
+  metadata.
+
+Current JSON import behavior:
+
+- `Import JSON` opens a hidden file input that accepts JSON files.
+- Successful import parses the selected file, converts the current token
+  payload shape back into `DesignState`, normalizes default `componentTokens`
+  and `variantSelections`, replaces the current `DesignState`, clears import
+  error feedback, and resets the file input.
+- Import prefers the current `overrides` shape when present. If `overrides` is
+  missing, import falls back to the older resolved `components` shape.
+- Imported motion receives `presetId: "imported"` because JSON token payloads
+  carry motion token values rather than a source preset identity.
+- Successful import does not save a local preset, update user preset storage,
+  create a restore point, or change import/export payload shapes.
+
+Current failed import feedback and recovery behavior:
+
+- Failed JSON parse, token parsing, and file read failures are shown through
+  product-local retryable feedback.
+- Failed imports do not mutate `DesignState`.
+- Failed imports reset the file input so the same file can be selected again.
+- Failed import feedback is not routed through compiler diagnostics.
+- Recovery after a failed import is currently "keep working from the previous
+  in-memory `DesignState`, then retry import or choose another action."
+- There is no automatic restore point, autosave recovery, version history,
+  migration UI, or workspace-level recovery model.
+
+### Current Semantics To Preserve
+
+Local presets are the only current saved-in-app persistence surface. They are
+local to the browser storage for this app origin and contain saved
+`DesignState`, but they are not files, not shared project documents, and not
+server persistence.
+
+Current in-app persistence does not save selected profile id, selected editing
+namespace, import feedback text, file input state, downloaded export files,
+console output, autosave checkpoints, version history, migration state, or
+collaboration state.
+
+JSON export is the only current file format that can be imported back into the
+product. It is a token payload, not a complete project/workspace document and
+not a byte-for-byte `DesignState` round trip. It is useful for token handoff
+and partial state restoration, but it does not persist the surrounding app
+session.
+
+CSS export is a consumable token stylesheet. It is not importable by the
+current product and should not be presented as a restore format.
+
+Reset restores the current editor to the selected profile's initial token
+state. It is not undo, not restore-from-preset, not restore-from-export, and
+not a destructive preset storage operation.
+
+Failed import recovery is state-preserving but manual. The previous in-memory
+state remains active, and the user can retry the same file because the file
+input is reset. There is no additional recovery artifact.
+
+### User-Facing Confusion Risks
+
+- Local preset vs JSON export: users may assume "Guardar preset" creates a
+  portable file, or that `tokens.json` is equivalent to a saved preset. They
+  currently serve different scopes.
+- CSS export vs JSON export: users may assume both exports can be loaded back
+  into Tokify. Only JSON import exists today.
+- Reset vs restore: users may read `Reiniciar` as a restore action or as a
+  preset/storage reset. It currently resets editor state only.
+- Failed import retry: feedback says the import can be retried, but the UI does
+  not explicitly explain that the previous state was preserved.
+- No workspace/project document yet: users may expect a durable project file
+  that includes all authoring/session/compiler state. Current exports and
+  presets do not provide that model.
+- No autosave/versioning/migration UI: users may expect automatic recovery or
+  version history. Current persistence is manual and local.
+
+### Next Implementation Candidates
+
+Small copy/status clarification around Presets:
+
+- Pros: addresses the biggest local save/load ambiguity at the point of action;
+  can clarify that presets are local browser saves, that loading a preset
+  replaces the current editor state, and that no file/workspace is created.
+- Pros: can improve the no-saved-presets state without changing storage shape,
+  import/export shape, runtime behavior, or compiler behavior.
+- Cons: does not fully explain CSS/JSON export differences or failed import
+  recovery.
+
+Small copy/status clarification around Import / Export:
+
+- Pros: can clarify that CSS is not importable, JSON is the importable token
+  payload, and neither export is a workspace document.
+- Pros: builds on the existing export readiness note with low implementation
+  risk if kept copy-only.
+- Cons: Slice C already improved export clarity, so this is less urgent than
+  the still-thin preset save/load semantics.
+
+Lightweight recovery hint after failed import:
+
+- Pros: directly explains that the previous state is still active and the same
+  file can be retried.
+- Pros: narrowly improves recovery confidence without changing import parsing
+  or diagnostics.
+- Cons: only appears after failure and does not clarify the everyday save/load
+  model.
+
+No implementation; defer until workspace model:
+
+- Pros: avoids adding copy that may later be replaced by a real workspace
+  document model.
+- Cons: leaves current internal users with avoidable ambiguity around a
+  workflow that already exists.
+
+Broader workspace/persistence architecture planning:
+
+- Pros: would define the eventual project document, migration, autosave, and
+  recovery model before durable persistence exists.
+- Cons: too broad for the next internal MVP usability checkpoint and likely to
+  pull future persistence concepts into scope before the current local/file
+  surfaces are clear.
+
+### Recommended Next Implementation Slice
+
+Recommend a small Preset Persistence Clarification slice.
+
+This slice should be copy/status-only and local to the current Presets surface.
+It should clarify that saving a preset stores the current design locally in
+this browser, that loading a preset replaces the current editor state, and that
+presets are separate from CSS/JSON file export. It may also strengthen the
+empty state to explain that no local presets have been saved yet.
+
+The slice should not change localStorage keys, preset payload shape, save/load
+behavior, delete behavior, import/export helper behavior, CSS/JSON output,
+JSON import behavior, runtime, resolver, validators, graph validation, registry
+behavior, diagnostics behavior, adapters, `PreviewCanvas`, public APIs, or
+generated output. It should not introduce a workspace document model, autosave,
+collaboration, server persistence, import/export shape changes, preset storage
+shape changes, runtime/resolver/compiler behavior changes, generated component
+code, adapters, or a `PreviewCanvas` redesign.
+
+This is recommended over deferral because the existing product already exposes
+manual local save/load, and a small clarification can reduce real internal MVP
+confusion without committing to the future workspace architecture.
+
 ## Exit Criteria
 
 This planning checkpoint is complete when:
@@ -504,6 +714,10 @@ This planning checkpoint is complete when:
 - candidate implementation slices are compared
 - exactly one first implementation slice is recommended
 - the post Slice A-C review recommends exactly one next checkpoint or slice
+- the Save / Load / Recovery clarity checkpoint inventories current
+  persistence and recovery surfaces
+- the Save / Load / Recovery clarity checkpoint recommends exactly one next
+  implementation slice or explicit deferral
 - no source code, tests, runtime behavior, resolver behavior, import/export
   behavior, `PreviewCanvas`, UI behavior, adapters, validators, graph
   validation, diagnostics behavior, registry logic, or public APIs are changed

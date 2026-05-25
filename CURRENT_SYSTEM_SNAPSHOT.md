@@ -90,6 +90,7 @@ Current stabilized areas:
 - Import Error Feedback Slice B
 - Export Readiness Clarification Slice C
 - Targeted Sidebar Hierarchy/Copy Cleanup
+- Save / Load / Recovery Clarity Planning Documentation Checkpoint
 
 Automated regression tests cover:
 
@@ -1848,6 +1849,26 @@ structured public diagnostics, component generation, adapters, `runtimePlan`
 export, emitted runtime variable export, graph export, and composition graph
 export remain inactive or unintroduced.
 
+## Save / Load / Recovery Clarity Planning
+
+Save / Load / Recovery Clarity Planning is closed as a documentation-only
+checkpoint in `docs/INTERNAL_USABLE_MVP_PLANNING.md`.
+
+The checkpoint inventories current local presets, save preset, empty preset
+state, reset, CSS export, JSON export, JSON import, failed import feedback, and
+successful import behavior. It clarifies that local presets are browser-local
+`DesignState` saves, JSON export is the only importable token file payload,
+CSS export is not a restore format, reset is not preset/file restore, and
+failed import recovery currently preserves the previous in-memory state for
+manual retry.
+
+The recommended next implementation slice is a copy/status-only Preset
+Persistence Clarification pass. It should not change localStorage keys, preset
+payload shape, save/load behavior, import/export helper behavior, CSS/JSON
+output, JSON import behavior, runtime, resolver, validators, graph validation,
+registry behavior, diagnostics behavior, adapters, `PreviewCanvas`, public
+APIs, or generated output.
+
 ## Export Architecture
 
 CSS export is handled by:
@@ -2061,7 +2082,9 @@ feedback layer for failed JSON imports. The Export Readiness Clarification
 Slice C checkpoint is closed as a product-local read-only note around current
 token exports. The targeted sidebar hierarchy/copy cleanup follow-up is closed
 as a local scanability pass that preserved behavior and architecture
-boundaries. Future internal usable MVP work should proceed through separate
-focused slices without widening runtime, resolver, import/export, validators,
-graph validation, registry, diagnostics, adapter, `PreviewCanvas`, or public
-API contracts.
+boundaries. The Save / Load / Recovery Clarity Planning checkpoint is closed
+as documentation-only and recommends a copy/status-only Preset Persistence
+Clarification slice next. Future internal usable MVP work should proceed
+through separate focused slices without widening runtime, resolver,
+import/export, validators, graph validation, registry, diagnostics, adapter,
+`PreviewCanvas`, or public API contracts.
