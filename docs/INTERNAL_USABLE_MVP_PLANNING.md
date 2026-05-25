@@ -474,6 +474,24 @@ API, no warning activation, no aggregate reporting, no strict mode, no
 canonical IDs, no instance paths, no child runtime resolution, no component
 code generation, no adapters, and no `PreviewCanvas` redesign.
 
+## Targeted Sidebar Hierarchy/Copy Cleanup Follow-up
+
+The post Slice A-C recommendation to perform a targeted hierarchy/copy cleanup
+before Slice D has been followed.
+
+The follow-up reduced sidebar copy density, shortened compiler status and
+export readiness copy, and grouped presets plus import/export actions more
+clearly. It did not implement Slice D, redesign `PreviewCanvas`, or introduce
+new product/compiler capabilities.
+
+The cleanup preserved runtime behavior, resolver behavior, import/export helper
+behavior, CSS/JSON export output, JSON import behavior, validators, graph
+validation, registry behavior, diagnostics behavior, adapters,
+`PreviewCanvas` behavior, and public APIs. Warnings, strict mode, aggregate
+diagnostics, structured public diagnostics, component generation, adapters,
+`runtimePlan` export, emitted runtime variable export, graph export, and
+composition graph export remain inactive or unintroduced.
+
 ## Exit Criteria
 
 This planning checkpoint is complete when:

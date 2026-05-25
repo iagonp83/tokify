@@ -89,6 +89,7 @@ Current stabilized areas:
 - Product-Compiler Flow Status Panel Slice A
 - Import Error Feedback Slice B
 - Export Readiness Clarification Slice C
+- Targeted Sidebar Hierarchy/Copy Cleanup
 
 Automated regression tests cover:
 
@@ -1829,6 +1830,24 @@ output, import behavior, import/export shapes, runtime behavior, resolver
 behavior, validators, graph validation behavior, registry behavior,
 diagnostics behavior, adapters, `PreviewCanvas`, or public APIs.
 
+## Targeted Sidebar Hierarchy/Copy Cleanup
+
+Targeted sidebar hierarchy/copy cleanup is closed.
+
+The cleanup is local to the design-generator sidebar, compiler status panel,
+export readiness note, scoped sidebar CSS, and matching copy/render tests. It
+reduced sidebar copy density, shortened compiler status and export readiness
+copy, and grouped presets plus import/export actions more clearly.
+
+It does not implement Slice D, redesign `PreviewCanvas`, introduce new
+product/compiler capabilities, or change runtime, resolver, import/export
+helpers, CSS/JSON export output, JSON import behavior, validators, graph
+validation, registry behavior, diagnostics behavior, adapters,
+`PreviewCanvas`, or public APIs. Warnings, strict mode, aggregate diagnostics,
+structured public diagnostics, component generation, adapters, `runtimePlan`
+export, emitted runtime variable export, graph export, and composition graph
+export remain inactive or unintroduced.
+
 ## Export Architecture
 
 CSS export is handled by:
@@ -2040,7 +2059,9 @@ read-only internal status surface for the existing Button/Input flow. The
 Import Error Feedback Slice B checkpoint is closed as a product-local UI
 feedback layer for failed JSON imports. The Export Readiness Clarification
 Slice C checkpoint is closed as a product-local read-only note around current
-token exports. Future internal usable MVP work should proceed through separate
+token exports. The targeted sidebar hierarchy/copy cleanup follow-up is closed
+as a local scanability pass that preserved behavior and architecture
+boundaries. Future internal usable MVP work should proceed through separate
 focused slices without widening runtime, resolver, import/export, validators,
 graph validation, registry, diagnostics, adapter, `PreviewCanvas`, or public
 API contracts.
